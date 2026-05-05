@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Env (secrets)
+.env
+src/backend/.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
