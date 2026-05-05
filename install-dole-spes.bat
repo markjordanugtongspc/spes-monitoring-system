@@ -1,39 +1,71 @@
 @echo off
-:: Ensure script runs as Administrator
+setlocal EnableExtensions
+cd /d "%~dp0"
+
+:: One-time HR / production PC setup: hosts, firewall, deps, build, PM2.
+:: Run as Administrator from the folder where this repo lives (any path — not hardcoded).
+
 net session >nul 2>&1
-if %errorLevel% == 0 (
-    echo Running with Administrator rights...
-) else (
-    echo This script must be run as Administrator!
+if %errorLevel% neq 0 (
+    echo Run this script as Administrator.
     pause
-    exit
+    exit /b 1
 )
 
-:: Step 1: Add local domain to hosts file
-echo 127.0.0.1   dole-spes.local >> %SystemRoot%\System32\drivers\etc\hosts
-echo Added local domain mapping: http://dole-spes.local
+echo Project folder: %CD%
 
-:: Step 2: Install PM2 globally if not installed
+:: Hosts (idempotent)
+findstr /c:"dole-spes.local" %SystemRoot%\System32\drivers\etc\hosts >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Hosts: dole-spes.local already present.
+) else (
+    echo 127.0.0.1   dole-spes.local>> %SystemRoot%\System32\drivers\etc\hosts
+    echo Hosts: added 127.0.0.1 dole-spes.local
+)
+
+:: Firewall — inbound API + static (default PORT 3000; match src/backend/.env if you change it)
+set SPES_PORT=3000
+netsh advfirewall firewall delete rule name="DOLE SPES Production - App 3000" >nul 2>&1
+netsh advfirewall firewall add rule name="DOLE SPES Production - App 3000" dir=in action=allow protocol=TCP localport=%SPES_PORT% profile=private
+echo Firewall: allowed inbound TCP %SPES_PORT% ^(Private profile^).
+
+where npm >nul 2>&1
+if %errorLevel% neq 0 (
+    echo npm not found. Install Node.js LTS, then re-run this script.
+    pause
+    exit /b 1
+)
+
+echo Installing dependencies...
+call npm install
+if %errorLevel% neq 0 (
+    echo npm install failed.
+    pause
+    exit /b 1
+)
+
+echo Building frontend...
+call npm run build
+if %errorLevel% neq 0 (
+    echo npm run build failed.
+    pause
+    exit /b 1
+)
+
 npm list -g pm2 >nul 2>&1
 if %errorLevel% neq 0 (
     echo Installing PM2 globally...
-    npm install -g pm2
-) else (
-    echo PM2 already installed.
+    call npm install -g pm2
 )
 
-:: Step 3: Navigate to project folder
-cd C:\dole-spes
+call pm2 delete dole-spes >nul 2>&1
+echo Starting server with PM2...
+call pm2 start src/backend/server.js --name dole-spes --cwd "%CD%"
+call pm2 save
+echo Configuring PM2 to start on boot ^(may print a one-time command to run as Admin^)...
+call pm2 startup windows --yes
 
-:: Step 4: Start server with PM2
-pm2 start server.js --name "dole-spes"
-
-:: Step 5: Save PM2 process list
-pm2 save
-
-:: Step 6: Configure PM2 to auto-start on boot
-pm2 startup windows --yes
-
-echo Installation complete!
-echo DOLE SPES Attendance System will now auto-start on every boot.
+echo.
+echo Done. On this PC open: http://dole-spes.local:%SPES_PORT%/
+echo LAN devices: use http://^<this-PC-LAN-IP^>:%SPES_PORT%/ ^(and optional DNS/hosts for dole-spes.local^).
 pause

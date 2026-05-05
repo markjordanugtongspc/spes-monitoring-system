@@ -19,5 +19,7 @@ if %errorLevel% equ 0 (
 
 echo.
 echo On this laptop open: http://dole-spes.local:5173
-echo On your phone same WiFi use Network URL from Vite , or map dole-spes.local to this PC IP on the phone/router.
+echo On your phone same WiFi use the Vite Network URL ^(e.g. http://192.168.x.x:5173^).
+echo If the phone shows "can't be reached", run setup-dev-firewall.bat as Administrator once.
+echo To use dole-spes.local on phones, map it to this PC's LAN IP via router DNS or per-device hosts.
 pause
