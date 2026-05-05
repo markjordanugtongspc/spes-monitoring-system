@@ -42,6 +42,12 @@ Opens inbound **TCP 5173** (Vite) and **3000** (API) on **Private** profile.
 - **AP / guest isolation:** Some routers’ **Guest** SSID blocks phone ↔ laptop. Use the main office Wi‑Fi if that happens.
 - **Dev server running:** `npm run dev` must be active while testing **5173**.
 
+### Port already in use (`5173` / `3000`)
+Each **`npm run dev`** starts **two** Node processes. If you start it **again** while an old session is still running (or you closed the terminal but Node stayed alive), you’ll see **`Port 5173 is already in use`** or the API may exit oddly.
+
+1. Stop the old terminal (**Ctrl+C**), wait a second.
+2. Or double‑click **`kill-dev-ports.bat`** (no Admin usually needed), then run **`npm run dev`** again.
+
 ### One command: Vite + API + HMR
 ```
 npm run dev
@@ -91,6 +97,7 @@ If you change **`PORT`** in **`src/backend/.env`**, update the firewall rule in 
 |--------|-----|
 | **`setup-dev-hosts.bat`** | Dev: `dole-spes.local` → localhost on **this PC** |
 | **`setup-dev-firewall.bat`** | Dev: allow LAN to reach **5173** + **3000** |
+| **`kill-dev-ports.bat`** | Dev: stop stray Node listeners on **5173** + **3000** |
 | **`install-dole-spes.bat`** | HR: full install + build + PM2 + firewall **3000** |
 | **`run-system.bat`** | HR: `pm2 resurrect` or start app after reboot |
 
