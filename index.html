@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SPES Foundation</title>
+    <link rel="stylesheet" href="/src/frontend/assets/style.css" />
+  </head>
+  <body class="bg-slate-100 text-slate-900">
+    <nav class="border-b border-slate-200 bg-white px-10 py-4 shadow-sm max-lg:px-5">
+      <div class="mx-auto flex w-full max-w-7xl items-center justify-between">
+        <a href="#" class="text-xl font-bold tracking-tight text-slate-800">SPES</a>
+        <button
+          data-collapse-toggle="navbar-default"
+          type="button"
+          class="cursor-pointer hidden rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 max-md:block"
+          aria-controls="navbar-default"
+          aria-expanded="false"
+        >
+          Menu
+        </button>
+        <div id="navbar-default" class="max-md:hidden">
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Flowbite Ready
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mx-auto w-full max-w-7xl px-10 py-16 max-lg:px-5 max-lg:py-10">
+      <section class="rounded-2xl bg-white p-10 shadow-sm max-lg:p-6">
+        <h1 class="text-4xl font-bold tracking-tight text-slate-900 max-lg:text-2xl">
+          Vanilla + Vite + Tailwind + Flowbite
+        </h1>
+        <p class="mt-4 text-base text-slate-600 max-lg:text-sm">
+          Foundation scaffold is ready for frontend-first development with a simple Express backend and Supabase client setup.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="/src/frontend/main.js"></script>
+  </body>
+</html>
