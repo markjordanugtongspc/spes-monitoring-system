@@ -14,6 +14,15 @@ if %errorLevel% neq 0 (
 
 echo Project folder: %CD%
 
+if not exist "src\backend\.env" (
+    if exist "src\backend\.env.example" (
+        copy /Y "src\backend\.env.example" "src\backend\.env" >nul
+        echo Created src\backend\.env from .env.example
+    ) else (
+        echo WARNING: No src\backend\.env.example - create src\backend\.env manually.
+    )
+)
+
 :: Hosts (idempotent)
 findstr /c:"dole-spes.local" %SystemRoot%\System32\drivers\etc\hosts >nul 2>&1
 if %errorLevel% equ 0 (
@@ -26,8 +35,8 @@ if %errorLevel% equ 0 (
 :: Firewall — inbound API + static (default PORT 3000; match src/backend/.env if you change it)
 set SPES_PORT=3000
 netsh advfirewall firewall delete rule name="DOLE SPES Production - App 3000" >nul 2>&1
-netsh advfirewall firewall add rule name="DOLE SPES Production - App 3000" dir=in action=allow protocol=TCP localport=%SPES_PORT% profile=private
-echo Firewall: allowed inbound TCP %SPES_PORT% ^(Private profile^).
+netsh advfirewall firewall add rule name="DOLE SPES Production - App 3000" dir=in action=allow protocol=TCP localport=%SPES_PORT% profile=domain,private,public
+echo Firewall: allowed inbound TCP %SPES_PORT% ^(domain, private, public profiles^).
 
 where npm >nul 2>&1
 if %errorLevel% neq 0 (
@@ -67,5 +76,6 @@ call pm2 startup windows --yes
 
 echo.
 echo Done. On this PC open: http://dole-spes.local:%SPES_PORT%/
-echo LAN devices: use http://^<this-PC-LAN-IP^>:%SPES_PORT%/ ^(and optional DNS/hosts for dole-spes.local^).
+echo Students ^(QR / poster^): http://^<this-PC-LAN-IP^>:%SPES_PORT%/
+echo Optional DNS: dole-spes.local -^> this PC LAN IP ^(not required if using IP + QR^).
 pause

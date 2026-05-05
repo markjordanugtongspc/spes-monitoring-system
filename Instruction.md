@@ -1,112 +1,84 @@
-# DOLE SPES Attendance System — Cursor AI Agent Instructions
+# DOLE SPES — Project instructions
 
-## Project Goal
-LAN-focused attendance app for DOLE Office SPES students. Devices on the same WiFi reach the app; **Supabase** stays in the cloud (needs internet).
+## What this repo is
+LAN-first attendance-style web app: **Vite + vanilla JS frontend**, **Express API**, **Supabase** (cloud DB/auth — needs internet). Students reach the app over **office Wi‑Fi** using the **HR/host PC’s LAN IP** (share via **QR code** / poster). Custom hostname **`dole-spes.local`** is optional (hosts on the HR PC only, or DNS if IT adds it later).
+
+**After this scaffold:** you keep coding (frontend under `src/frontend/`, API in `src/backend/server.js`, Supabase client in `src/frontend/api/supabase.js`) until features are done; then rebuild and redeploy on the HR PC as below.
 
 ---
 
-## Development mode (your laptop)
+## Batch files (what each is for)
 
-### Install once
-```
+| File | When | Admin? | Purpose |
+|------|------|--------|---------|
+| **`install-dole-spes.bat`** | **HR production PC — first deploy** | **Yes** | Installs deps, builds `dist/`, adds hosts entry, opens firewall for port **3000**, starts **`src/backend/server.js`** with **PM2**, **`pm2 save`**, **`pm2 startup`**. **This is the main “make it run” installer.** |
+| **`run-system.bat`** | HR PC — **after reboot** (optional safety net) | No | `cd` to project folder → **`pm2 resurrect`** or start **`dole-spes`** if needed. Use if PM2 does not auto-restore; shortcut in **Startup** is optional. |
+| **`setup-dev-hosts.bat`** | **Your laptop — dev only** | Yes | Maps **`dole-spes.local` → 127.0.0.1** on **this PC** so you can open **`http://dole-spes.local:5173`**. **Not used on HR for student access.** |
+| **`setup-dev-firewall.bat`** | **Your laptop — dev only** | Yes | Opens inbound **TCP 5173** (Vite) and **3000** (API) for **Private** profile so phones can hit **`http://<laptop-LAN-IP>:5173`** during development. |
+| **`kill-dev-ports.bat`** | **Your laptop — dev only, optional** | No | Frees stuck **5173** / **3000** if **`npm run dev`** was started twice or Node stayed running. **Not part of HR production install.** |
+
+There are **five** scripts; **none are duplicates**. Do **not** delete them unless you drop dev-on-phone or HR reboot helpers entirely.
+
+---
+
+## HR production PC — “does `install-dole-spes.bat` alone make it work?”
+
+**Almost.** Run it **as Administrator** from the **project folder** (the folder that contains `package.json`).
+
+It will:
+
+1. Ensure **`127.0.0.1 dole-spes.local`** exists in the hosts file (for **browsers on that PC only**).
+2. Allow inbound **TCP 3000** on **Domain, Private, and Public** Windows Firewall profiles (so mis-tagged networks still work).
+3. Run **`npm install`** and **`npm run build`**.
+4. Install/start **PM2** and run **`src/backend/server.js`**, which serves **`dist/`** + **`/api/*`** on port **3000** (default).
+
+**You must have installed [Node.js LTS](https://nodejs.org/) on the HR PC first** (includes `npm`). The script stops with a clear message if `npm` is missing.
+
+**First run:** if **`src/backend/.env`** does not exist, the installer **copies `src/backend/.env.example` → `.env`**. Edit **`src/backend/.env`** later if you change **PORT** or need secrets — if you change **PORT**, update **`SPES_PORT`** inside **`install-dole-spes.bat`** so the firewall rule matches.
+
+**After install:**
+
+- On the **HR PC:** **`http://dole-spes.local:3000/`** or **`http://localhost:3000/`**
+- **Students (BYOD):** **`http://<HR-PC-LAN-IPv4>:3000/`** — put that URL in a **QR code** on a poster (no router DNS required).
+
+If **`pm2 startup`** prints an extra command, run that **once as Administrator** (PM2’s normal Windows behavior).
+
+**Optional:** Shortcut **`run-system.bat`** in **`shell:startup`** if you want a reboot safety net.
+
+---
+
+## Updating the app on the HR PC later
+
+On your dev machine: finish features → **`npm run build`**. On HR: pull/copy files → from project folder:
+
+```bat
 npm install
-```
-
-### Local friendly URL on this PC only
-1. **`setup-dev-hosts.bat`** → right-click → **Run as administrator** (once).  
-   Adds `127.0.0.1   dole-spes.local`
-2. Open **`http://dole-spes.local:5173`**
-
-### Phone cannot connect / “This site can’t be reached” on LAN IP
-
-Most common fix on Windows: **firewall**.
-
-**Option A — script (recommended)**  
-Right-click **`setup-dev-firewall.bat`** → **Run as administrator** once.  
-Opens inbound **TCP 5173** (Vite) and **3000** (API) on **Private** profile.
-
-**Option B — manual (Windows Firewall)**
-
-1. Press **Win + R**, type **`wf.msc`**, Enter.
-2. **Inbound Rules** → **New Rule…**
-3. **Port** → **TCP** → **Specific local ports:** `5173` → **Next**
-4. **Allow the connection** → **Next**
-5. Check **Private** only (recommended) → **Next**
-6. Name e.g. **`DOLE SPES Dev Vite 5173`** → **Finish**
-7. Repeat steps 2–6 for port **`3000`** (name e.g. **`DOLE SPES Dev API 3000`**).
-
-**Also check**
-
-- **Wi‑Fi profile:** **Settings → Network & Internet → Wi‑Fi → [your network]** → set **Network profile** to **Private** (not Public), or add the same rules for **Public**.
-- **Correct IP:** On the laptop run `ipconfig`, use the **IPv4** under the adapter that is actually on **the same Wi‑Fi** as the phone (often `192.168.x.x`). Ignore Hyper‑V / virtual adapters unless that’s your LAN.
-- **AP / guest isolation:** Some routers’ **Guest** SSID blocks phone ↔ laptop. Use the main office Wi‑Fi if that happens.
-- **Dev server running:** `npm run dev` must be active while testing **5173**.
-
-### Port already in use (`5173` / `3000`)
-Each **`npm run dev`** starts **two** Node processes. If you start it **again** while an old session is still running (or you closed the terminal but Node stayed alive), you’ll see **`Port 5173 is already in use`** or the API may exit oddly.
-
-1. Stop the old terminal (**Ctrl+C**), wait a second.
-2. Or double‑click **`kill-dev-ports.bat`** (no Admin usually needed), then run **`npm run dev`** again.
-
-### One command: Vite + API + HMR
-```
-npm run dev
-```
-- Browser uses **`/api/*`** → proxied to **`http://127.0.0.1:3000`**
-- **Phone:** use Vite’s printed **Network** URL, e.g. `http://192.168.1.102:5173`
-
-Optional:
-
-```
-npm run dev:vite
-npm run dev:backend
-```
-
-### Env
-- **`src/backend/.env`** — copy from **`src/backend/.env.example`** (`PORT`, `HOST`)
-- Root **`.env`** — optional **`VITE_*`** for Supabase
-
-### Production-style static files
-```
 npm run build
+pm2 restart dole-spes
 ```
-Output: **`dist/`**. After build, **Express** serves **`dist/`** when **`index.html`** exists (same port as API, default **3000**).
+
+(Or re-run **`install-dole-spes.bat`** if you prefer a full scripted pass — it will rebuild and restart PM2.)
 
 ---
 
-## Production mode (HR PC)
+## Development (your laptop)
 
-1. Copy the whole project folder to the HR machine (any path).
-2. **`install-dole-spes.bat`** → **Run as administrator** (from inside that folder).  
-   It uses **`%~dp0`** (this folder), **not** a fixed `C:\dole-spes` path: installs deps, **`npm run build`**, adds **hosts**, opens firewall **3000**, starts **`src/backend/server.js`** under **PM2**, **`pm2 save`**, **`pm2 startup`**.
+1. **`npm install`**
+2. Once as Admin: **`setup-dev-hosts.bat`** (nice URL on laptop only), **`setup-dev-firewall.bat`** (phones → LAN IP during dev).
+3. **`npm run dev`** — Vite **5173** + API **3000**, **`/api`** proxied through Vite.
+4. If ports stick: **`kill-dev-ports.bat`** then **`npm run dev`** again.
 
-3. Put **`run-system.bat`** in **Startup** folder if you want a safety net after reboot (PM2 usually restores via **`pm2 startup`**):  
-   **Win + R** → `shell:startup` → place a shortcut to **`run-system.bat`**.
-
-HR browser on that PC: **`http://dole-spes.local:3000/`** (hosts maps to **127.0.0.1** on HR PC only).
-
-Students on LAN: **`http://<HR-PC-LAN-IP>:3000/`**, or DNS/hosts **`dole-spes.local` → HR PC LAN IP**.
-
-If you change **`PORT`** in **`src/backend/.env`**, update the firewall rule in **`install-dole-spes.bat`** (`SPES_PORT`) to match.
+**Env:** **`src/backend/.env`** (see **`.env.example`**). Root **`.env`** for **`VITE_*`** Supabase vars when you wire the client.
 
 ---
 
-## Scripts summary
+## Summary
 
-| Script | Use |
-|--------|-----|
-| **`setup-dev-hosts.bat`** | Dev: `dole-spes.local` → localhost on **this PC** |
-| **`setup-dev-firewall.bat`** | Dev: allow LAN to reach **5173** + **3000** |
-| **`kill-dev-ports.bat`** | Dev: stop stray Node listeners on **5173** + **3000** |
-| **`install-dole-spes.bat`** | HR: full install + build + PM2 + firewall **3000** |
-| **`run-system.bat`** | HR: `pm2 resurrect` or start app after reboot |
+| Scenario | What to run |
+|----------|-------------|
+| **HR PC — go live** | Install **Node LTS** → copy project folder → **`install-dole-spes.bat`** as **Administrator** |
+| **HR — reboot helper** | Optional **`run-system.bat`** or Startup shortcut |
+| **Laptop — coding + phone test** | **`setup-dev-hosts.bat`** + **`setup-dev-firewall.bat`** (Admin, once) → **`npm run dev`** |
+| **Laptop — stuck ports** | Optional **`kill-dev-ports.bat`** |
 
----
-
-## Workflow summary
-
-| Goal | Steps |
-|------|--------|
-| Laptop dev | `npm install` → **`setup-dev-hosts.bat`** (Admin) → **`setup-dev-firewall.bat`** (Admin) → **`npm run dev`** |
-| Phone on Wi‑Fi | Firewall OK → **Private** profile → use **Network** URL from Vite |
-| HR production | Folder on HR PC → **`install-dole-spes.bat`** (Admin) → optional Startup shortcut for **`run-system.bat`** |
+Students: **LAN IP + QR** to **`http://<host-IP>:3000/`** — final approach; no router access required.
