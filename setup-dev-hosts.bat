@@ -1,11 +1,14 @@
 @echo off
-:: One-time dev laptop: map dole-spes.local -> 127.0.0.1 (browser on this PC only).
-:: Run as Administrator. Skip HR / PM2 production steps.
+setlocal EnableExtensions
+
+:: Map dole-spes.local -^> 127.0.0.1 on this PC only (browser shortcuts).
+:: Usage: setup-dev-hosts.bat           — ends with pause
+::        setup-dev-hosts.bat nopause   — no pause
 
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo Right-click this file and choose "Run as administrator".
-    pause
+    if /i not "%~1"=="nopause" pause
     exit /b 1
 )
 
@@ -18,8 +21,7 @@ if %errorLevel% equ 0 (
 )
 
 echo.
-echo On this laptop open: http://dole-spes.local:5173
-echo On your phone same WiFi use the Vite Network URL ^(e.g. http://192.168.x.x:5173^).
-echo If the phone shows "can't be reached", run setup-dev-firewall.bat as Administrator once.
-echo To use dole-spes.local on phones, map it to this PC's LAN IP via router DNS or per-device hosts.
-pause
+echo On this PC: http://dole-spes.local:5173 ^(with npm run dev or npm run preview:lan^).
+echo Other devices on LAN use http://^<this-PC-IPv4^>:5173 — not dole-spes.local unless you configure DNS/hosts per device.
+
+if /i not "%~1"=="nopause" pause

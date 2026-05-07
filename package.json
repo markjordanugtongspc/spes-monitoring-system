@@ -1,6 +1,8 @@
 {
   "name": "spes",
-  "version": "0.1.7",
+  "version": "0.1.8",
+  "description": "DOLE SPES Portal desktop and web client",
+  "author": "DOLE SPES",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -8,14 +10,52 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "preview:lan": "vite preview --host 0.0.0.0 --port 5173 --strictPort",
     "electron": "npm run build && electron .",
-    "electron:run": "electron ."
+    "electron:run": "electron .",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "ph.gov.dole.spes.portal",
+    "productName": "DOLE SPES Portal",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "src/frontend/assets/img/logos/spes.png",
+        "to": "app-icon.png"
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.4",
     "@tailwindcss/vite": "^4.2.4",
     "autoprefixer": "^10.5.0",
     "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.5.13",
     "tailwindcss": "^4.2.4",
     "vite": "^8.0.10"

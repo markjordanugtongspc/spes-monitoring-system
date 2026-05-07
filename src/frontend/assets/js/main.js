@@ -30,6 +30,12 @@ async function pingHealth() {
 
 pingHealth();
 
+function initAppVersionLabel() {
+  const el = document.getElementById("app-version");
+  const v = import.meta.env.VITE_APP_VERSION;
+  if (el && v) el.textContent = `Version ${v}`;
+}
+
 // --- FUNCTION: SWAP BRANDING FLAT ICONS (START) ---
 function initLogoSwap() {
   const logos = [
@@ -61,6 +67,7 @@ function initAutoYear() {
 // --- FUNCTION: AUTO INPUT CURRENT YEAR (END) ---
 
 initThemeToggle();
+initAppVersionLabel();
 initLogoSwap();
 initAutoYear();
 initMobileSplashDrawer();

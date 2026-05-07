@@ -4,6 +4,13 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Native square checkbox (Flowbite/global styles can make checkboxes look round). */
+.remember-me-checkbox {
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  border-radius: 2px;
+}
+
 @theme {
   --color-spes-blue: #0038A8;
   --color-spes-red: #CE1126;

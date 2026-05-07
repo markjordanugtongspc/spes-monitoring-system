@@ -22,7 +22,7 @@ export async function initRememberMePreferences() {
   const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
   const rememberCheckbox = document.getElementById("remember-me");
-  const signInButton = document.querySelector("button[type='button']");
+  const signInButton = document.getElementById("sign-in-button");
   if (!usernameInput || !passwordInput || !rememberCheckbox || !signInButton) return;
 
   const stored = preferenceStorage.readRememberMePreferences();

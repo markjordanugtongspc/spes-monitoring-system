@@ -104,7 +104,7 @@
                     id="remember-me"
                     type="checkbox"
                     value=""
-                    class="cursor-pointer h-4 w-4 shrink-0 rounded border-spes-blue bg-spes-white text-spes-blue accent-spes-blue focus:ring-2 focus:ring-spes-blue/40 dark:border-spes-white/50 dark:bg-spes-black dark:accent-spes-yellow dark:focus:ring-spes-yellow/35"
+                    class="remember-me-checkbox cursor-pointer h-4 w-4 shrink-0 rounded-none border-2 border-spes-blue bg-spes-white text-spes-blue accent-spes-blue focus:ring-2 focus:ring-spes-blue/40 focus:ring-offset-0 dark:border-spes-white/70 dark:bg-spes-black dark:accent-spes-yellow dark:focus:ring-spes-yellow/35"
                   />
                   Remember me
                 </label>
@@ -112,6 +112,7 @@
               </div>
 
               <button
+                id="sign-in-button"
                 type="button"
                 class="cursor-pointer mt-2 w-full rounded-xl bg-spes-blue px-5 py-3 text-sm font-extrabold uppercase tracking-[0.2em] text-spes-white shadow-lg ring-0 transition-all hover:bg-spes-blue/85 focus:outline-none focus:ring-4 focus:ring-spes-blue/35 dark:bg-spes-dark-primary dark:text-spes-white dark:hover:bg-spes-white/20 dark:hover:ring-2 dark:hover:ring-spes-white/35"
               >
@@ -121,6 +122,7 @@
 
             <footer class="mt-8 border-t border-spes-blue/15 pt-5 text-center text-xs font-medium tracking-wide text-spes-black/70 dark:border-spes-white/15 dark:text-spes-white/70">
               <span>DOLE SPES Portal © <span id="current-year"></span></span>
+              <p id="app-version" class="mt-1 text-[11px] tabular-nums text-spes-black/55 dark:text-spes-white/55"></p>
             </footer>
           </div>
         </div>
