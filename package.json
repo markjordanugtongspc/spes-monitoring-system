@@ -33,6 +33,7 @@
       }
     ],
     "win": {
+      "icon": "src/frontend/assets/img/logos/spes.png",
       "signAndEditExecutable": false,
       "target": [
         {
