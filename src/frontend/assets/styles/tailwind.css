@@ -1,0 +1,16 @@
+@config "../../../../tailwind.config.js";
+@import "tailwindcss";
+@import "flowbite/src/themes/default";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-spes-blue: #0038A8;
+  --color-spes-red: #CE1126;
+  --color-spes-yellow: #FCD116;
+  --color-spes-black: #000000;
+  --color-spes-white: #FFFFFF;
+  --color-spes-dark-blue: #001B52;
+  --color-spes-dark-primary: #243447;
+  --color-spes-dark-secondary: #141D26;
+}

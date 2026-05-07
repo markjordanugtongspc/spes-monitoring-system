@@ -3,44 +3,156 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPES Foundation</title>
-    <link rel="stylesheet" href="/src/frontend/assets/style.css" />
+    <title>SPES Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
   </head>
-  <body class="bg-slate-100 text-slate-900">
-    <nav class="border-b border-slate-200 bg-white px-10 py-4 shadow-sm max-lg:px-5">
-      <div class="mx-auto flex w-full max-w-7xl items-center justify-between">
-        <a href="#" class="text-xl font-bold tracking-tight text-slate-800">SPES</a>
-        <button
-          data-collapse-toggle="navbar-default"
-          type="button"
-          class="cursor-pointer hidden rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 max-md:block"
-          aria-controls="navbar-default"
-          aria-expanded="false"
-        >
-          Menu
-        </button>
-        <div id="navbar-default" class="max-md:hidden">
-          <button
-            type="button"
-            class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            Flowbite Ready
-          </button>
+  <body class="min-h-screen bg-spes-white font-poppins text-spes-black antialiased dark:bg-spes-dark-secondary dark:text-spes-white">
+    <main class="grid min-h-screen grid-cols-2 max-lg:grid-cols-1">
+      <section class="relative flex items-center justify-center bg-spes-blue px-10 py-12 max-lg:hidden max-lg:px-6">
+        <div class="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-spes-dark-blue/25 to-transparent"></div>
+        <div class="relative flex w-full max-w-lg flex-col items-center text-center">
+          <img
+            id="spes-logo"
+            src="/src/frontend/assets/img/logos/spes.png"
+            alt="SPES logo"
+            data-flat-icon
+            class="js-swappable-logo h-40 w-40 rounded-full border-4 border-spes-white/80 object-cover shadow-2xl max-lg:h-28 max-lg:w-28"
+          />
+          <h1 class="mt-7 text-4xl font-extrabold tracking-wide text-spes-white max-lg:mt-5 max-lg:text-2xl">
+            DOLE SPES PORTAL
+          </h1>
+          <p class="mt-3 text-sm font-medium tracking-[0.28em] text-spes-yellow max-lg:tracking-[0.2em]">
+            SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS
+          </p>
         </div>
-      </div>
-    </nav>
+      </section>
 
-    <main class="mx-auto w-full max-w-7xl px-10 py-16 max-lg:px-5 max-lg:py-10">
-      <section class="rounded-2xl bg-white p-10 shadow-sm max-lg:p-6">
-        <h1 class="text-4xl font-bold tracking-tight text-slate-900 max-lg:text-2xl">
-          Vanilla + Vite + Tailwind + Flowbite
-        </h1>
-        <p class="mt-4 text-base text-slate-600 max-lg:text-sm">
-          Foundation scaffold is ready for frontend-first development with a simple Express backend and Supabase client setup.
-        </p>
+      <section class="relative flex min-h-screen items-start justify-center bg-spes-white px-14 pb-14 pt-6 dark:bg-spes-dark-secondary max-lg:px-6">
+        <button
+          id="theme-toggle"
+          type="button"
+          class="cursor-pointer absolute right-6 top-6 rounded-lg p-1.5 text-spes-blue transition-colors hover:bg-spes-blue/10 hover:text-spes-blue/80 dark:text-spes-white dark:hover:bg-spes-dark-primary/55 dark:hover:text-spes-white/90"
+        >
+          <svg id="theme-toggle-dark-icon" class="hidden h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586z"></path>
+          </svg>
+          <svg id="theme-toggle-light-icon" class="hidden h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm4 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm-.464 4.95.707.707a1 1 0 0 0 1.414-1.414l-.707-.707a1 1 0 0 0-1.414 1.414zm2.12-10.607a1 1 0 0 1 0 1.414l-.706.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zM17 11a1 1 0 1 0 0-2h-1a1 1 0 1 0 0 2h1zm-7 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM5.05 6.464A1 1 0 1 0 6.465 5.05l-.708-.707a1 1 0 0 0-1.414 1.414l.707.707zm1.414 8.486-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 1.414zM4 11a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2h1z"></path>
+          </svg>
+          <span class="sr-only">Toggle dark mode</span>
+        </button>
+
+        <div class="flex h-full w-full max-w-2xl flex-col">
+          <div class="mb-7">
+            <div class="relative -top-2 flex items-center gap-3 pr-14">
+              <img
+                src="/src/frontend/assets/img/logos/bph.png"
+                alt="Bagong Pilipinas logo"
+                class="h-8 w-8 shrink-0 overflow-hidden rounded-full object-cover ring-2 ring-spes-blue/15 dark:ring-spes-white/20"
+              />
+              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-spes-blue dark:text-spes-yellow">DOLE REGION X</p>
+            </div>
+          </div>
+
+          <div class="flex flex-1 flex-col justify-center">
+            <h1 class="mt-2 text-start text-4xl font-montserrat font-extrabold text-spes-black dark:text-spes-white max-lg:text-3xl">Welcome Back</h1>
+            <p class="mt-2 max-w-2xl text-start text-xs text-gray-500 dark:text-spes-white/70">
+              Sign in to track your daily attendance and program progression, or access the dashboard to oversee users and system logs.
+            </p>
+            <form class="mt-6 space-y-6">
+              <div>
+                <label for="username" class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60"
+                />
+              </div>
+              <div class="relative">
+                <label for="password" class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 pr-11 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60"
+                />
+                <button
+                  id="toggle-password-button"
+                  type="button"
+                  class="cursor-pointer absolute right-3 top-10 inline-flex items-center justify-center text-spes-blue/75 hover:text-spes-blue dark:text-spes-white/80 dark:hover:text-spes-yellow"
+                  aria-label="Toggle password visibility"
+                >
+                  <svg id="password-eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
+                  </svg>
+                  <svg id="password-eye-closed" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M10.58 10.58a2 2 0 1 0 2.83 2.83" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M6.71 6.71C4.65 8.06 3.3 10 2 12c0 0 3.5 6 10 6 2.1 0 3.93-.62 5.47-1.56M9.88 4.22C10.57 4.08 11.27 4 12 4c6.5 0 10 6 10 6a17.52 17.52 0 0 1-2.37 3.26" stroke="currentColor" stroke-width="1.8" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <label for="remember-me" class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-spes-black hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    value=""
+                    class="cursor-pointer h-4 w-4 shrink-0 rounded border-spes-blue bg-spes-white text-spes-blue accent-spes-blue focus:ring-2 focus:ring-spes-blue/40 dark:border-spes-white/50 dark:bg-spes-black dark:accent-spes-yellow dark:focus:ring-spes-yellow/35"
+                  />
+                  Remember me
+                </label>
+                <a href="#" class="text-right text-sm font-semibold whitespace-nowrap text-spes-blue hover:underline dark:text-spes-yellow">Forgot password?</a>
+              </div>
+
+              <button
+                type="button"
+                class="cursor-pointer mt-2 w-full rounded-xl bg-spes-blue px-5 py-3 text-sm font-extrabold uppercase tracking-[0.2em] text-spes-white shadow-lg ring-0 transition-all hover:bg-spes-blue/85 focus:outline-none focus:ring-4 focus:ring-spes-blue/35 dark:bg-spes-dark-primary dark:text-spes-white dark:hover:bg-spes-white/20 dark:hover:ring-2 dark:hover:ring-spes-white/35"
+              >
+                Sign In
+              </button>
+            </form>
+
+            <footer class="mt-8 border-t border-spes-blue/15 pt-5 text-center text-xs font-medium tracking-wide text-spes-black/70 dark:border-spes-white/15 dark:text-spes-white/70">
+              <span>DOLE SPES Portal © <span id="current-year"></span></span>
+            </footer>
+          </div>
+        </div>
       </section>
     </main>
 
-    <script type="module" src="/src/frontend/main.js"></script>
+    <div
+      id="drawer-top-example"
+      class="fixed top-0 left-0 right-0 z-70 h-screen w-full -translate-y-full overflow-hidden bg-spes-blue p-4 transition-transform duration-500 ease-out"
+      tabindex="-1"
+      aria-label="Mobile branding panel"
+    >
+      <div class="mx-auto flex h-full w-full max-w-lg flex-col items-center text-center">
+        <div class="flex flex-1 flex-col items-center justify-start pt-[10vh]">
+          <img
+            src="/src/frontend/assets/img/logos/spes.png"
+            alt="SPES logo"
+            data-flat-icon
+            class="js-swappable-logo h-20 w-20 rounded-full border-4 border-spes-white/80 object-cover shadow-2xl sm:h-24 sm:w-24"
+          />
+          <h2 class="mt-3 px-2 text-[clamp(1.3rem,5.4vw,1.8rem)] font-montserrat font-extrabold tracking-wide text-spes-white">DOLE SPES PORTAL</h2>
+          <p class="mt-2 px-2 text-[clamp(0.54rem,2.2vw,0.72rem)] font-medium tracking-[0.12em] text-spes-yellow">SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS</p>
+        </div>
+        <div class="pointer-events-none mb-4 flex flex-col items-center text-spes-white/90">
+          <svg class="h-5 w-5 animate-pulse" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M10 17a1 1 0 0 1-.707-.293l-5-5a1 1 0 0 1 1.414-1.414L9 13.586V3a1 1 0 1 1 2 0v10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-5 5A1 1 0 0 1 10 17Z" clip-rule="evenodd"></path>
+          </svg>
+          <span class="mt-1 text-[10px] font-medium tracking-[0.14em]">TAP OR SWIPE UP</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/frontend/assets/js/main.js"></script>
   </body>
 </html>

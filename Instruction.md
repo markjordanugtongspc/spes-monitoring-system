@@ -3,7 +3,7 @@
 ## What this repo is
 LAN-first attendance-style web app: **Vite + vanilla JS frontend**, **Express API**, **Supabase** (cloud DB/auth — needs internet). Students reach the app over **office Wi‑Fi** using the **HR/host PC’s LAN IP** (share via **QR code** / poster). Custom hostname **`dole-spes.local`** is optional (hosts on the HR PC only, or DNS if IT adds it later).
 
-**After this scaffold:** you keep coding (frontend under `src/frontend/`, API in `src/backend/server.js`, Supabase client in `src/frontend/api/supabase.js`) until features are done; then rebuild and redeploy on the HR PC as below.
+**After this scaffold:** you keep coding (frontend under `src/frontend/`, API in `src/frontend/api/server.js`, Supabase client in `src/backend/api/supabase.js`) until features are done; then rebuild and redeploy on the HR PC as below.
 
 ---
 
@@ -11,7 +11,7 @@ LAN-first attendance-style web app: **Vite + vanilla JS frontend**, **Express AP
 
 | File | When | Admin? | Purpose |
 |------|------|--------|---------|
-| **`install-dole-spes.bat`** | **HR production PC — first deploy** | **Yes** | Installs deps, builds `dist/`, adds hosts entry, opens firewall for port **3000**, starts **`src/backend/server.js`** with **PM2**, **`pm2 save`**, **`pm2 startup`**. **This is the main “make it run” installer.** |
+| **`install-dole-spes.bat`** | **HR production PC — first deploy** | **Yes** | Installs deps, builds `dist/`, adds hosts entry, opens firewall for port **3000**, starts **`src/frontend/api/server.js`** with **PM2**, **`pm2 save`**, **`pm2 startup`**. **This is the main “make it run” installer.** |
 | **`run-system.bat`** | HR PC — **after reboot** (optional safety net) | No | `cd` to project folder → **`pm2 resurrect`** or start **`dole-spes`** if needed. Use if PM2 does not auto-restore; shortcut in **Startup** is optional. |
 | **`setup-dev-hosts.bat`** | **Your laptop — dev only** | Yes | Maps **`dole-spes.local` → 127.0.0.1** on **this PC** so you can open **`http://dole-spes.local:5173`**. **Not used on HR for student access.** |
 | **`setup-dev-firewall.bat`** | **Your laptop — dev only** | Yes | Opens inbound **TCP 5173** (Vite) and **3000** (API) for **Private** profile so phones can hit **`http://<laptop-LAN-IP>:5173`** during development. |
@@ -30,7 +30,7 @@ It will:
 1. Ensure **`127.0.0.1 dole-spes.local`** exists in the hosts file (for **browsers on that PC only**).
 2. Allow inbound **TCP 3000** on **Domain, Private, and Public** Windows Firewall profiles (so mis-tagged networks still work).
 3. Run **`npm install`** and **`npm run build`**.
-4. Install/start **PM2** and run **`src/backend/server.js`**, which serves **`dist/`** + **`/api/*`** on port **3000** (default).
+4. Install/start **PM2** and run **`src/frontend/api/server.js`**, which serves **`dist/`** + **`/api/*`** on port **3000** (default).
 
 **You must have installed [Node.js LTS](https://nodejs.org/) on the HR PC first** (includes `npm`). The script stops with a clear message if `npm` is missing.
 
@@ -69,6 +69,18 @@ pm2 restart dole-spes
 4. If ports stick: **`kill-dev-ports.bat`** then **`npm run dev`** again.
 
 **Env:** **`src/backend/.env`** (see **`.env.example`**). Root **`.env`** for **`VITE_*`** Supabase vars when you wire the client.
+
+### Access URLs (confirmed on your laptop)
+
+When running **`npm run dev`**:
+
+- Laptop: **`http://localhost:5173/`**
+- Mobile (same Wi-Fi): **`http://192.168.1.102:5173/`**
+
+When running **`npm run start:prod`**:
+
+- Laptop: **`http://localhost:3000/`**
+- Mobile (same Wi-Fi): **`http://192.168.1.102:3000/`**
 
 ---
 
