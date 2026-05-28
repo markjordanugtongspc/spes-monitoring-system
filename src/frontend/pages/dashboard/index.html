@@ -23,19 +23,19 @@
   <!-- SPES:SIDEBAR -->
 
   <!-- Main Content -->
-  <main class="min-h-screen transition-all duration-300 sm:ml-64">
+  <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
     <!-- Top Enterprise Banner -->
-    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-8 lg:pb-24 shadow-lg">
       <!-- Background Image Layer -->
       <div
-        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
       </div>
       <!-- Primary Color Overlay (Reduced Opacity) -->
       <div
-        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/80 to-[#002878]/90 dark:from-spes-dark-primary/85 dark:to-[#0A0A0A]/90">
       </div>
 
-      <div class="relative z-30 mx-auto max-w-7xl">
+      <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
         <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 class="font-montserrat text-3xl font-black text-spes-white">Dashboard</h1>
@@ -95,9 +95,9 @@
     </header>
 
     <!-- Dashboard Grid -->
-    <div class="relative z-20 mx-auto -mt-16 max-w-7xl px-6 pb-12">
+    <div class="relative z-20 mx-auto mt-4 lg:-mt-16 max-w-7xl 2xl:max-w-[2200px] px-6 pb-12 flex flex-col">
       <!-- Top Row: Metric Cards -->
-      <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3 order-2 lg:order-1">
         <!-- Card 1: Total Implementors -->
         <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
           <div class="mb-4 flex items-center justify-between">
@@ -107,7 +107,7 @@
             <span id="badge-staff-metric"
               class="rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
           </div>
-          <div id="distribution-chart" class="min-h-[220px] pr-4">
+          <div id="distribution-chart" class="h-[220px] pr-4">
             <!-- Flowbite Widget Skeleton (Chart) -->
             <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent">
                 <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2.5"></div>
@@ -129,11 +129,11 @@
           <div class="mb-4 flex items-center justify-between">
             <h3
               class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
-              Total SPES</h3>
+              TOTAL GENDER STATS</h3>
             <span id="badge-student-metric"
               class="rounded-full bg-emerald-500/5 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-500">...</span>
           </div>
-          <div id="spes-gender-chart" class="min-h-[220px] pr-4">
+          <div id="spes-gender-chart" class="h-[250px] pr-4">
             <!-- Card Placeholder Skeleton -->
             <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent">
                 <div class="flex items-center justify-center h-28 w-full bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse mb-4">
@@ -161,7 +161,7 @@
                 </svg>
               </div>
               <div>
-                <h5 class="text-lg font-extrabold text-spes-black dark:text-spes-white leading-tight">1.2k</h5>
+                <div class="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-white/10"></div>
                 <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">
                   Students Added</p>
               </div>
@@ -192,7 +192,7 @@
       </div>
 
       <!-- Bottom Row -->
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3 order-3 lg:order-2">
         <!-- Trends -->
         <div
           class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col justify-between">
@@ -219,86 +219,349 @@
             <div class="text-center">
               <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">Total
                 Enrolled</p>
-              <p class="text-lg font-black text-spes-blue dark:text-spes-yellow">2,858</p>
+              <div id="metric-total-enrolled" class="flex items-center justify-center gap-1 h-6 mt-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+              </div>
             </div>
             <div class="text-center">
               <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">Avg
                 Monthly</p>
-              <p class="text-lg font-black text-emerald-500">238</p>
+              <div id="metric-avg-monthly" class="flex items-center justify-center gap-1 h-6 mt-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+              </div>
             </div>
             <div class="text-center">
               <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">
                 Growth</p>
-              <p class="text-lg font-black text-spes-blue dark:text-spes-yellow">+14%</p>
+              <div id="metric-growth" class="flex items-center justify-center gap-1 h-6 mt-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Recent Implementors Table (Compact Snapshot) -->
-        <div class="lg:col-span-2 rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary">
-          <div class="mb-4 flex items-center justify-between">
-            <h3
-              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
-              Recent Implementors</h3>
-            <a href="../implementors/"
-              class="cursor-pointer text-[10px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">View
-              All</a>
-          </div>
+        <div id="dashboard-implementors-panel" class="hidden lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
+          <div>
+            <div class="mb-4 flex items-center justify-between">
+              <h3
+                class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Recent Implementors</h3>
+              <a href="../implementors/"
+                class="cursor-pointer text-[10px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">View
+                All</a>
+            </div>
 
-          <div class="relative overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead
-                class="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-white/5 dark:text-spes-white/40">
-                <tr>
-                  <th class="px-4 py-3 text-left whitespace-nowrap">ID No.</th>
-                  <th class="px-6 py-3 text-left">Name</th>
-                  <th class="px-6 py-3 text-center">Office</th>
-                  <th class="px-6 py-3 text-center">Role</th>
-                  <th class="px-6 py-3 text-center">Status</th>
-                  <th class="px-6 py-3 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody id="staff-table-body">
-                <!-- Tabular List Skeleton Rows (3 Rows) -->
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="relative overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead
+                  class="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-white/5 dark:text-spes-white/40">
+                  <tr>
+                    <th class="px-4 py-3 text-left whitespace-nowrap">ID No.</th>
+                    <th class="px-6 py-3 text-left">Name</th>
+                    <th class="px-6 py-3 text-center">Office</th>
+                    <th class="px-6 py-3 text-center">Role</th>
+                    <th class="px-6 py-3 text-center">Status</th>
+                    <th class="px-6 py-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="staff-table-body">
+                  <!-- Tabular List Skeleton Rows (3 Rows) -->
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                  </tr>
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                  </tr>
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Toggle Switcher Button -->
+          <div class="absolute bottom-5 right-5">
+            <button id="toggle-to-spes" data-permission="users:view" class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
+              <span>SPES List</span>
+              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L19 10m0 0l-5.5 5.5M19 10H5" /></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Beneficiaries Table (Compact Snapshot) -->
+        <div id="dashboard-beneficiaries-panel" class="lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
+          <div>
+            <div class="mb-4 flex items-center justify-between">
+              <h3
+                class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Recent Beneficiaries/SPES</h3>
+              <a href="../beneficiaries/"
+                class="cursor-pointer text-[10px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">View
+                All</a>
+            </div>
+
+            <div class="relative overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead
+                  class="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-white/5 dark:text-spes-white/40">
+                  <tr>
+                    <th class="px-4 py-3 text-left whitespace-nowrap">ID No.</th>
+                    <th class="px-6 py-3 text-left">Name</th>
+                    <th class="px-6 py-3 class-center text-center">Address</th>
+                    <th class="px-6 py-3 text-center">Period</th>
+                    <th class="px-6 py-3 text-center">Insurance</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-beneficiary-table-body">
+                  <!-- Tabular List Skeleton Rows (3 Rows) -->
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  </tr>
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  </tr>
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
+                    </td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Toggle Switcher Button -->
+          <div class="absolute bottom-5 right-5">
+            <button id="toggle-to-implementors" data-permission="users:view" class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
+              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L5 14m0 0l5.5-5.5M5 14H19" /></svg>
+              <span>Implementors List</span>
+            </button>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- QUICK ACCESS HUB (PARALLELOGRAM QUICK ACCESS) -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <div class="mt-0 lg:mt-8 mb-8 lg:mb-0 transition-all duration-300 order-1 lg:order-3">
+        <h3 class="mb-6 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Quick Access Hub</h3>
+        
+        <!-- Desktop Grid: Skewed Parallelogram Buttons (scale on hover) -->
+        <div class="hidden md:grid grid-cols-6 gap-6 justify-items-center">
+          <!-- Quick Action 1: Add Implementor -->
+          <div class="flex flex-col items-center gap-3" data-permission="users:view">
+            <a href="../implementors/#add" id="quick-add-implementor" class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+            </a>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add Implementor</span>
+          </div>
+          
+          <!-- Quick Action 2: Add Beneficiary -->
+          <div class="flex flex-col items-center gap-3">
+            <a href="../beneficiaries/#add" id="quick-add-beneficiary" class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+            </a>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add Beneficiary</span>
+          </div>
+
+          <!-- Quick Action 3: System Audit (Mock) -->
+          <!-- [LLM/AI TODO: Implement System Audit logic and attach to #quick-audit] -->
+          <div class="flex flex-col items-center gap-3">
+            <button id="quick-audit" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">System Audit</span>
+          </div>
+
+          <!-- Quick Action 4: Export Reports (Mock) -->
+          <!-- [LLM/AI TODO: Implement Export Reports logic and attach to #quick-export] -->
+          <div class="flex flex-col items-center gap-3">
+            <button id="quick-export" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export Reports</span>
+          </div>
+
+          <!-- Quick Action 5: Roles Setup (Mock) -->
+          <!-- [LLM/AI TODO: Implement Roles Setup logic and attach to #quick-roles] -->
+          <div class="flex flex-col items-center gap-3">
+            <button id="quick-roles" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Roles Setup</span>
+          </div>
+
+          <!-- Quick Action 6: Theme Toggle -->
+          <div class="flex flex-col items-center gap-3">
+            <button id="quick-settings" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[15deg]">
+                <!-- Moon Icon (Visible in Light Mode) -->
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <!-- Sun Icon (Visible in Dark Mode) -->
+                <svg class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500 hidden dark:block text-spes-black/50 dark:text-spes-white/50 group-hover:text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </button>
+            <span id="quick-settings-text" class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Dark Mode</span>
+          </div>
+        </div>
+
+        <!-- Mobile Swipeable Horizontal List (Replaces Flowbite Carousel) -->
+        <div class="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-5 pb-4 pt-2 -mx-2 px-2 scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+          <style>
+            .flex::-webkit-scrollbar { display: none; }
+          </style>
+
+          <!-- Quick Action 1: Add Implementor -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20" data-permission="users:view">
+            <a href="../implementors/#add" id="quick-add-implementor-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+            </a>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add Impl</span>
+          </div>
+
+          <!-- Quick Action 2: Add Beneficiary -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
+            <a href="../beneficiaries/#add" id="quick-add-beneficiary-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+            </a>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add Benef</span>
+          </div>
+
+          <!-- Quick Action 3: System Audit -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
+            <button id="quick-audit-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Audit</span>
+          </div>
+
+          <!-- Quick Action 4: Export Reports -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
+            <button id="quick-export-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
+          </div>
+
+          <!-- Quick Action 5: Roles Setup -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
+            <button id="quick-roles-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+              </div>
+            </button>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Roles</span>
+          </div>
+
+          <!-- Quick Action 6: Theme Toggle -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
+            <button id="quick-settings-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[12deg]">
+                <!-- Moon Icon (Visible in Light Mode) -->
+                <svg class="h-6 w-6 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <!-- Sun Icon (Visible in Dark Mode) -->
+                <svg class="h-6 w-6 hidden dark:block text-spes-black/50 dark:text-spes-white/50 group-hover:text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </button>
+            <span id="quick-settings-mob-text" class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Dark Mode</span>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 

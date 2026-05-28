@@ -1,3 +1,27 @@
+/**
+ * SPES Portal — Animations & UI Effects (Unified)
+ * ─────────────────────────────────────────────────────────────
+ * Merged from: animation.js + animations.js
+ *
+ * Exports:
+ *  - applyDrawerAnimationClasses
+ *  - animateMobileSplashVisibility
+ *  - initLandingHeroAnimation
+ *  - initLandingActiveNavHighlight
+ *  - initStickyCardHoverAnimation
+ *  - initGuidedAnchorEffects
+ *  - initDropdownAutoClose
+ *  - initRoutePageLinks
+ *  - applyCarouselSmoothness
+ *  - initQuickAccessCarousel  (dashboard mobile swipe — legacy no-op if removed)
+ *  - initQuickAccessPremiumInteractions
+ */
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 1 — DRAWER & SPLASH ANIMATIONS (from animation.js)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 // --- FUNCTION: APPLY DRAWER + SPLASH ANIMATION CLASSES (START) ---
 export function applyDrawerAnimationClasses(splashElement, drawerElement) {
   if (splashElement) {
@@ -28,6 +52,11 @@ export function animateMobileSplashVisibility(splashElement, shouldShow) {
   }, 320);
 }
 // --- FUNCTION: ANIMATE MOBILE SPLASH VISIBILITY (END) ---
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 2 — LANDING PAGE ANIMATIONS (from animation.js)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // --- FUNCTION: INIT LANDING HERO REVEAL ANIMATION (START) ---
 export function initLandingHeroAnimation() {
@@ -118,6 +147,20 @@ export function initStickyCardHoverAnimation() {
 }
 // --- FUNCTION: INIT STICKY CARD HOVER ANIMATION (END) ---
 
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 3 — GUIDED ANCHOR + DROPDOWN (from animation.js)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function closeAllDropdowns() {
+  const dropdowns = Array.from(document.querySelectorAll("[id$='dropdown'], [id$='Dropdown']"));
+  dropdowns.forEach(dropdown => {
+    if (!dropdown.classList.contains("hidden")) {
+      dropdown.classList.add("hidden");
+    }
+  });
+}
+
 export function initGuidedAnchorEffects() {
   const guidedLinks = Array.from(document.querySelectorAll("[data-guide-link]"));
   const guidedClicks = Array.from(document.querySelectorAll("[data-guide-click]"));
@@ -171,13 +214,11 @@ export function initGuidedAnchorEffects() {
   };
 
   const animateToTarget = (fromX, fromY, targetElement, callback) => {
-    // 1. Initial State
     guideCursor.style.left = `${fromX}px`;
     guideCursor.style.top = `${fromY}px`;
     guideCursor.classList.remove("opacity-0", "duration-500", "scale-90", "scale-110", "scale-150");
     guideCursor.classList.add("opacity-100", "scale-100");
 
-    // 2. Move to Target
     window.requestAnimationFrame(() => {
       const rect = targetElement.getBoundingClientRect();
       const toX = rect.left + rect.width / 2;
@@ -188,26 +229,23 @@ export function initGuidedAnchorEffects() {
       guideCursor.style.top = `${toY}px`;
 
       window.setTimeout(() => {
-        // 3. Perform "Click" Animation
         guideCursor.classList.remove("duration-500");
-        guideCursor.classList.add("duration-150", "scale-90"); // Press down
+        guideCursor.classList.add("duration-150", "scale-90");
 
         window.setTimeout(() => {
           guideCursor.classList.remove("scale-90");
-          guideCursor.classList.add("scale-110"); // Release up
-          
-          // Show indicator
+          guideCursor.classList.add("scale-110");
+
           blinkIndicator.style.left = `${toX}px`;
           blinkIndicator.style.top = `${toY}px`;
           blinkIndicator.classList.remove("opacity-0", "scale-150");
           blinkIndicator.classList.add("opacity-100", "scale-100");
 
           window.setTimeout(() => {
-            // 4. Smooth Exit
             guideCursor.classList.remove("duration-150");
             guideCursor.classList.add("duration-500", "opacity-0", "scale-75");
             blinkIndicator.classList.add("duration-500", "opacity-0", "scale-150");
-            
+
             window.setTimeout(() => {
               guideCursor.classList.remove("scale-75", "opacity-100");
               blinkIndicator.classList.remove("opacity-100", "scale-150");
@@ -223,7 +261,7 @@ export function initGuidedAnchorEffects() {
     link.addEventListener("click", (event) => {
       const href = link.getAttribute("href") || "";
       if (!href.includes("#")) return;
-      
+
       const targetId = href.split("#")[1];
       const target = document.getElementById(targetId) || document.querySelector(`#${targetId}`);
       if (!target) return;
@@ -238,7 +276,6 @@ export function initGuidedAnchorEffects() {
       target.scrollIntoView({ behavior: "smooth", block: "center" });
 
       window.setTimeout(() => {
-        // If it's program-overview, skip the main header click and go straight to cards
         if (targetId === "program-overview") {
           const cards = Array.from(target.querySelectorAll("[data-program-overview-card]"));
           if (cards.length) {
@@ -248,7 +285,7 @@ export function initGuidedAnchorEffects() {
               const card = cards[cardIndex];
               const curX = cardIndex === 0 ? fromX : (parseFloat(guideCursor.style.left) || window.innerWidth / 2);
               const curY = cardIndex === 0 ? fromY : (parseFloat(guideCursor.style.top) || window.innerHeight / 2);
-              
+
               animateToTarget(curX, curY, card, () => {
                 pulseTarget(card);
                 cardIndex++;
@@ -258,7 +295,6 @@ export function initGuidedAnchorEffects() {
             nextCard();
           }
         } else {
-          // Standard behavior for other links
           animateToTarget(fromX, fromY, target, () => {
             pulseTarget(target);
           });
@@ -282,18 +318,9 @@ export function initGuidedAnchorEffects() {
   });
 }
 
-function closeAllDropdowns() {
-  const dropdowns = Array.from(document.querySelectorAll("[id$='dropdown'], [id$='Dropdown']"));
-  dropdowns.forEach(dropdown => {
-    if (!dropdown.classList.contains("hidden")) {
-      dropdown.classList.add("hidden");
-    }
-  });
-}
-
 export function initDropdownAutoClose() {
   const navChoices = Array.from(document.querySelectorAll("#navbar-multi-level-dropdown a, #navbar-multi-level-dropdown button[data-modal-target]"));
-  
+
   navChoices.forEach(choice => {
     choice.addEventListener("click", () => {
       closeAllDropdowns();
@@ -317,7 +344,11 @@ export function initDropdownAutoClose() {
     });
   });
 }
-// --- FUNCTION: INIT GUIDED ANCHOR EFFECTS (END) ---
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 4 — ROUTING & CAROUSEL HELPERS (from animation.js)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // --- FUNCTION: INIT ROUTE PAGE LINKS (START) ---
 export function initRoutePageLinks() {
@@ -334,6 +365,7 @@ export function initRoutePageLinks() {
   });
 }
 // --- FUNCTION: INIT ROUTE PAGE LINKS (END) ---
+
 // --- FUNCTION: APPLY CAROUSEL SMOOTHNESS (START) ---
 export function applyCarouselSmoothness() {
   const items = Array.from(document.querySelectorAll("[data-carousel-item]"));
@@ -342,3 +374,105 @@ export function applyCarouselSmoothness() {
   });
 }
 // --- FUNCTION: APPLY CAROUSEL SMOOTHNESS (END) ---
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 5 — QUICK ACCESS HUB (from animations.js)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// --- FUNCTION: INITIALIZE QUICK ACCESS CAROUSEL (START) ---
+/**
+ * Legacy carousel wrapper. The mobile view now uses native CSS snap scroll,
+ * so this function is kept for backwards compatibility but is essentially a no-op
+ * if the #quick-access-carousel element is absent.
+ */
+export function initQuickAccessCarousel() {
+  const carousel = document.getElementById("quick-access-carousel");
+  if (!carousel) return; // No-op: mobile now uses snap-scroll flex list
+
+  const items = Array.from(carousel.querySelectorAll("[data-carousel-item]"));
+  if (items.length === 0) return;
+
+  let activeIndex = 0;
+
+  const showSlide = (index) => {
+    items.forEach((item, i) => {
+      if (i === index) {
+        item.classList.remove("hidden");
+        item.classList.add("flex");
+      } else {
+        item.classList.add("hidden");
+        item.classList.remove("flex");
+      }
+    });
+  };
+
+  showSlide(activeIndex);
+
+  carousel.querySelector("[data-carousel-prev]")?.addEventListener("click", () => {
+    activeIndex = (activeIndex - 1 + items.length) % items.length;
+    showSlide(activeIndex);
+  });
+
+  carousel.querySelector("[data-carousel-next]")?.addEventListener("click", () => {
+    activeIndex = (activeIndex + 1) % items.length;
+    showSlide(activeIndex);
+  });
+}
+// --- FUNCTION: INITIALIZE QUICK ACCESS CAROUSEL (END) ---
+
+
+// --- FUNCTION: INITIALIZE QUICK ACCESS PREMIUM INTERACTIONS (START) ---
+/**
+ * Attaches a premium particle blast and smooth hover scaling to Quick Access buttons.
+ */
+export function initQuickAccessPremiumInteractions() {
+  const buttons = document.querySelectorAll(
+    "#quick-add-implementor, #quick-add-beneficiary, #quick-add-implementor-mob, #quick-add-beneficiary-mob"
+  );
+
+  buttons.forEach(button => {
+    const wrapper = button.parentElement;
+    if (wrapper) wrapper.style.position = "relative";
+
+    button.addEventListener("click", (e) => {
+      createPremiumParticles(e, button);
+    });
+  });
+}
+
+function createPremiumParticles(event, element) {
+  const particleContainer = document.createElement("div");
+  particleContainer.style.cssText = "position:absolute;pointer-events:none;top:0;left:0;width:100%;height:100%;z-index:999;";
+  element.appendChild(particleContainer);
+
+  const colors = ["#0038A8", "#FCD116", "#10B981", "#3B82F6"]; // Brand colors
+
+  for (let i = 0; i < 12; i++) {
+    const particle = document.createElement("div");
+    particle.style.cssText = `
+      position:absolute;
+      width:${Math.random() * 4 + 3}px;
+      height:${Math.random() * 4 + 3}px;
+      border-radius:50%;
+      background-color:${colors[Math.floor(Math.random() * colors.length)]};
+      top:50%;left:50%;
+      transform:translate(-50%,-50%);
+      transition:all 0.6s cubic-bezier(0.1,0.8,0.3,1);
+    `;
+    particleContainer.appendChild(particle);
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * 40 + 20;
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    requestAnimationFrame(() => {
+      particle.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(0)`;
+      particle.style.opacity = "0";
+    });
+  }
+
+  setTimeout(() => particleContainer.remove(), 700);
+}
+// --- FUNCTION: INITIALIZE QUICK ACCESS PREMIUM INTERACTIONS (END) ---

@@ -1,7 +1,7 @@
 // --- FUNCTION: INITIALIZE DARK MODE TOGGLE (START) ---
 export function initThemeToggle() {
   const root = document.documentElement;
-  const toggleButtons = Array.from(document.querySelectorAll("#theme-toggle, #theme-toggle-mobile"));
+  const toggleButtons = Array.from(document.querySelectorAll("#theme-toggle, #theme-toggle-mobile, #quick-settings, #quick-settings-mob"));
   const darkIcon = document.getElementById("theme-toggle-dark-icon");
   const lightIcon = document.getElementById("theme-toggle-light-icon");
 
@@ -14,6 +14,14 @@ export function initThemeToggle() {
     const isDark = root.classList.contains("dark");
     darkIcon?.classList.toggle("hidden", isDark);
     lightIcon?.classList.toggle("hidden", !isDark);
+
+    // Dynamic text for Quick Access Theme Toggles
+    const txtEls = document.querySelectorAll("#quick-settings-text, #quick-settings-mob-text");
+    txtEls.forEach(el => {
+      el.textContent = el.id.includes("mob") 
+        ? (isDark ? "Light" : "Dark") 
+        : (isDark ? "Light Mode" : "Dark Mode");
+    });
   };
 
   updateIcons();

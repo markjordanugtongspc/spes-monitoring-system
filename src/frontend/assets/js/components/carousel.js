@@ -1,5 +1,5 @@
 import { Carousel } from "flowbite";
-import { applyCarouselSmoothness } from "./animation";
+import { applyCarouselSmoothness } from "./animations";
 
 
 /**

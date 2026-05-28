@@ -11,6 +11,7 @@ import { initScopedTextPlaceholders } from "./components/content-placeholders";
 import { initLoginCarousel } from "./components/carousel";
 import { initLoginHandler } from "./components/login-handler";
 import { initBeneficiaries } from "./components/beneficiaries";
+import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations";
 
 
 
@@ -43,6 +44,9 @@ function initLogoSwap() {
 }
 // --- FUNCTION: SWAP BRANDING FLAT ICONS (END) ---
 
+import { supabase } from "../../../backend/api/supabase.js";
+import Swal from "sweetalert2";
+
 initThemeToggle();
 initAppVersionLabel();
 initLogoSwap();
@@ -54,4 +58,52 @@ initScopedTextPlaceholders();
 initLoginCarousel();
 initLoginHandler();
 initBeneficiaries();
+initQuickAccessCarousel();
+initQuickAccessPremiumInteractions();
+
+// ── Supabase Realtime Permissions Listener ────────────────────────
+function setupRealtimePermissionsListener() {
+  const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  if (!session || !session.role_id) return;
+
+  supabase
+    .channel("global-main-permissions-channel")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "permissions",
+        filter: `role_id=eq.${session.role_id}`
+      },
+      async (payload) => {
+        // Refresh local cache and localStorage
+        const { fetchRolePermissions } = await import("../../../backend/api/permissions.js");
+        const { data: freshPerms } = await fetchRolePermissions(session.role_id, { forceRefresh: true });
+        if (freshPerms) {
+          session.permissions = freshPerms;
+          localStorage.setItem("spes_session", JSON.stringify(session));
+          
+          Swal.fire({
+            title: "Permissions Updated",
+            text: "Your access permissions have been updated in real-time. Reloading the page...",
+            icon: "info",
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            customClass: {
+              popup: "rounded-2xl border-none shadow-2xl"
+            },
+            background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
+            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
+          }).then(() => {
+            window.location.reload();
+          });
+        }
+      }
+    )
+    .subscribe();
+}
+
+setupRealtimePermissionsListener();
 

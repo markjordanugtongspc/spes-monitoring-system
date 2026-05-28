@@ -2,7 +2,12 @@
  * SPES Portal — RBAC DOM Guard
  * ─────────────────────────────
  * Scans the page for elements with `data-permission` attributes
- * and removes / disables them based on the current user's role.
+ * and removes / disables / hides them based on the current user's role.
+ *
+ * Permission resolution order:
+ *   1. Admin role → always granted (static RBAC)
+ *   2. DB permissions (stored in session.permissions) → checked for officer
+ *   3. Static RBAC config → fallback
  *
  * Usage in HTML:
  *   <div data-permission="users:edit">Edit button here</div>
@@ -16,6 +21,44 @@
 import { canDo } from "./config.js";
 import { modals } from "../components/modals.js";
 
+// Map permission strings used in HTML → DB column names in session.permissions
+const DB_PERM_MAP = {
+  "users:view":    (p) => p.view_users,
+  "users:create":  (p) => p.create_users,
+  "users:manage":  (p) => p.create_users || p.edit_users,
+  "users:edit":    (p) => p.edit_users,
+  "users:delete":  (p) => p.delete_users,
+  "reports:export":(p) => p.export_reports,
+  "reports:view":  (p) => p.view_users || p.export_reports,
+  "beneficiaries:view": () => true,  // officers can always view beneficiaries
+};
+
+/**
+ * Check whether the session's DB permissions cover a given permission string.
+ * Returns `null` if the permission isn't mapped to a DB column (fall back to RBAC).
+ */
+function _checkDbPermission(dbPerms, permission) {
+  if (!dbPerms || !(permission in DB_PERM_MAP)) return null;
+  return Boolean(DB_PERM_MAP[permission](dbPerms));
+}
+
+/**
+ * Resolve whether the current user has a given permission.
+ * Admins always win via static RBAC.
+ * Officers/students use DB permissions first, then static RBAC.
+ */
+async function _hasPermission(userRole, permission, session) {
+  // Admin is fully handled by the static RBAC which grants everything
+  if (userRole === "admin") return true;
+
+  // Check DB-stored permissions for officer / student
+  const dbResult = _checkDbPermission(session?.permissions, permission);
+  if (dbResult !== null) return dbResult;
+
+  // Fallback to static RBAC config
+  return canDo(userRole, permission);
+}
+
 /**
  * Apply RBAC permissions to the DOM.
  * Call once after page load with the authenticated user's role.
@@ -23,20 +66,19 @@ import { modals } from "../components/modals.js";
  * @param {string} userRole – "admin" | "officer" | "student"
  */
 export async function applyPermissions(userRole) {
+  const session = getSession();
   const els = document.querySelectorAll("[data-permission]");
 
   for (const el of els) {
     const permission = el.getAttribute("data-permission");
     const mode = el.getAttribute("data-permission-mode") || "remove";
-    const allowed = await canDo(userRole, permission);
+    const allowed = await _hasPermission(userRole, permission, session);
 
     if (allowed) {
-      // Make sure element is visible
       el.classList.remove("hidden");
       continue;
     }
 
-    // Not allowed — apply restriction
     switch (mode) {
       case "disable":
         el.classList.add("pointer-events-none", "opacity-40");
@@ -57,7 +99,7 @@ export async function applyPermissions(userRole) {
 
 /**
  * Get stored session from localStorage.
- * @returns {{ id: string, role: string, full_name: string, email: string } | null}
+ * @returns {{ id, role, role_id, full_name, email, permissions } | null}
  */
 export function getSession() {
   try {
@@ -82,7 +124,7 @@ export function requireAuth() {
 }
 
 /**
- * Sign out — clear session and redirect to login.
+ * Sign out — clear session and all caches, redirect to login.
  */
 export function signOut() {
   modals.confirm(
@@ -94,6 +136,7 @@ export function signOut() {
     if (result.isConfirmed) {
       localStorage.removeItem("spes_session");
       localStorage.removeItem("spes_supabase_token");
+      sessionStorage.clear();
       window.location.href = "/src/frontend/login/";
     }
   });

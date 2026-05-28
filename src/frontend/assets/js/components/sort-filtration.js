@@ -9,17 +9,27 @@ export function setupSortFiltration({
   btnFilterId,
   dropdownFilterId,
   originalData,
+  defaultFilters = {},
   onRender
 }) {
   let activeSort = "none";
-  let activeFilters = {};
+  // Merge caller-supplied defaults (e.g. { archiveStatus: "active" } for implementors,
+  // or { status: "active" } for beneficiaries) so archived rows are hidden by default.
+  let activeFilters = { ...defaultFilters };
 
-  const btnSort = document.getElementById(btnSortId);
-  const dropdownSort = document.getElementById(dropdownSortId);
-  const btnFilter = document.getElementById(btnFilterId);
+  const btnSort        = document.getElementById(btnSortId);
+  const dropdownSort   = document.getElementById(dropdownSortId);
+  const btnFilter      = document.getElementById(btnFilterId);
   const dropdownFilter = document.getElementById(dropdownFilterId);
 
   if (!btnSort || !dropdownSort || !btnFilter || !dropdownFilter) return;
+
+  // ── Highlight default filter options on first load ──────────
+  Object.keys(activeFilters).forEach(key => {
+    const val   = activeFilters[key];
+    const match = dropdownFilter.querySelector(`[data-filter-key="${key}"][data-filter-val="${val}"]`);
+    if (match) match.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+  });
 
   // Toggle dropdowns on click
   btnSort.addEventListener("click", (e) => {
@@ -48,7 +58,7 @@ export function setupSortFiltration({
   sortOptions.forEach(opt => {
     opt.addEventListener("click", () => {
       activeSort = opt.getAttribute("data-sort-val");
-      
+
       // Update checkmarks/active classes
       sortOptions.forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
       opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
@@ -100,14 +110,34 @@ export function setupSortFiltration({
     // 1. Apply Filtering
     Object.keys(activeFilters).forEach(key => {
       const activeValue = activeFilters[key].toLowerCase();
+
       if (key === "search") {
         processed = processed.filter(item => {
-          const nameVal = (item.name || item.full_name || "").toLowerCase();
-          const emailVal = (item.email || "").toLowerCase();
+          const nameVal   = (item.name || item.full_name || "").toLowerCase();
+          const emailVal  = (item.email || "").toLowerCase();
           const officeVal = (item.office || "").toLowerCase();
-          const addrVal = (item.address || "").toLowerCase();
-          return nameVal.includes(activeValue) || emailVal.includes(activeValue) || officeVal.includes(activeValue) || addrVal.includes(activeValue);
+          const addrVal   = (item.address || "").toLowerCase();
+          return (
+            nameVal.includes(activeValue) ||
+            emailVal.includes(activeValue) ||
+            officeVal.includes(activeValue) ||
+            addrVal.includes(activeValue)
+          );
         });
+      } else if (key === "status") {
+        // Beneficiaries — uses `archived_at` (with 'd')
+        if (activeValue === "active") {
+          processed = processed.filter(item => !item.archived_at);
+        } else if (activeValue === "archived") {
+          processed = processed.filter(item => !!item.archived_at);
+        }
+      } else if (key === "archiveStatus") {
+        // Implementors — uses `archive_at` (no 'd')
+        if (activeValue === "active") {
+          processed = processed.filter(item => !item.archive_at);
+        } else if (activeValue === "archived") {
+          processed = processed.filter(item => !!item.archive_at);
+        }
       } else {
         processed = processed.filter(item => {
           const itemVal = (item[key] || "").toString().toLowerCase();

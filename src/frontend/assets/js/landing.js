@@ -7,7 +7,7 @@ import {
   initLandingActiveNavHighlight,
   initLandingHeroAnimation,
   initStickyCardHoverAnimation
-} from "./components/animation";
+} from "./components/animations";
 import { initScopedTextPlaceholders } from "./components/content-placeholders";
 import { initLandingVideoPlayer } from "./components/video-player";
 import { initProgramOverviewCards } from "./components/program-overview-cards";

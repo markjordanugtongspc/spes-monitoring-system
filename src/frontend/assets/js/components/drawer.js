@@ -2,7 +2,7 @@ import { Drawer } from "flowbite";
 import {
   animateMobileSplashVisibility,
   applyDrawerAnimationClasses
-} from "./animation";
+} from "./animations";
 
 // --- FUNCTION: MOBILE SPLASH + FLOWBITE DRAWER BRIDGE (START) ---
 export function initMobileSplashDrawer() {
@@ -186,16 +186,18 @@ export function initImplementorsDrawer() {
     document.getElementById("drawer-impl-name").textContent = implementorData.full_name || "Unknown";
     document.getElementById("drawer-impl-role").textContent = implementorData.role || "N/A";
     document.getElementById("drawer-impl-id").textContent = implementorData.id ? `DOLE-${implementorData.id.toString().padStart(4, '0')}` : "---";
-    document.getElementById("drawer-impl-office").textContent = implementorData.office || "---";
+    const officeStr = implementorData.office || "---";
+    document.getElementById("drawer-impl-office").innerHTML = `<span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${officeStr}</span>`;
+    document.getElementById("drawer-impl-office-location").textContent = implementorData.office_location || "—";
     document.getElementById("drawer-impl-email").textContent = implementorData.email || "---";
     
-    // New Fields (Using mock defaults since dashboard.js mock data doesn't have them all)
-    document.getElementById("drawer-impl-address").textContent = implementorData.address || "Cagayan de Oro City, Misamis Oriental";
-    document.getElementById("drawer-impl-religion").textContent = implementorData.religion || "Roman Catholic";
-    document.getElementById("drawer-impl-language").textContent = implementorData.language || "English, Cebuano, Tagalog";
-    document.getElementById("drawer-impl-blood").textContent = implementorData.blood_type || "O+";
-    document.getElementById("drawer-impl-phone").textContent = implementorData.phone || "+63 917 123 4567";
-    document.getElementById("drawer-impl-notes").textContent = implementorData.notes || "No recent notes or activities recorded for this implementor.";
+    document.getElementById("drawer-impl-address").textContent = implementorData.address || "—";
+    document.getElementById("drawer-impl-religion").textContent = implementorData.religion || "—";
+    document.getElementById("drawer-impl-language").textContent = implementorData.language || "—";
+    document.getElementById("drawer-impl-blood").textContent = implementorData.blood_type || "—";
+    document.getElementById("drawer-impl-phone").textContent = implementorData.phone || "—";
+    const notesEl = document.getElementById("drawer-impl-notes");
+    if (notesEl) notesEl.closest(".space-y-6") && (notesEl.textContent = "—");
 
     // Dynamic Status Badge (Dot Only)
     const statusText = (implementorData.status || "offline").toUpperCase();
@@ -231,3 +233,204 @@ export function initImplementorsDrawer() {
   window.openImplementorDrawer = openDrawer;
 }
 // --- END COMMENT SEPARATOR: EXCLUSIVE IMPLEMENTORS DRAWER LOGIC ---
+
+// --- ADD IMPLEMENTOR BOTTOM OFFCANVAS DRAWER ---
+export function initAddImplementorDrawer({ onSuccess } = {}) {
+  const overlay = document.getElementById("drawer-add-impl-overlay");
+  const drawerEl = document.getElementById("drawer-add-implementor");
+  const form = document.getElementById("form-add-implementor");
+  const errorBanner = document.getElementById("aif-error");
+  const cancelBtn = document.getElementById("btn-cancel-add-impl");
+  const closeBtn = document.getElementById("btn-close-add-impl-drawer");
+  const submitBtn = document.getElementById("btn-submit-add-impl");
+
+  if (!drawerEl || !overlay || !form) return { open: () => {}, close: () => {} };
+
+  let _addStaff, _fetchOffices, _fetchRoles;
+  let currentEditId = null;
+  let _updateStaff;
+
+  const _loadApis = async () => {
+    if (_addStaff) return;
+    const mod = await import("../../../../backend/api/staff.js");
+    _addStaff = mod.addStaff;
+    _updateStaff = mod.updateStaff;
+    _fetchOffices = mod.fetchOffices;
+    _fetchRoles = mod.fetchRoles;
+  };
+
+  const _showError = (msg) => {
+    errorBanner.textContent = msg;
+    errorBanner.classList.remove("hidden");
+  };
+
+  const _hideError = () => {
+    errorBanner.textContent = "";
+    errorBanner.classList.add("hidden");
+  };
+
+  const _setLoading = (loading) => {
+    submitBtn.disabled = loading;
+    submitBtn.innerHTML = loading
+      ? `<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Saving…`
+      : (currentEditId ? `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Update Implementor` : `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`);
+  };
+
+  const _populateDropdowns = async () => {
+    await _loadApis();
+    const officeSelect = document.getElementById("aif-office");
+    const roleSelect = document.getElementById("aif-role");
+
+    const [officesResult, rolesResult] = await Promise.all([
+      _fetchOffices({ forceRefresh: true }),
+      _fetchRoles({ forceRefresh: true }),
+    ]);
+
+    officeSelect.innerHTML = `<option value="">— Select Office —</option>`;
+    (officesResult.data ?? []).forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = o.name;
+      officeSelect.appendChild(opt);
+    });
+
+    roleSelect.innerHTML = `<option value="">— Select Role —</option>`;
+    (rolesResult.data ?? []).forEach((r) => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = r.name;
+      roleSelect.appendChild(opt);
+    });
+  };
+
+  const _isMobile = () => window.innerWidth < 640;
+
+  const openDrawer = async (staffData = null) => {
+    form.reset();
+    _hideError();
+    _setLoading(false);
+    await _populateDropdowns();
+
+    const titleEl = document.getElementById("drawer-add-impl-title");
+    const descEl = titleEl.nextElementSibling;
+    const pwdLabel = document.querySelector('label[for="aif-password"]');
+    const confirmPwdLabel = document.querySelector('label[for="aif-confirm-password"]');
+
+    if (staffData) {
+      currentEditId = staffData.id;
+      titleEl.textContent = "Edit Implementor";
+      descEl.textContent = "Update the details for this staff account.";
+      submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Update Implementor`;
+      pwdLabel.innerHTML = `New Password <span class="text-[10px] font-normal lowercase tracking-normal opacity-70">(leave blank to keep)</span>`;
+      confirmPwdLabel.innerHTML = `Confirm New Password <span class="text-[10px] font-normal lowercase tracking-normal opacity-70">(leave blank to keep)</span>`;
+
+      document.getElementById("aif-full-name").value = staffData.full_name || "";
+      document.getElementById("aif-username").value = staffData.username || "";
+      document.getElementById("aif-email").value = staffData.email || "";
+      document.getElementById("aif-office").value = staffData.office_id || "";
+      document.getElementById("aif-role").value = staffData.role_id || "";
+      document.getElementById("aif-address").value = staffData.address || "";
+      document.getElementById("aif-religion").value = staffData.religion || "";
+      document.getElementById("aif-language").value = staffData.language || "";
+      document.getElementById("aif-blood-type").value = staffData.blood_type || "";
+      document.getElementById("aif-phone").value = staffData.phone || "";
+    } else {
+      currentEditId = null;
+      titleEl.textContent = "Add Implementor";
+      descEl.textContent = "Fill in the details to create a new staff account.";
+      submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`;
+      pwdLabel.innerHTML = `Password <span class="text-red-500">*</span>`;
+      confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
+    }
+
+    drawerEl.setAttribute("aria-hidden", "false");
+    overlay.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      overlay.classList.remove("opacity-0");
+      overlay.classList.add("opacity-100");
+      if (_isMobile()) {
+        drawerEl.classList.remove("translate-y-full");
+        drawerEl.classList.add("translate-y-0");
+      } else {
+        drawerEl.classList.remove("sm:translate-x-full");
+        drawerEl.classList.add("sm:translate-x-0");
+      }
+    });
+    document.body.classList.add("overflow-hidden");
+  };
+
+  const closeDrawer = () => {
+    drawerEl.setAttribute("aria-hidden", "true");
+    if (_isMobile()) {
+      drawerEl.classList.remove("translate-y-0");
+      drawerEl.classList.add("translate-y-full");
+    } else {
+      drawerEl.classList.remove("sm:translate-x-0");
+      drawerEl.classList.add("sm:translate-x-full");
+    }
+    overlay.classList.remove("opacity-100");
+    overlay.classList.add("opacity-0");
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    }, 300);
+  };
+
+  cancelBtn?.addEventListener("click", closeDrawer);
+  closeBtn?.addEventListener("click", closeDrawer);
+  overlay.addEventListener("click", closeDrawer);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    _hideError();
+
+    const pwd = document.getElementById("aif-password").value;
+    const confirmPwd = document.getElementById("aif-confirm-password").value;
+
+    if (!currentEditId && !pwd) return _showError("Password is required.");
+    if (pwd !== confirmPwd) return _showError("Passwords do not match.");
+
+    const payload = {
+      full_name:  document.getElementById("aif-full-name").value.trim(),
+      username:   document.getElementById("aif-username").value.trim(),
+      email:      document.getElementById("aif-email").value.trim() || null,
+      office_id:  document.getElementById("aif-office").value || null,
+      role_id:    document.getElementById("aif-role").value || null,
+      address:    document.getElementById("aif-address").value.trim() || null,
+      religion:   document.getElementById("aif-religion").value.trim() || null,
+      language:   document.getElementById("aif-language").value.trim() || null,
+      blood_type: document.getElementById("aif-blood-type").value || null,
+      phone:      document.getElementById("aif-phone").value.trim() || null,
+    };
+    
+    if (pwd) {
+      payload.password = pwd;
+    }
+
+    if (!payload.full_name) return _showError("Full name is required.");
+    if (!payload.username) return _showError("Username is required.");
+    if (!payload.office_id) return _showError("Please select an office.");
+    if (!payload.role_id) return _showError("Please select a role.");
+
+    _setLoading(true);
+    await _loadApis();
+    
+    let result;
+    if (currentEditId) {
+      result = await _updateStaff(currentEditId, payload);
+    } else {
+      payload.status = "OFFLINE";
+      result = await _addStaff(payload);
+    }
+    
+    _setLoading(false);
+
+    if (!result.success) return _showError(result.error ?? (currentEditId ? "Failed to update implementor." : "Failed to add implementor."));
+
+    closeDrawer();
+    if (typeof onSuccess === "function") onSuccess(result.data);
+  });
+
+  return { open: openDrawer, close: closeDrawer };
+}
+// --- END: ADD IMPLEMENTOR BOTTOM OFFCANVAS DRAWER ---
