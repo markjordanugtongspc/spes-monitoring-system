@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roles & Permissions | SPES Portal</title>
+  <link rel="icon" type="image/png" href="../../assets/img/logos/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-spes-white font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- SPES:SIDEBAR -->
+
+  <main class="min-h-screen transition-all duration-300 sm:ml-64">
+    <!-- Top Enterprise Banner -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+      <!-- Background Image Layer -->
+      <div
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+      </div>
+      <!-- Primary Color Overlay (Reduced Opacity) -->
+      <div
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
+      </div>
+
+      <div class="relative z-30 mx-auto max-w-7xl">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="font-montserrat text-3xl font-black text-spes-white">Role & Permissions</h1>
+            <p class="mt-1 text-sm text-spes-white/70">Manage and dynamically adjust system access rights for all roles.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button data-permission="users:manage"
+              class="hidden cursor-pointer inline-flex items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Custom Role
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="mx-auto -mt-16 max-w-7xl px-6 pb-12 relative z-20">
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- PERMISSIONS MANAGER DIRECTORY TABLE -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <section
+        class="relative overflow-x-auto rounded-xl border border-spes-blue/10 bg-spes-white shadow-sm dark:border-spes-white/10 dark:bg-spes-dark-primary">
+        <div class="inline-block min-w-full align-middle">
+          <div class="overflow-hidden">
+            <!-- Table Header Bar (Premium Gradient) -->
+            <div
+              class="relative z-50 flex flex-col items-start justify-between gap-4 bg-gradient-to-r from-spes-blue to-[#002878] p-4 sm:flex-row sm:items-center border-b border-white/10 rounded-t-xl">
+              <!-- Action Dropdown (admin only) -->
+              <div data-permission="users:manage" class="hidden">
+                <button id="staff-action-dropdown-btn" data-dropdown-toggle="staff-action-dropdown"
+                  class="cursor-pointer inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
+                  type="button">
+                  Action
+                  <svg class="ms-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
+                  </svg>
+                </button>
+                <div id="staff-action-dropdown"
+                  class="z-50 hidden w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
+                    <li><a id="btn-bulk-grant" href="#"
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
+                        All (Selected)</a></li>
+                    <li><a id="btn-bulk-revoke" href="#"
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 text-spes-red/80 hover:bg-spes-red/8 hover:text-spes-red">Revoke
+                        All (Selected)</a></li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Search -->
+              <div class="relative w-full sm:max-w-xs">
+                <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
+                  <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-width="2"
+                      d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                  </svg>
+                </div>
+                <input type="text" id="staff-search-input"
+                  class="block w-full rounded-lg border border-white/20 bg-white/10 py-2 pe-3 ps-9 text-sm text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
+                  placeholder="Search role..." />
+              </div>
+            </div>
+
+            <!-- Table -->
+            <table class="w-full text-sm text-spes-black/70 dark:text-spes-white/70">
+              <thead
+                class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
+                <tr>
+                  <th scope="col" class="p-4 text-center w-4">
+                    <div class="flex items-center justify-center">
+                      <input id="staff-checkbox-all" type="checkbox"
+                        class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                    </div>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left">ID No.</th>
+                  <th scope="col" class="px-6 py-3 text-left">Name</th>
+                  <th scope="col" class="px-6 py-3 text-center">Office</th>
+                  <th scope="col" class="px-6 py-3 text-center">View Users</th>
+                  <th scope="col" class="px-6 py-3 text-center">Create Users</th>
+                  <th scope="col" class="px-6 py-3 text-center">Edit Users</th>
+                  <th scope="col" class="px-6 py-3 text-center">Delete Users</th>
+                  <th scope="col" class="px-6 py-3 text-center">Export Reports</th>
+                  <th scope="col" class="px-6 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="staff-table-body">
+                <!-- Tabular List Skeleton Rows (5 Rows) -->
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-24"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-28 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-30 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-24"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-26 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-36"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <nav class="flex flex-col items-center justify-between gap-3 p-4 sm:flex-row" aria-label="Table navigation">
+              <span class="text-sm text-spes-black/60 dark:text-spes-white/60">
+                Showing <span id="pagination-range"
+                  class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
+                  class="font-semibold text-spes-black dark:text-spes-white">0</span>
+              </span>
+              <ul id="pagination-controls" class="flex -space-x-px text-sm">
+                <li><button
+                    class="cursor-pointer rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
+                </li>
+                <li><button
+                    class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-3 py-2 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
+                </li>
+                <li><button
+                    class="cursor-pointer rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="../../assets/js/dashboard.js"></script>
+</body>
+
+</html>

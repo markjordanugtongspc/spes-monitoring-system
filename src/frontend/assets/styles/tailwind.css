@@ -21,3 +21,29 @@
   --color-spes-dark-primary: #243447;
   --color-spes-dark-secondary: #141D26;
 }
+
+/* ── DASHBOARD: STICKY NOTE EFFECT (START) ── */
+.sticky-corner {
+  position: relative;
+  overflow: hidden;
+}
+.sticky-corner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent transparent rgba(0,0,0,0.1) transparent;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+.dark .sticky-corner::after {
+  border-color: transparent transparent rgba(255,255,255,0.1) transparent;
+}
+.sticky-corner:hover::after {
+  border-width: 0 24px 24px 0;
+}
+/* ── DASHBOARD: STICKY NOTE EFFECT (END) ── */

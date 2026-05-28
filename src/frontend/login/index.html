@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPES Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="min-h-screen bg-spes-white font-poppins text-spes-black antialiased dark:bg-spes-dark-secondary dark:text-spes-white">
+  <main class="grid min-h-screen grid-cols-2 max-lg:grid-cols-1">
+    <section class="relative flex items-center justify-center bg-spes-blue max-lg:hidden overflow-hidden">
+      <!-- Flowbite Carousel -->
+      <div id="login-carousel" class="absolute inset-0 z-0 h-full w-full" data-carousel="slide">
+        <!-- Carousel wrapper -->
+        <div class="relative h-full overflow-hidden">
+          <!-- Item 1 (First - Longer Duration) -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="0">
+            <img src="../assets/img/slide/first.jpg" class="absolute block h-full w-full object-cover" alt="Slide 1">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="1">
+            <img src="../assets/img/slide/2.jpg" class="absolute block h-full w-full object-cover" alt="Slide 2">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="2">
+            <img src="../assets/img/slide/3.jpg" class="absolute block h-full w-full object-cover" alt="Slide 3">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 4 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="3">
+            <img src="../assets/img/slide/4.jpg" class="absolute block h-full w-full object-cover" alt="Slide 4">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 5 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="4">
+            <img src="../assets/img/slide/5.jpg" class="absolute block h-full w-full object-cover" alt="Slide 4">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 6 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="5">
+            <img src="../assets/img/slide/6.jpg" class="absolute block h-full w-full object-cover" alt="Slide 4">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+          <!-- Item 7 -->
+          <div class="hidden duration-1000 ease-in-out" data-carousel-item="6">
+            <img src="../assets/img/slide/7.jpg" class="absolute block h-full w-full object-cover" alt="Slide 4">
+            <div class="absolute inset-0 bg-spes-blue/45 mix-blend-multiply"></div>
+            <div class="absolute inset-0 bg-linear-to-b from-spes-dark-blue/40 via-transparent to-spes-dark-blue/40">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- App Version (Bottom Left) -->
+      <p id="app-version"
+        class="absolute bottom-6 left-8 z-20 text-[11px] font-bold tabular-nums text-spes-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] tracking-widest">
+      </p>
+
+
+
+      <!-- Overlay Content -->
+
+      <!-- Section Background Fade Overlay -->
+      <div class="absolute inset-0 z-5 bg-linear-to-b from-spes-black/60 via-spes-black/20 to-spes-black/60"></div>
+
+      <!-- Overlay Content -->
+      <div class="relative z-10 flex w-full max-w-lg flex-col items-center text-center px-10">
+        <img id="spes-logo" src="../assets/img/logos/c_spes.png" alt="SPES logo" data-flat-icon
+          class="js-swappable-logo h-40 w-40 rounded-full border-4 border-spes-white/80 object-cover shadow-2xl transition-transform hover:scale-105 cursor-pointer max-lg:h-28 max-lg:w-28" />
+        <h1
+          class="mt-8 text-4xl font-extrabold tracking-wide text-spes-white drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)] max-lg:text-2xl">
+          DOLE SPES PORTAL
+        </h1>
+        <p
+          class="mt-3 text-sm font-semibold tracking-[0.28em] text-spes-yellow drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] max-lg:tracking-[0.2em]">
+          SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS
+        </p>
+      </div>
+
+
+    </section>
+
+    <section
+      class="relative flex min-h-screen items-start justify-center bg-spes-white px-14 pb-14 pt-6 dark:bg-spes-dark-secondary max-lg:px-6">
+      <a href="/" title="Back to home"
+        class="cursor-pointer absolute right-6 top-6 inline-flex items-center gap-2 rounded-full border border-spes-blue/35 bg-transparent px-3.5 py-2 text-sm font-semibold text-spes-blue shadow-none transition-colors hover:border-spes-blue hover:text-spes-dark-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-spes-blue/40 dark:border-spes-white/30 dark:text-spes-yellow dark:hover:border-spes-yellow dark:hover:text-spes-yellow">
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M10 20v-6h4v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round" />
+          <path d="M4 11.5 12 5l8 6.5V20a1.5 1.5 0 0 1-1.5 1.5H5.5A1.5 1.5 0 0 1 4 20v-8.5Z" stroke="currentColor"
+            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Home
+      </a>
+      <div class="flex h-full w-full max-w-2xl flex-col">
+        <div class="mb-7 pt-1">
+          <div class="flex items-center gap-3 pr-14 max-lg:pr-0">
+            <img src="../assets/img/logos/bph.png" alt="Bagong Pilipinas logo"
+              class="h-8 w-8 shrink-0 overflow-hidden rounded-full object-cover ring-2 ring-spes-blue/15 dark:ring-spes-white/20" />
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-spes-blue dark:text-spes-yellow">DOLE
+              REGION X</p>
+          </div>
+        </div>
+
+        <div class="flex flex-1 flex-col justify-start pt-16">
+          <h1
+            class="mt-2 text-start text-4xl font-montserrat font-extrabold text-spes-black dark:text-spes-white max-lg:text-3xl">
+            Welcome Back</h1>
+
+          <div data-text-placeholder-root data-text-placeholder-scope="login" class="mt-2 max-w-2xl">
+            <div data-text-placeholder-skeleton role="status" class="max-w-2xl animate-pulse space-y-2">
+              <div class="h-2.5 w-full rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+              <div class="h-2.5 max-w-[96%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+              <div class="h-2.5 max-w-[88%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+              <div class="h-2.5 max-w-[72%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div data-text-placeholder-content class="hidden">
+              <p class="text-start text-xs text-gray-500 dark:text-spes-white/70">
+                Sign in to track your daily attendance and program progression, or access the dashboard to oversee users
+                and system logs.
+              </p>
+            </div>
+          </div>
+          <form class="mt-6 space-y-6">
+            <div>
+              <label for="username"
+                class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Username</label>
+              <input id="username" type="text" placeholder="Enter your username"
+                class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60" />
+            </div>
+            <div class="relative">
+              <label for="password"
+                class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Password</label>
+              <input id="password" type="password" placeholder="Enter your password" autocomplete="current-password"
+                class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 pr-11 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60" />
+              <button id="toggle-password-button" type="button"
+                class="cursor-pointer absolute right-3 top-10 inline-flex items-center justify-center text-spes-blue/75 hover:text-spes-blue dark:text-spes-white/80 dark:hover:text-spes-yellow"
+                aria-label="Toggle password visibility">
+                <svg id="password-eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" />
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
+                </svg>
+                <svg id="password-eye-closed" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" />
+                  <path d="M10.58 10.58a2 2 0 1 0 2.83 2.83" stroke="currentColor" stroke-width="1.8" />
+                  <path
+                    d="M6.71 6.71C4.65 8.06 3.3 10 2 12c0 0 3.5 6 10 6 2.1 0 3.93-.62 5.47-1.56M9.88 4.22C10.57 4.08 11.27 4 12 4c6.5 0 10 6 10 6a17.52 17.52 0 0 1-2.37 3.26"
+                    stroke="currentColor" stroke-width="1.8" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <label for="remember-me"
+                class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-spes-black hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow">
+                <input id="remember-me" type="checkbox" value=""
+                  class="remember-me-checkbox cursor-pointer h-4 w-4 shrink-0 rounded-none border-2 border-spes-blue bg-spes-white text-spes-blue accent-spes-blue focus:ring-2 focus:ring-spes-blue/40 focus:ring-offset-0 dark:border-spes-white/70 dark:bg-spes-black dark:accent-spes-yellow dark:focus:ring-spes-yellow/35" />
+                Remember me
+              </label>
+              <a href="#"
+                class="cursor-pointer text-right text-sm font-semibold whitespace-nowrap text-spes-blue hover:underline dark:text-spes-yellow">Forgot
+                password?</a>
+
+            </div>
+
+            <button id="sign-in-button" type="button"
+              class="cursor-pointer mt-2 w-full rounded-xl bg-spes-blue px-5 py-3 text-sm font-extrabold uppercase tracking-[0.2em] text-spes-white shadow-lg ring-0 transition-all hover:bg-spes-blue/85 focus:outline-none focus:ring-4 focus:ring-spes-blue/35 dark:bg-spes-dark-primary dark:text-spes-white dark:hover:bg-spes-white/20 dark:hover:ring-2 dark:hover:ring-spes-white/35">
+              Sign In
+            </button>
+
+            <div class="mt-2 text-center text-sm font-medium text-spes-black/75 dark:text-spes-white/75">
+              Don't have an Account?
+              <a href="@@REGISTER_HREF@@"
+                class="cursor-pointer ml-1 font-extrabold text-spes-blue hover:underline dark:text-spes-yellow">Register
+                Now</a>
+            </div>
+          </form>
+
+          <footer
+            class="mt-8 border-t border-spes-blue/15 pt-5 text-center text-xs font-medium tracking-wide text-spes-black/70 dark:border-spes-white/15 dark:text-spes-white/70">
+            <span>DOLE SPES Portal © <span data-auto-year></span></span>
+          </footer>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../assets/js/main.js"></script>
+
+
+</body>
+
+</html>

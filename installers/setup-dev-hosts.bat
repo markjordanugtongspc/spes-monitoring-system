@@ -1,9 +1,9 @@
 @echo off
 setlocal EnableExtensions
 
-:: Map dole-spes.local -^> 127.0.0.1 on this PC only (browser shortcuts).
-:: Usage: setup-dev-hosts.bat           — ends with pause
-::        setup-dev-hosts.bat nopause   — no pause
+:: Map dole-spes.local -> 127.0.0.1 on this PC only (browser shortcuts).
+:: Usage: setup-dev-hosts.bat           -- ends with pause
+::        setup-dev-hosts.bat nopause   -- no pause
 
 net session >nul 2>&1
 if %errorLevel% neq 0 (
@@ -21,7 +21,7 @@ if %errorLevel% equ 0 (
 )
 
 echo.
-echo On this PC: http://dole-spes.local:5173 ^(with npm run dev or npm run preview:lan^).
-echo Other devices on LAN use http://^<this-PC-IPv4^>:5173 — not dole-spes.local unless you configure DNS/hosts per device.
+echo On this PC: http://dole-spes.local:5173 (with npm run dev or npm run preview:lan).
+echo Other devices on LAN use http://^<this-PC-IPv4^>:5173 unless DNS/hosts are configured.
 
 if /i not "%~1"=="nopause" pause

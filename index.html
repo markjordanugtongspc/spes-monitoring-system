@@ -3,158 +3,342 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SPES Login</title>
+    <title>DOLE SPES Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
-  <body class="min-h-screen bg-spes-white font-poppins text-spes-black antialiased dark:bg-spes-dark-secondary dark:text-spes-white">
-    <main class="grid min-h-screen grid-cols-2 max-lg:grid-cols-1">
-      <section class="relative flex items-center justify-center bg-spes-blue px-10 py-12 max-lg:hidden max-lg:px-6">
-        <div class="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-spes-dark-blue/25 to-transparent"></div>
-        <div class="relative flex w-full max-w-lg flex-col items-center text-center">
-          <img
-            id="spes-logo"
-            src="/src/frontend/assets/img/logos/spes.png"
-            alt="SPES logo"
-            data-flat-icon
-            class="js-swappable-logo h-40 w-40 rounded-full border-4 border-spes-white/80 object-cover shadow-2xl max-lg:h-28 max-lg:w-28"
-          />
-          <h1 class="mt-7 text-4xl font-extrabold tracking-wide text-spes-white max-lg:mt-5 max-lg:text-2xl">
-            DOLE SPES PORTAL
-          </h1>
-          <p class="mt-3 text-sm font-medium tracking-[0.28em] text-spes-yellow max-lg:tracking-[0.2em]">
-            SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS
-          </p>
+  <body class="bg-spes-white font-poppins text-spes-black antialiased dark:bg-spes-dark-secondary dark:text-spes-white" data-nav-context="landing">
+    <!-- SPES:PAGE:landing -->
+    <!-- SPES:HEADER -->
+
+    <main id="home" class="pt-20">
+      <section class="relative isolate overflow-hidden">
+        <div class="relative -mt-28 h-[96vh] min-h-[680px] w-full">
+          <video
+            id="landing-hero-video"
+            class="h-full w-full object-cover"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="auto"
+            aria-label="SPES landing video"
+          >
+            <source src="./src/frontend/assets/vids/landing.mp4" type="video/mp4" />
+
+            Your browser does not support the video tag.
+          </video>
+          <div class="absolute inset-0 bg-linear-to-b from-spes-black/65 via-spes-black/50 to-spes-black/75"></div>
+        </div>
+
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
+          <div class="pointer-events-auto mx-auto flex w-full max-w-6xl flex-col items-center text-center">
+            <p data-animate-hero class="mb-4 px-5 py-2 text-xs font-semibold tracking-[0.2em] text-spes-yellow">
+              REGION X • STUDENT EMPLOYMENT INITIATIVE
+            </p>
+            <h1 data-animate-hero class="font-montserrat text-[clamp(1.6rem,4vw,3.1rem)] font-extrabold leading-tight text-spes-white">
+              Special Program for the
+              <span class="text-sky-300">Employment of Students</span> (SPES)
+            </h1>
+            <div data-text-placeholder-root data-text-placeholder-scope="landing" class="mt-5 w-full max-w-3xl">
+              <div data-text-placeholder-skeleton role="status" class="mx-auto max-w-3xl animate-pulse space-y-2.5">
+                <div class="h-2.5 w-full rounded-full bg-spes-white/25"></div>
+                <div class="h-2.5 max-w-[92%] rounded-full bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[88%] rounded-full bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[76%] rounded-full bg-spes-white/20"></div>
+                <span class="sr-only">Loading...</span>
+              </div>
+              <div data-text-placeholder-content class="hidden">
+                <p data-animate-hero class="text-sm leading-relaxed text-spes-white/90 md:text-base text-wrap">
+                  SPES helps eligible students and out-of-school youth gain temporary employment while continuing education, in partnership with DOLE and participating establishments.
+                </p>
+              </div>
+            </div>
+
+            <div id="apply-now" data-animate-hero class="mt-10 w-full max-w-4xl">
+              <div data-text-placeholder-root data-text-placeholder-scope="landing">
+                <div data-text-placeholder-skeleton role="status" class="animate-pulse">
+                  <div class="relative grid items-center gap-5 rounded-l-2xl p-5 pr-14 md:grid-cols-[1fr_auto] md:p-7 md:pr-18">
+                    <div class="flex items-center gap-4 text-start max-md:flex-col max-md:items-center">
+                      <div class="h-20 w-40 shrink-0 rounded-lg bg-spes-white/20 md:h-24 md:w-44" aria-hidden="true"></div>
+                      <div class="min-w-0 flex-1 space-y-2.5 max-md:flex max-md:flex-col max-md:items-center">
+                        <div class="h-4 w-52 max-w-full rounded-full bg-spes-white/25"></div>
+                        <div class="h-3 w-44 max-w-full rounded-full bg-spes-yellow/35"></div>
+                      </div>
+                    </div>
+                    <div class="h-12 w-full max-w-[220px] rounded-xl bg-spes-yellow/40 md:max-w-none md:justify-self-end" aria-hidden="true"></div>
+                  </div>
+                  <div class="mt-4 max-w-4xl space-y-2">
+                    <div class="h-2 w-full rounded-full bg-spes-white/20"></div>
+                    <div class="h-2 max-w-[96%] rounded-full bg-spes-white/20"></div>
+                    <div class="h-2 max-w-[94%] rounded-full bg-spes-white/20"></div>
+                    <div class="h-2 max-w-[78%] rounded-full bg-spes-white/20"></div>
+                  </div>
+                  <span class="sr-only">Loading...</span>
+                </div>
+                <div data-text-placeholder-content class="hidden">
+                  <div class="relative grid items-center gap-5 rounded-l-2xl p-5 pr-14 md:grid-cols-[1fr_auto] md:p-7 md:pr-18">
+                    <div class="flex items-center gap-4 text-start max-md:flex-col max-md:text-center">
+                      <img
+                        src="https://www.deped.gov.ph/wp-content/uploads/Call-for-Application@2x-1024x496.png"
+                        alt="Call for Application"
+                        class="h-20 w-40 object-cover md:h-24 md:w-44"
+                      />
+                      <div>
+                        <h2 class="text-xl font-bold text-spes-white md:text-2xl">Ready to Take on SPES?</h2>
+                        <p class="text-sm font-semibold text-spes-yellow">Be sure to read the guidelines!</p>
+                      </div>
+                    </div>
+                    <a
+                      href="https://www.deped.gov.ph/2025/03/03/guidelines-on-the-implementation-of-the-special-program-for-employment-of-students-spes-2025/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="cursor-pointer inline-flex items-center justify-center rounded-xl bg-spes-yellow px-8 py-4 text-sm font-extrabold uppercase tracking-[0.18em] text-spes-dark-blue transition-all hover:bg-spes-yellow/80 hover:text-spes-dark-blue/85 focus:outline-none focus:ring-4 focus:ring-spes-yellow/60"
+                    >
+                      Apply Now
+                    </a>
+                  </div>
+                  <p class="mt-2 text-xs leading-relaxed text-spes-white/85 text-wrap md:mt-4">
+                    By clicking “Apply Now,” you hereby acknowledge that you have read, and understood the GUIDELINES ON THE IMPLEMENTATION OF THE SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS (SPES) 2025 and that you give your consent to adhere/ follow them.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="relative flex min-h-screen items-start justify-center bg-spes-white px-14 pb-14 pt-6 dark:bg-spes-dark-secondary max-lg:px-6">
-        <button
-          id="theme-toggle"
-          type="button"
-          class="cursor-pointer absolute right-6 top-6 rounded-lg p-1.5 text-spes-blue transition-colors hover:bg-spes-blue/10 hover:text-spes-blue/80 dark:text-spes-white dark:hover:bg-spes-dark-primary/55 dark:hover:text-spes-white/90"
-        >
-          <svg id="theme-toggle-dark-icon" class="hidden h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586z"></path>
-          </svg>
-          <svg id="theme-toggle-light-icon" class="hidden h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm4 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm-.464 4.95.707.707a1 1 0 0 0 1.414-1.414l-.707-.707a1 1 0 0 0-1.414 1.414zm2.12-10.607a1 1 0 0 1 0 1.414l-.706.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zM17 11a1 1 0 1 0 0-2h-1a1 1 0 1 0 0 2h1zm-7 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM5.05 6.464A1 1 0 1 0 6.465 5.05l-.708-.707a1 1 0 0 0-1.414 1.414l.707.707zm1.414 8.486-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 1.414zM4 11a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2h1z"></path>
-          </svg>
-          <span class="sr-only">Toggle dark mode</span>
-        </button>
-
-        <div class="flex h-full w-full max-w-2xl flex-col">
-          <div class="mb-7">
-            <div class="relative -top-2 flex items-center gap-3 pr-14">
-              <img
-                src="/src/frontend/assets/img/logos/bph.png"
-                alt="Bagong Pilipinas logo"
-                class="h-8 w-8 shrink-0 overflow-hidden rounded-full object-cover ring-2 ring-spes-blue/15 dark:ring-spes-white/20"
-              />
-              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-spes-blue dark:text-spes-yellow">DOLE REGION X</p>
+      <section id="program-overview" class="mx-auto w-full max-w-7xl px-4 py-14 md:py-18">
+        <div class="grid gap-6 md:grid-cols-3">
+          <article data-program-overview-card data-hover-card data-guide-click aria-busy="true" class="relative cursor-pointer rounded-r-xl rounded-l-none border border-spes-black/10 bg-spes-white p-5 shadow-sm border-l-4 border-l-spes-blue aria-busy:border-l-spes-black/15 dark:border-spes-white/10 dark:bg-spes-dark-primary dark:border-l-spes-yellow dark:aria-busy:border-l-spes-white/15 md:p-6">
+            <div data-program-card-skeleton role="status" class="space-y-4 animate-pulse">
+              <div class="flex items-start justify-between gap-4">
+                <div class="max-w-sm flex-1 space-y-3">
+                  <div class="h-2 w-24 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="mb-4 h-2.5 w-48 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[330px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[300px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                </div>
+                <div class="h-10 w-10 shrink-0 rounded-xl bg-spes-black/10 dark:bg-spes-white/10" aria-hidden="true"></div>
+              </div>
+              <div class="mt-4 max-w-lg space-y-2.5">
+                <div class="h-2 w-full rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[95%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[88%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[72%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+              </div>
+              <span class="sr-only">Loading...</span>
             </div>
-          </div>
-
-          <div class="flex flex-1 flex-col justify-center">
-            <h1 class="mt-2 text-start text-4xl font-montserrat font-extrabold text-spes-black dark:text-spes-white max-lg:text-3xl">Welcome Back</h1>
-            <p class="mt-2 max-w-2xl text-start text-xs text-gray-500 dark:text-spes-white/70">
-              Sign in to track your daily attendance and program progression, or access the dashboard to oversee users and system logs.
-            </p>
-            <form class="mt-6 space-y-6">
-              <div>
-                <label for="username" class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Username</label>
-                <input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60"
-                />
-              </div>
-              <div class="relative">
-                <label for="password" class="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-spes-blue dark:text-spes-white">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  autocomplete="current-password"
-                  class="block w-full rounded-xl border border-spes-blue/25 bg-spes-white px-4 py-3 pr-11 text-sm text-spes-black placeholder:text-spes-black/50 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/30 dark:border-spes-white/30 dark:bg-spes-black dark:text-spes-white dark:placeholder:text-spes-white/60"
-                />
-                <button
-                  id="toggle-password-button"
-                  type="button"
-                  class="cursor-pointer absolute right-3 top-10 inline-flex items-center justify-center text-spes-blue/75 hover:text-spes-blue dark:text-spes-white/80 dark:hover:text-spes-yellow"
-                  aria-label="Toggle password visibility"
-                >
-                  <svg id="password-eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" stroke="currentColor" stroke-width="1.8" />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
+            <div data-program-card-content class="hidden">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-[11px] font-semibold tracking-[0.22em] text-spes-black/55 dark:text-spes-white/55">PROGRAM</p>
+                  <h3 class="mt-3 font-montserrat text-lg font-extrabold text-spes-blue dark:text-spes-yellow">Program Coverage</h3>
+                </div>
+                <div class="grid h-10 w-10 place-items-center rounded-xl bg-spes-blue/10 text-spes-blue dark:bg-spes-white/10 dark:text-spes-yellow">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M4 20a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
                   </svg>
-                  <svg id="password-eye-closed" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M3 3l18 18" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M10.58 10.58a2 2 0 1 0 2.83 2.83" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M6.71 6.71C4.65 8.06 3.3 10 2 12c0 0 3.5 6 10 6 2.1 0 3.93-.62 5.47-1.56M9.88 4.22C10.57 4.08 11.27 4 12 4c6.5 0 10 6 10 6a17.52 17.52 0 0 1-2.37 3.26" stroke="currentColor" stroke-width="1.8" />
+                </div>
+              </div>
+              <p class="mt-4 text-sm leading-relaxed text-spes-black/70 dark:text-spes-white/75">
+                SPES supports poor but deserving students and out-of-school youth by providing temporary employment and wage subsidy assistance during school breaks.
+              </p>
+            </div>
+          </article>
+
+          <article data-program-overview-card data-hover-card data-guide-click aria-busy="true" class="relative cursor-pointer rounded-r-xl rounded-l-none border border-spes-black/10 bg-spes-white p-5 shadow-sm border-l-4 border-l-spes-yellow aria-busy:border-l-spes-black/15 dark:border-spes-white/10 dark:bg-spes-dark-primary dark:border-l-spes-yellow dark:aria-busy:border-l-spes-white/15 md:p-6">
+            <div data-program-card-skeleton role="status" class="space-y-4 animate-pulse">
+              <div class="flex items-start justify-between gap-4">
+                <div class="max-w-sm flex-1 space-y-3">
+                  <div class="h-2 w-24 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="mb-4 h-2.5 w-48 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[330px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[300px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                </div>
+                <div class="h-10 w-10 shrink-0 rounded-xl bg-spes-black/10 dark:bg-spes-white/10" aria-hidden="true"></div>
+              </div>
+              <div class="mt-4 max-w-lg space-y-2.5">
+                <div class="h-2 w-full rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[95%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[88%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[72%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+              </div>
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div data-program-card-content class="hidden">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-[11px] font-semibold tracking-[0.22em] text-spes-black/55 dark:text-spes-white/55">REMINDER</p>
+                  <h3 class="mt-3 font-montserrat text-lg font-extrabold text-spes-blue dark:text-spes-yellow">Application Reminder</h3>
+                </div>
+                <div class="grid h-10 w-10 place-items-center rounded-xl bg-spes-yellow/15 text-spes-yellow dark:bg-spes-white/10 dark:text-spes-yellow">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M9 6h10M9 10h10M9 14h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <path d="M5 6h.01M5 10h.01M5 14h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
                   </svg>
-                </button>
+                </div>
               </div>
+              <p class="mt-4 text-sm leading-relaxed text-spes-black/70 dark:text-spes-white/75">
+                Prepare eligibility documents in advance and regularly monitor announcements from DOLE Region X and partner institutions.
+              </p>
+            </div>
+          </article>
 
-              <div class="flex items-center justify-between gap-3">
-                <label for="remember-me" class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-spes-black hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow">
-                  <input
-                    id="remember-me"
-                    type="checkbox"
-                    value=""
-                    class="remember-me-checkbox cursor-pointer h-4 w-4 shrink-0 rounded-none border-2 border-spes-blue bg-spes-white text-spes-blue accent-spes-blue focus:ring-2 focus:ring-spes-blue/40 focus:ring-offset-0 dark:border-spes-white/70 dark:bg-spes-black dark:accent-spes-yellow dark:focus:ring-spes-yellow/35"
-                  />
-                  Remember me
-                </label>
-                <a href="#" class="text-right text-sm font-semibold whitespace-nowrap text-spes-blue hover:underline dark:text-spes-yellow">Forgot password?</a>
+          <article data-program-overview-card data-hover-card data-guide-click aria-busy="true" class="relative cursor-pointer rounded-r-xl rounded-l-none border border-spes-black/10 bg-spes-white p-5 shadow-sm border-l-4 border-l-spes-red aria-busy:border-l-spes-black/15 dark:border-spes-white/10 dark:bg-spes-dark-primary dark:border-l-spes-yellow dark:aria-busy:border-l-spes-white/15 md:p-6">
+            <div data-program-card-skeleton role="status" class="space-y-4 animate-pulse">
+              <div class="flex items-start justify-between gap-4">
+                <div class="max-w-sm flex-1 space-y-3">
+                  <div class="h-2 w-24 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="mb-4 h-2.5 w-48 rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[330px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[300px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                  <div class="h-2 max-w-[360px] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                </div>
+                <div class="h-10 w-10 shrink-0 rounded-xl bg-spes-black/10 dark:bg-spes-white/10" aria-hidden="true"></div>
               </div>
+              <div class="mt-4 max-w-lg space-y-2.5">
+                <div class="h-2 w-full rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[95%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[88%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+                <div class="h-2 max-w-[72%] rounded-full bg-spes-black/15 dark:bg-spes-white/15"></div>
+              </div>
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div data-program-card-content class="hidden">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-[11px] font-semibold tracking-[0.22em] text-spes-black/55 dark:text-spes-white/55">CHANNELS</p>
+                  <h3 class="mt-3 font-montserrat text-lg font-extrabold text-spes-blue dark:text-spes-yellow">Official Channels</h3>
+                </div>
+                <div class="grid h-10 w-10 place-items-center rounded-xl bg-spes-red/10 text-spes-red dark:bg-spes-white/10 dark:text-spes-yellow">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 2 3 6.5V12c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6.5L12 2Z" stroke="currentColor" stroke-width="1.8" />
+                    <path d="m9 12 2 2 4-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </div>
+              </div>
+              <p class="mt-4 text-sm leading-relaxed text-spes-black/70 dark:text-spes-white/75">
+                Always use official government pages and memoranda for updates to avoid misinformation on schedule, slots, and requirements.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
 
-              <button
-                id="sign-in-button"
-                type="button"
-                class="cursor-pointer mt-2 w-full rounded-xl bg-spes-blue px-5 py-3 text-sm font-extrabold uppercase tracking-[0.2em] text-spes-white shadow-lg ring-0 transition-all hover:bg-spes-blue/85 focus:outline-none focus:ring-4 focus:ring-spes-blue/35 dark:bg-spes-dark-primary dark:text-spes-white dark:hover:bg-spes-white/20 dark:hover:ring-2 dark:hover:ring-spes-white/35"
-              >
-                Sign In
-              </button>
-            </form>
-
-            <footer class="mt-8 border-t border-spes-blue/15 pt-5 text-center text-xs font-medium tracking-wide text-spes-black/70 dark:border-spes-white/15 dark:text-spes-white/70">
-              <span>DOLE SPES Portal © <span id="current-year"></span></span>
-              <p id="app-version" class="mt-1 text-[11px] tabular-nums text-spes-black/55 dark:text-spes-white/55"></p>
-            </footer>
+      <section id="legal-basis" class="bg-spes-blue/8 py-14 dark:bg-spes-dark-primary/55">
+        <div class="mx-auto w-full max-w-7xl px-4">
+          <div data-text-placeholder-root data-text-placeholder-scope="landing">
+            <div data-text-placeholder-skeleton role="status" class="max-w-4xl animate-pulse">
+              <div class="mb-4 h-7 max-w-xs rounded-lg bg-spes-black/15 dark:bg-spes-white/20"></div>
+              <div class="space-y-2.5">
+                <div class="h-2.5 w-full rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[95%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[92%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[88%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+                <div class="h-2.5 max-w-[70%] rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+              </div>
+              <span class="sr-only">Loading...</span>
+            </div>
+            <div data-text-placeholder-content class="hidden">
+              <h2 class="font-montserrat text-2xl font-extrabold text-spes-blue dark:text-spes-yellow">Legal Basis: RA 10917 and DO 175</h2>
+              <p class="mt-4 max-w-4xl text-sm leading-relaxed text-spes-black/80 dark:text-spes-white/80">
+                Republic Act No. 10917 amended the SPES law to widen coverage and strengthen support for student beneficiaries. Department Order No. 175, series of 2017, provides implementing rules and guidelines for SPES operations and benefit release.
+              </p>
+            </div>
           </div>
         </div>
       </section>
     </main>
 
-    <div
-      id="drawer-top-example"
-      class="fixed top-0 left-0 right-0 z-70 h-screen w-full -translate-y-full overflow-hidden bg-spes-blue p-4 transition-transform duration-500 ease-out"
-      tabindex="-1"
-      aria-label="Mobile branding panel"
-    >
-      <div class="mx-auto flex h-full w-full max-w-lg flex-col items-center text-center">
-        <div class="flex flex-1 flex-col items-center justify-start pt-[10vh]">
-          <img
-            src="/src/frontend/assets/img/logos/spes.png"
-            alt="SPES logo"
-            data-flat-icon
-            class="js-swappable-logo h-20 w-20 rounded-full border-4 border-spes-white/80 object-cover shadow-2xl sm:h-24 sm:w-24"
-          />
-          <h2 class="mt-3 px-2 text-[clamp(1.3rem,5.4vw,1.8rem)] font-montserrat font-extrabold tracking-wide text-spes-white">DOLE SPES PORTAL</h2>
-          <p class="mt-2 px-2 text-[clamp(0.54rem,2.2vw,0.72rem)] font-medium tracking-[0.12em] text-spes-yellow">SPECIAL PROGRAM FOR EMPLOYMENT OF STUDENTS</p>
-        </div>
-        <div class="pointer-events-none mb-4 flex flex-col items-center text-spes-white/90">
-          <svg class="h-5 w-5 animate-pulse" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fill-rule="evenodd" d="M10 17a1 1 0 0 1-.707-.293l-5-5a1 1 0 0 1 1.414-1.414L9 13.586V3a1 1 0 1 1 2 0v10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-5 5A1 1 0 0 1 10 17Z" clip-rule="evenodd"></path>
-          </svg>
-          <span class="mt-1 text-[10px] font-medium tracking-[0.14em]">TAP OR SWIPE UP</span>
+    <div id="how-to-apply-modal" tabindex="-1" aria-hidden="true" class="fixed top-0 right-0 left-0 z-[60] hidden h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto backdrop-blur-sm bg-spes-black/20">
+      <div class="relative max-h-[90vh] w-full max-w-2xl p-4">
+        <div class="relative rounded-2xl border border-spes-blue/20 bg-spes-white shadow-2xl dark:border-spes-white/10 dark:bg-spes-dark-primary overflow-hidden">
+          <!-- Header -->
+          <div class="flex items-center justify-between border-b border-spes-blue/15 bg-spes-blue/5 p-4 dark:border-spes-white/10 dark:bg-spes-white/5 md:p-6">
+            <h3 class="font-montserrat text-xl font-extrabold text-spes-blue dark:text-spes-yellow">
+              SPES 2025 Application Guidelines
+            </h3>
+            <button type="button" data-modal-hide="how-to-apply-modal" class="cursor-pointer ms-auto inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-spes-black/65 hover:bg-spes-blue/10 hover:text-spes-blue dark:text-spes-white/65 dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">
+              <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12"/></svg>
+              <span class="sr-only">Close modal</span>
+            </button>
+          </div>
+          
+          <!-- Content -->
+          <div class="max-h-[60vh] space-y-6 overflow-y-auto p-4 text-sm leading-relaxed text-spes-black/80 dark:text-spes-white/80 md:p-8">
+            <section>
+              <h4 class="mb-3 font-bold text-spes-blue dark:text-spes-yellow flex items-center gap-2">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-spes-blue/10 text-xs dark:bg-spes-yellow/10">1</span>
+                Qualification Standards
+              </h4>
+              <ul class="ml-8 list-disc space-y-2">
+                <li><strong>Age Requirement:</strong> 15 to 30 years old at the time of application.</li>
+                <li><strong>Status:</strong> Currently enrolled student (Basic Education or ALS) or Out-of-School Youth (OSY).</li>
+                <li><strong>Academic Stand:</strong> Passing grades in the most recent academic year/term.</li>
+                <li><strong>Financial Threshold:</strong> Combined parental annual income must not exceed the regional poverty threshold.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h4 class="mb-3 font-bold text-spes-blue dark:text-spes-yellow flex items-center gap-2">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-spes-blue/10 text-xs dark:bg-spes-yellow/10">2</span>
+                Documentary Requirements
+              </h4>
+              <div class="ml-8 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-lg bg-spes-blue/5 p-3 dark:bg-spes-white/5">
+                  <p class="font-semibold text-spes-blue dark:text-spes-yellow">For All Applicants:</p>
+                  <ul class="mt-1 list-inside list-disc text-xs space-y-1">
+                    <li>Updated Resume with 1x1 ID Photo</li>
+                    <li>Birth Certificate (PSA issued)</li>
+                    <li>Certificate of Indigency/ITR</li>
+                  </ul>
+                </div>
+                <div class="rounded-lg bg-spes-blue/5 p-3 dark:bg-spes-white/5">
+                  <p class="font-semibold text-spes-blue dark:text-spes-yellow">For Students:</p>
+                  <ul class="mt-1 list-inside list-disc text-xs space-y-1">
+                    <li>Most recent Report Card</li>
+                    <li>Certificate of Enrollment (ALS)</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h4 class="mb-3 font-bold text-spes-blue dark:text-spes-yellow flex items-center gap-2">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-spes-blue/10 text-xs dark:bg-spes-yellow/10">3</span>
+                Application Process
+              </h4>
+              <p class="ml-8">Applications are processed online through the official DOLE Region X portal. Be prepared for an in-person interview if shortlisted.</p>
+            </section>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center justify-end gap-3 border-t border-spes-blue/15 p-4 dark:border-spes-white/10 md:p-6">
+            <button data-modal-hide="how-to-apply-modal" type="button" class="cursor-pointer rounded-xl border border-spes-blue/25 bg-spes-white px-6 py-2.5 text-sm font-bold text-spes-blue transition hover:bg-spes-blue/10 focus:outline-none focus:ring-4 focus:ring-spes-blue/25 dark:border-spes-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">
+              Close
+            </button>
+            <a href="https://www.facebook.com/DOLE10LDNPFO" target="_blank" rel="noopener noreferrer" class="cursor-pointer inline-flex items-center justify-center rounded-xl bg-spes-blue px-6 py-2.5 text-sm font-bold text-spes-white shadow-lg transition hover:bg-spes-dark-blue dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-spes-yellow/80">
+              Go to Official Page
+            </a>
+          </div>
         </div>
       </div>
     </div>
 
-    <script type="module" src="/src/frontend/assets/js/main.js"></script>
+    <!-- SPES:FOOTER -->
+
+    <script type="module" src="./src/frontend/assets/js/landing.js"></script>
+
   </body>
 </html>

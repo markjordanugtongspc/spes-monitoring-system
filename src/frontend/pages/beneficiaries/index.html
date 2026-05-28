@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beneficiary Insurance Directory | SPES Portal</title>
+  <link rel="icon" type="image/png" href="../../assets/img/logos/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- SPES:SIDEBAR -->
+
+  <main class="min-h-screen transition-all duration-300 sm:ml-64">
+    <!-- Top Enterprise Banner -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+      <!-- Background Image Layer -->
+      <div
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+      </div>
+      <!-- Primary Color Overlay -->
+      <div
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
+      </div>
+
+      <div class="relative z-30 mx-auto max-w-7xl">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="font-montserrat text-3xl font-black text-spes-white">Beneficiary Directory</h1>
+            <p class="mt-1 text-sm text-spes-white/70">Insurance monitoring roster for SPES program beneficiaries.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              class="cursor-pointer inline-flex items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
+              </svg>
+              Add Beneficiary
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="mx-auto -mt-16 max-w-7xl px-6 pb-12 relative z-20">
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- BENEFICIARY DIRECTORY TABLE -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <section
+        class="relative overflow-x-auto rounded-xl border border-spes-blue/10 bg-spes-white shadow-sm dark:border-spes-white/10 dark:bg-spes-dark-primary">
+        <div class="inline-block min-w-full align-middle">
+          <div class="overflow-visible">
+            <!-- Table Header Bar -->
+            <div
+              class="flex flex-col gap-3 bg-gradient-to-r from-spes-blue to-[#002878] p-4 border-b border-white/10 rounded-t-xl overflow-visible sm:flex-row sm:items-center sm:justify-between">
+              <h3 class="font-montserrat text-xs font-black uppercase tracking-widest text-white shrink-0">Insured
+                Students Roster</h3>
+              <!-- Controls: Sort + Filter (left) | Search (right, grows) -->
+              <div class="flex items-center gap-2 overflow-visible relative z-30">
+                <!-- Sort Dropdown Trigger -->
+                <div class="relative shrink-0">
+                  <button id="btn-sort-beneficiary"
+                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
+                    title="Sort">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    </svg>
+                  </button>
+                  <div id="dropdown-sort-beneficiary"
+                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-1.5 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
+                    <button data-sort-val="none"
+                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Default</button>
+                    <button data-sort-val="name-asc"
+                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name
+                      (A-Z)</button>
+                    <button data-sort-val="name-desc"
+                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name
+                      (Z-A)</button>
+                  </div>
+                </div>
+
+                <!-- Filter Dropdown Trigger -->
+                <div class="relative shrink-0">
+                  <button id="btn-filter-beneficiary"
+                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
+                    title="Filter">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                  </button>
+                  <div id="dropdown-filter-beneficiary"
+                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
+                    <span
+                      class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Period</span>
+                    <button data-filter-key="period" data-filter-val="all"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All
+                      Periods</button>
+                    <button data-filter-key="period" data-filter-val="MAY 2026"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">May
+                      2026</button>
+                    <button data-filter-key="period" data-filter-val="JUNE 2026"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">June
+                      2026</button>
+                    <button data-filter-key="period" data-filter-val="APRIL 2026"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">April
+                      2026</button>
+
+                    <span
+                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Relationship</span>
+                    <button data-filter-key="relationship" data-filter-val="all"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All
+                      Relationships</button>
+                    <button data-filter-key="relationship" data-filter-val="MOTHER"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Mother</button>
+                    <button data-filter-key="relationship" data-filter-val="FATHER"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Father</button>
+                    <button data-filter-key="relationship" data-filter-val="SPOUSE"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Spouse</button>
+                  </div>
+                </div>
+
+                <!-- Search (grows to fill remaining space) -->
+                <div class="relative flex-1 min-w-[160px]">
+                  <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
+                    <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-width="2"
+                        d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                    </svg>
+                  </div>
+                  <input type="text" id="staff-search-input"
+                    class="block w-full rounded-lg border border-white/20 bg-white/10 py-2 pe-3 ps-9 text-sm text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
+                    placeholder="Search assured name..." />
+                </div>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <table class="w-full text-sm text-spes-black/70 dark:text-spes-white/70">
+              <thead
+                class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
+                <tr>
+                  <th scope="col" class="p-4 text-center w-4">
+                    <div class="flex items-center justify-center">
+                      <input id="staff-checkbox-all" type="checkbox"
+                        class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                    </div>
+                  </th>
+                  <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
+                  <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
+                  <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Period of Employment</th>
+                  <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Amount of Insurance</th>
+                  <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="beneficiary-table-body">
+                <!-- Tabular List Skeleton Rows (5 Rows) -->
+                <tr class="animate-pulse border-b border-spes-blue/10 bg-spes-white dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-56"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-spes-blue/10 bg-spes-white dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-44"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-48"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-spes-blue/10 bg-spes-white dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-40 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-52"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-64"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-spes-blue/10 bg-spes-white dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-52"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-spes-blue/10 bg-spes-white dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-28 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-36"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-44"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <nav
+              class="flex flex-col items-center justify-between gap-3 p-4 sm:flex-row border-t border-spes-blue/10 dark:border-white/5"
+              aria-label="Table navigation">
+              <span class="text-sm text-spes-black/60 dark:text-spes-white/60">
+                Showing <span id="pagination-range"
+                  class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
+                  class="font-semibold text-spes-black dark:text-spes-white">0</span>
+              </span>
+              <ul id="pagination-controls" class="flex -space-x-px text-sm">
+                <li><button id="prev-page"
+                    class="cursor-pointer rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
+                </li>
+                <!-- Page Indicators rendered by JS -->
+                <li id="page-indicators-container" class="flex -space-x-px"></li>
+                <li><button id="next-page"
+                    class="cursor-pointer rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- INSURANCE DECLARATION & SIGNATURE FOOTER -->
+      <!-- ════════════════════════════════════════════════════ -->
+    </div>
+  </main>
+
+  <!-- Backdrop Blur Overlay -->
+  <div id="drawer-backdrop"
+    class="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs hidden transition-opacity duration-300 opacity-0"></div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- BENEFICIARY DETAILS DRAWER -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="drawer-beneficiary-details"
+    class="fixed z-50 bg-white p-6 transition-transform dark:bg-spes-dark-primary bottom-0 left-0 right-0 w-full rounded-t-3xl translate-y-full sm:translate-y-0 sm:top-0 sm:bottom-auto sm:right-0 sm:left-auto sm:w-96 sm:h-screen sm:rounded-none sm:translate-x-full shadow-2xl border-t sm:border-t-0 sm:border-l border-spes-blue/10 dark:border-spes-white/10"
+    tabindex="-1" aria-labelledby="drawer-label">
+    <div class="flex items-center justify-between border-b-2 border-spes-black pb-4 mb-5 dark:border-white/20">
+      <h5 id="drawer-label"
+        class="inline-flex items-center text-sm sm:text-base md:text-lg font-montserrat font-black text-spes-blue dark:text-white tracking-tight uppercase truncate whitespace-nowrap max-w-[200px] sm:max-w-[260px]">
+        Beneficiary Details
+      </h5>
+      <button type="button" id="btn-close-beneficiary-drawer"
+        class="cursor-pointer text-spes-black/50 bg-transparent hover:bg-gray-100 hover:text-spes-black rounded-lg text-sm w-8 h-8 flex items-center justify-center dark:hover:bg-white/5 dark:hover:text-white dark:text-white/50">
+        <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+        </svg>
+        <span class="sr-only">Close menu</span>
+      </button>
+    </div>
+
+    <div id="drawer-beneficiary-content" class="space-y-6">
+      <!-- JS Loaded Content -->
+    </div>
+  </div>
+
+  <script type="module" src="../../assets/js/dashboard.js"></script>
+</body>
+
+</html>

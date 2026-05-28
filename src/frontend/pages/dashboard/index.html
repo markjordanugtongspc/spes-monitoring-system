@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | SPES Portal</title>
+  <link rel="icon" type="image/png" href="../../assets/img/logos/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- SPES:SIDEBAR -->
+
+  <!-- Main Content -->
+  <main class="min-h-screen transition-all duration-300 sm:ml-64">
+    <!-- Top Enterprise Banner -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+      <!-- Background Image Layer -->
+      <div
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+      </div>
+      <!-- Primary Color Overlay (Reduced Opacity) -->
+      <div
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
+      </div>
+
+      <div class="relative z-30 mx-auto max-w-7xl">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="font-montserrat text-3xl font-black text-spes-white">Dashboard</h1>
+            <p class="mt-1 text-sm text-spes-white/70">Welcome back, <span id="header-user-name"
+                class="font-bold">Admin</span></p>
+          </div>
+
+          <div class="grid grid-cols-2 items-center gap-3 md:flex md:flex-wrap">
+            <!-- Real-time Clock (Right side on mobile) -->
+            <div
+              class="order-2 md:order-1 flex items-center justify-center gap-1 sm:gap-2 rounded px-2 md:px-4 py-2.5 text-[9px] sm:text-xs font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 text-center">
+              <svg class="h-3 w-3 sm:h-4 sm:w-4 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                  d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span id="real-time-clock" class="tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
+            </div>
+
+            <!-- Modernized Filters (Left side on mobile) -->
+            <div
+              class="order-1 md:order-2 inline-flex items-center justify-center rounded-md p-1 ring-1 ring-white/30 text-[9px] sm:text-xs">
+              <button
+                class="cursor-pointer rounded-sm bg-spes-white px-2 sm:px-4 py-1.5 font-bold text-spes-blue shadow-sm">All
+                Time</button>
+              <button
+                class="cursor-pointer px-2 sm:px-4 py-1.5 font-bold text-white hover:text-spes-yellow transition-colors">2026</button>
+
+              <!-- Compact Year Dropdown -->
+              <div class="relative">
+                <button id="year-dropdown-btn"
+                  class="cursor-pointer flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 font-bold text-white hover:text-spes-yellow transition-colors">
+                  2025
+                  <svg id="year-dropdown-icon" class="h-2 w-2 sm:h-3 sm:w-3 transition-transform duration-200"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" />
+                  </svg>
+                </button>
+                <div id="year-dropdown-menu"
+                  class="absolute right-0 top-full z-50 mt-2 hidden w-32 rounded-md border border-white/20 bg-spes-blue p-2 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  <ul class="space-y-1">
+                    <li><a href="#"
+                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2025
+                        Archive</a></li>
+                    <li><a href="#"
+                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2024
+                        Records</a></li>
+                    <li><a href="#"
+                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2023
+                        History</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Grid -->
+    <div class="relative z-20 mx-auto -mt-16 max-w-7xl px-6 pb-12">
+      <!-- Top Row: Metric Cards -->
+      <div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- Card 1: Total Implementors -->
+        <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
+          <div class="mb-4 flex items-center justify-between">
+            <h3
+              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+              Total Implementors</h3>
+            <span id="badge-staff-metric"
+              class="rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
+          </div>
+          <div id="distribution-chart" class="min-h-[220px] pr-4">
+            <!-- Flowbite Widget Skeleton (Chart) -->
+            <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent">
+                <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2.5"></div>
+                <div class="w-48 h-2 mb-10 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                <div class="flex items-baseline mt-4 space-x-6">
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
+                    <div class="w-full h-16 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
+                    <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-28"></div>
+                </div>
+                <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Total SPES (Male/Female) -->
+        <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
+          <div class="mb-4 flex items-center justify-between">
+            <h3
+              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+              Total SPES</h3>
+            <span id="badge-student-metric"
+              class="rounded-full bg-emerald-500/5 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-500">...</span>
+          </div>
+          <div id="spes-gender-chart" class="min-h-[220px] pr-4">
+            <!-- Card Placeholder Skeleton -->
+            <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent">
+                <div class="flex items-center justify-center h-28 w-full bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse mb-4">
+                    <svg class="w-8 h-8 text-gray-400 dark:text-white/20" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM9 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm5.697 2.395v-.733l1.269-1.219v2.984l-1.268-1.032Z"/>
+                    </svg>
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48 mb-2.5"></div>
+                <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mb-1.5"></div>
+                <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Added SPES (Bar Chart) -->
+        <div class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col">
+          <div class="mb-3 flex justify-between border-b border-gray-100 pb-3 dark:border-white/5">
+            <div class="flex items-center">
+              <div
+                class="me-3 flex h-10 w-10 items-center justify-center rounded-full border border-spes-blue/10 bg-spes-blue/5 text-spes-blue dark:border-spes-yellow/10 dark:bg-spes-yellow/5 dark:text-spes-yellow">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1Zm0 0h6v-1a6 6 0 0 0-9-5.197M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+                </svg>
+              </div>
+              <div>
+                <h5 class="text-lg font-extrabold text-spes-black dark:text-spes-white leading-tight">1.2k</h5>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">
+                  Students Added</p>
+              </div>
+            </div>
+            <span
+              class="inline-flex h-fit items-center rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+              <svg class="me-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+              12%
+            </span>
+          </div>
+
+          <div id="column-chart" class="flex-1 min-h-[160px]">
+            <!-- Flowbite Widget Skeleton (Chart) -->
+            <div role="status" class="w-full p-4 animate-pulse bg-transparent">
+                <div class="flex items-baseline space-x-4 h-24 pt-2">
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-12"></div>
+                    <div class="w-full h-8 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
+                    <div class="w-full h-10 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                    <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-20"></div>
+                </div>
+                <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- Trends -->
+        <div
+          class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col justify-between">
+          <div>
+            <h3
+              class="mb-4 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+              Enrollment Timeline</h3>
+            <div id="mini-trends" class="h-[185px]">
+              <!-- Flowbite Widget Skeleton (Chart) -->
+              <div role="status" class="w-full p-4 animate-pulse bg-transparent">
+                  <div class="flex items-baseline space-x-3 h-28 pt-2">
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-8"></div>
+                      <div class="w-full h-14 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-10"></div>
+                      <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
+                  </div>
+                  <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-white/10">
+            <div class="text-center">
+              <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">Total
+                Enrolled</p>
+              <p class="text-lg font-black text-spes-blue dark:text-spes-yellow">2,858</p>
+            </div>
+            <div class="text-center">
+              <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">Avg
+                Monthly</p>
+              <p class="text-lg font-black text-emerald-500">238</p>
+            </div>
+            <div class="text-center">
+              <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">
+                Growth</p>
+              <p class="text-lg font-black text-spes-blue dark:text-spes-yellow">+14%</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Implementors Table (Compact Snapshot) -->
+        <div class="lg:col-span-2 rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary">
+          <div class="mb-4 flex items-center justify-between">
+            <h3
+              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+              Recent Implementors</h3>
+            <a href="../implementors/"
+              class="cursor-pointer text-[10px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">View
+              All</a>
+          </div>
+
+          <div class="relative overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead
+                class="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-white/5 dark:text-spes-white/40">
+                <tr>
+                  <th class="px-4 py-3 text-left whitespace-nowrap">ID No.</th>
+                  <th class="px-6 py-3 text-left">Name</th>
+                  <th class="px-6 py-3 text-center">Office</th>
+                  <th class="px-6 py-3 text-center">Role</th>
+                  <th class="px-6 py-3 text-center">Status</th>
+                  <th class="px-6 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="staff-table-body">
+                <!-- Tabular List Skeleton Rows (3 Rows) -->
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                  <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <td class="px-6 py-4">
+                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
+                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
+                  </td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </main>
+
+  <script type="module" src="../../assets/js/dashboard.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,189 @@
+<!-- Sidebar Navigation for SPES Dashboard -->
+<!-- Used by: pages/dashboard/index.html -->
+<!-- data-permission attributes control RBAC visibility -->
+
+<!-- Mobile Sidebar Trigger: Modernized Glass Tab -->
+<button id="sidebar-toggle-btn" data-drawer-target="sidebar-dashboard" data-drawer-toggle="sidebar-dashboard"
+  aria-controls="sidebar-dashboard" type="button"
+  class="group cursor-pointer fixed left-0 top-1/2 z-30 flex -translate-y-1/2 items-center justify-center rounded-r-2xl border-y border-r border-spes-blue/30 bg-white/70 px-2 py-6 text-spes-blue shadow-[0_0_20px_rgba(37,99,235,0.2)] backdrop-blur-xl opacity-40 transition-all hover:opacity-100 active:opacity-100 hover:bg-spes-blue hover:pl-3 hover:text-white dark:border-spes-yellow/30 dark:bg-spes-dark-primary/80 dark:text-spes-yellow dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary sm:hidden">
+  <span class="sr-only">Open sidebar</span>
+  <svg class="h-5 w-5 animate-pulse transition-transform group-hover:scale-125" fill="none" viewBox="0 0 24 24"
+    stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m9 5 7 7-7 7" />
+  </svg>
+</button>
+
+<aside id="sidebar-dashboard"
+  class="fixed top-0 left-0 z-40 h-screen w-64 -translate-x-full border-r border-spes-blue/15 bg-spes-white transition-transform dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:translate-x-0"
+  aria-label="Dashboard Sidebar">
+  <div class="flex h-full flex-col overflow-y-auto px-3 py-5">
+    <!-- Brand -->
+    <a href="#" class="cursor-pointer mb-6 flex items-center gap-3 px-2">
+      <img src="../../assets/img/logos/c_spes.png" class="h-9 w-9 rounded-full object-cover ring-2 ring-spes-blue/25"
+        alt="SPES Logo" />
+      <div>
+        <span class="text-lg font-semibold text-spes-blue dark:text-spes-yellow">SPES Portal</span>
+        <p id="sidebar-role-badge"
+          class="text-[10px] font-bold uppercase tracking-[0.2em] text-spes-blue/60 dark:text-spes-yellow/60"></p>
+      </div>
+    </a>
+
+    <!-- Navigation -->
+    <ul class="flex-1 space-y-1.5 font-medium">
+      <!-- Dashboard (all roles) -->
+      <li>
+        <a href="../dashboard/" data-nav-item="overview"
+          class="cursor-pointer sidebar-link group flex items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+          <svg class="h-5 w-5 shrink-0 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M10 6.025A7.5 7.5 0 1 0 17.975 14H10V6.025Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M13.5 3c-.169 0-.334.014-.5.025V11h7.975c.011-.166.025-.331.025-.5A7.5 7.5 0 0 0 13.5 3Z" />
+          </svg>
+          <span class="ms-3">Dashboard</span>
+        </a>
+      </li>
+
+
+      <!-- User Management (admin + officer can see, but edit/delete is admin-only via RBAC) -->
+      <li data-permission="users:view" class="hidden">
+        <button type="button"
+          class="sidebar-dropdown-btn group flex w-full items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow"
+          aria-controls="sidebar-dropdown-users" data-collapse-toggle="sidebar-dropdown-users">
+          <svg class="h-5 w-5 shrink-0 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-width="1.8"
+              d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1Zm0 0h6v-1a6 6 0 0 0-9-5.197M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          </svg>
+          <span class="ms-3 flex-1 text-left whitespace-nowrap">User Management</span>
+          <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
+          </svg>
+        </button>
+        <ul id="sidebar-dropdown-users" class="hidden space-y-1 py-1.5">
+          <li>
+            <a href="../implementors/" data-nav-item="implementor-list"
+              class="cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-8 pr-3 text-sm text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+              <svg
+                class="h-4 w-4 shrink-0 mr-2.5 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Implementor Directory
+            </a>
+          </li>
+
+          <li data-permission="roles:manage" class="hidden">
+            <a href="../roles/" data-nav-item="roles"
+              class="cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-8 pr-3 text-sm text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+              <svg
+                class="h-4 w-4 shrink-0 mr-2.5 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Roles & Permissions
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <!-- Beneficiaries -->
+      <li data-permission="beneficiaries:view" class="hidden">
+        <a href="../beneficiaries/" data-nav-item="beneficiaries"
+          class="cursor-pointer sidebar-link group flex items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+
+          <svg class="h-5 w-5 shrink-0 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+          </svg>
+          <span class="ms-3">Beneficiaries</span>
+        </a>
+      </li>
+
+      <!-- Reports -->
+      <li data-permission="reports:view" class="hidden">
+        <a href="#" data-nav-item="reports"
+          class="cursor-pointer sidebar-link group flex items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+
+          <svg class="h-5 w-5 shrink-0 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+          </svg>
+          <span class="ms-3">Reports</span>
+        </a>
+      </li>
+
+      <!-- Settings (admin only) -->
+      <li data-permission="settings:manage" class="hidden">
+        <a href="#" data-nav-item="settings"
+          class="cursor-pointer sidebar-link group flex items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
+
+          <svg class="h-5 w-5 shrink-0 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          </svg>
+          <span class="ms-3">Settings</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- User Profile + Sign Out -->
+    <div class="mt-auto border-t border-spes-blue/10 pt-4 dark:border-spes-white/10">
+      <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+        <div
+          class="flex h-9 w-9 items-center justify-center rounded-full bg-spes-blue/10 text-sm font-bold text-spes-blue dark:bg-spes-white/10 dark:text-spes-yellow"
+          id="sidebar-user-avatar"></div>
+        <div class="min-w-0 flex-1">
+          <p id="sidebar-user-name" class="truncate text-sm font-semibold text-spes-black dark:text-spes-white"></p>
+          <p id="sidebar-user-email" class="truncate text-xs text-spes-black/60 dark:text-spes-white/60"></p>
+        </div>
+      </div>
+
+      <!-- Sign Out -->
+      <div class="mt-auto border-t border-spes-blue/10 pt-4 dark:border-white/5">
+        <button id="sign-out-btn"
+          class="cursor-pointer group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-bold text-spes-red transition-all hover:bg-spes-red/10">
+          <svg class="h-5 w-5 shrink-0 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v1" />
+          </svg>
+          <span class="ms-3">Sign Out</span>
+        </button>
+      </div>
+    </div>
+</aside>
+
+<script>
+  // Smart Toggle Logic for Mobile Drawer Handle
+  (function () {
+    const sidebar = document.getElementById('sidebar-dashboard');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+
+    if (!sidebar || !toggleBtn) return;
+
+    // We watch for the 'translate-x-0' class which indicates the sidebar is open
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isOpen = !sidebar.classList.contains('-translate-x-full');
+          if (isOpen) {
+            toggleBtn.classList.add('hidden');
+          } else {
+            toggleBtn.classList.remove('hidden');
+          }
+        }
+      });
+    });
+
+    observer.observe(sidebar, { attributes: true });
+  })();
+</script>

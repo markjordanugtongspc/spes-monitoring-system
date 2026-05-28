@@ -1,6 +1,6 @@
 {
   "name": "spes",
-  "version": "0.1.8",
+  "version": "0.1.16",
   "description": "DOLE SPES Portal desktop and web client",
   "author": "DOLE SPES",
   "private": true,
@@ -9,11 +9,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "generate:icon": "node scripts/generate-icon.mjs",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:major": "npm version major --no-git-tag-version",
     "preview": "vite preview",
     "preview:lan": "vite preview --host 0.0.0.0 --port 5173 --strictPort",
     "electron": "npm run build && electron .",
     "electron:run": "electron .",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && npm run generate:icon && electron-builder"
   },
   "build": {
     "appId": "ph.gov.dole.spes.portal",
@@ -28,21 +32,25 @@
     ],
     "extraResources": [
       {
-        "from": "src/frontend/assets/img/logos/spes.png",
+        "from": "src/frontend/assets/img/logos/c_spes.png",
         "to": "app-icon.png"
       }
     ],
     "win": {
-      "icon": "src/frontend/assets/img/logos/spes.png",
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false,
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -58,11 +66,20 @@
     "electron": "^36.4.0",
     "electron-builder": "^26.0.12",
     "postcss": "^8.5.13",
+    "sharp": "^0.34.4",
     "tailwindcss": "^4.2.4",
+    "to-ico": "^1.1.5",
     "vite": "^8.0.10"
   },
   "dependencies": {
+    "@rbac/rbac": "^2.1.3",
     "@supabase/supabase-js": "^2.105.1",
-    "flowbite": "^4.0.1"
+    "apexcharts": "^3.46.0",
+    "dotenv": "^17.4.2",
+    "flowbite": "^4.0.1",
+    "sweetalert2": "^11.26.24"
+  },
+  "spes": {
+    "updateManifestUrl": ""
   }
 }

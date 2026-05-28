@@ -1,0 +1,187 @@
+<header
+  class="fixed top-0 z-50 w-full border-b border-spes-blue/20 bg-spes-white/90 backdrop-blur-lg dark:border-spes-white/10 dark:bg-spes-dark-secondary/90">
+  <nav class="mx-auto flex w-full max-w-7xl items-center justify-between p-4">
+    <a href="@@LOGO_HREF@@" class="cursor-pointer flex items-center space-x-3 rtl:space-x-reverse">
+
+      <img src="./src/frontend/assets/img/logos/c_spes.png"
+        class="h-9 w-9 rounded-full object-cover ring-2 ring-spes-blue/25" alt="SPES Logo" />
+
+      <span class="self-center whitespace-nowrap text-lg font-semibold text-spes-blue dark:text-spes-yellow">
+        DOLE SPES
+      </span>
+    </a>
+
+    <!-- Desktop Navigation -->
+    <div class="hidden w-full md:order-2 md:block md:w-auto">
+      <ul class="flex flex-row space-x-8 font-medium">
+        <li>
+          <a href="@@HASH_HOME@@" data-nav-link data-nav-id="home"
+            class="cursor-pointer block text-spes-black transition-colors hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow @@NAV_HOME_ACTIVE@@">Home</a>
+
+        </li>
+        <li>
+          <button id="aboutDropdownButton" data-dropdown-toggle="about-dropdown"
+            class="cursor-pointer flex items-center justify-between font-medium text-spes-black hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow">
+            About SPES
+            <svg class="ms-1.5 h-4 w-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+              fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="m19 9-7 7-7-7" />
+            </svg>
+          </button>
+          <div id="about-dropdown"
+            class="z-10 hidden w-56 rounded-lg border border-spes-blue/20 bg-spes-white shadow-lg dark:border-spes-white/10 dark:bg-spes-dark-primary">
+            <ul class="space-y-1 p-2 text-sm font-medium text-spes-black dark:text-spes-white">
+              <li><a href="@@HASH_PROGRAM@@" data-guide-link
+                  class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/10 hover:text-spes-blue dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">Program
+                  Overview</a></li>
+
+              <li>
+                <button id="guideDropdownButton" data-dropdown-toggle="guide-dropdown"
+                  data-dropdown-placement="right-start" type="button"
+                  class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/10 hover:text-spes-blue dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">
+                  Guidelines
+                  <svg class="ms-auto h-4 w-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7" />
+                  </svg>
+                </button>
+                <div id="guide-dropdown"
+                  class="z-10 hidden w-56 rounded-lg border border-spes-blue/20 bg-spes-white shadow-lg dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <ul class="space-y-1 p-2 text-sm font-medium text-spes-black dark:text-spes-white">
+                    <li><a href="https://www.facebook.com/DOLE10LDNPFO" target="_blank" rel="noopener noreferrer"
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/10 hover:text-spes-blue dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">DOLE
+                        SPES 2025 Guidelines</a></li>
+
+                    <li><a href="@@HASH_LEGAL@@" data-guide-link
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/10 hover:text-spes-blue dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">RA
+                        10917 &amp; DO 175</a></li>
+
+                  </ul>
+                </div>
+              </li>
+              <li><button data-modal-target="how-to-apply-modal" data-modal-toggle="how-to-apply-modal" type="button"
+                  class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/10 hover:text-spes-blue dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">How
+                  to Apply</button></li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <a href="@@HASH_LEGAL@@" data-nav-link data-guide-link data-nav-id="legal"
+            class="cursor-pointer block text-spes-black transition-colors hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow">Legal
+            Basis</a>
+
+        </li>
+        <li>
+          <a href="@@CONTACT_HREF@@" data-nav-link data-nav-id="contact"
+            class="cursor-pointer block text-spes-black transition-colors hover:text-spes-blue dark:text-spes-white dark:hover:text-spes-yellow @@NAV_CONTACT_ACTIVE@@">Contact</a>
+
+        </li>
+      </ul>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center space-x-4 md:order-3">
+      <a href="tel:0632216789"
+        class="cursor-pointer hidden text-sm text-spes-black/70 hover:underline dark:text-spes-white/70 md:block">
+
+        (063) 221-6014
+      </a>
+      <a href="@@LOGIN_HREF@@"
+        class="cursor-pointer hidden text-sm font-medium text-spes-blue hover:underline dark:text-spes-yellow md:block">
+
+        Login
+      </a>
+
+      <!-- Theme Toggle (Desktop Only) -->
+      <button id="theme-toggle" type="button"
+        class="cursor-pointer hidden md:inline-flex items-center justify-center rounded-lg p-2 text-spes-blue hover:bg-spes-blue/10 dark:text-spes-white/80 dark:hover:text-spes-yellow dark:hover:bg-spes-white/10">
+        <svg id="theme-toggle-dark-icon" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586z"></path>
+        </svg>
+        <svg id="theme-toggle-light-icon" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm4 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm-.464 4.95.707.707a1 1 0 0 0 1.414-1.414l-.707-.707a1 1 0 0 0-1.414 1.414zm2.12-10.607a1 1 0 0 1 0 1.414l-.706.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zM17 11a1 1 0 1 0 0-2h-1a1 1 0 1 0 0 2h1zm-7 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM5.05 6.464A1 1 0 1 0 6.465 5.05l-.708-.707a1 1 0 0 0-1.414 1.414l.707.707zm1.414 8.486-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 1.414zM4 11a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2h1z">
+          </path>
+        </svg>
+      </button>
+
+      <!-- Drawer Toggle -->
+      <button data-drawer-target="drawer-top-navigation" data-drawer-show="drawer-top-navigation"
+        data-drawer-placement="top" type="button"
+        class="cursor-pointer inline-flex items-center justify-center rounded-lg p-2 text-spes-blue hover:bg-spes-blue/10 md:hidden dark:text-spes-white dark:hover:bg-spes-white/10"
+        aria-controls="drawer-top-navigation">
+        <span class="sr-only">Open main menu</span>
+        <svg class="h-6 w-6" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Top Drawer Navigation -->
+  <div id="drawer-top-navigation"
+    class="fixed top-0 left-0 right-0 z-50 w-full p-4 transition-transform -translate-y-full bg-spes-white dark:bg-spes-dark-secondary border-b border-spes-blue/20 dark:border-spes-white/10"
+    tabindex="-1" aria-labelledby="drawer-top-label">
+    <div
+      class="flex items-center justify-center border-b border-spes-blue/10 pb-4 mb-4 dark:border-spes-white/10 relative">
+      <h5 id="drawer-top-label" class="text-base font-semibold text-spes-blue uppercase dark:text-spes-yellow">
+        Navigation Menu</h5>
+      <button type="button" data-drawer-hide="drawer-top-navigation" aria-controls="drawer-top-navigation"
+        class="cursor-pointer text-spes-black/60 bg-transparent hover:bg-spes-blue/10 hover:text-spes-blue rounded-lg text-sm w-8 h-8 absolute top-0 end-0 flex items-center justify-center dark:text-spes-white/60 dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow">
+        <svg class="w-3 h-3" aria-hidden="true" fill="none" viewBox="0 0 14 14" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+        </svg>
+        <span class="sr-only">Close menu</span>
+      </button>
+    </div>
+    <ul class="space-y-4 font-medium">
+      <li><a href="@@LOGIN_HREF@@"
+          class="cursor-pointer flex items-center p-2 text-spes-blue rounded-lg hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-white/10 font-bold uppercase tracking-wider">Login
+          to Portal</a></li>
+      <li><a href="@@HASH_HOME@@"
+          class="cursor-pointer flex items-center p-2 text-spes-black rounded-lg hover:bg-spes-blue/10 dark:text-spes-white dark:hover:bg-spes-white/10">Home</a>
+      </li>
+      <li>
+        <div
+          class="p-2 text-spes-black dark:text-spes-white font-semibold border-b border-spes-blue/5 dark:border-spes-white/5 mb-2">
+          About SPES</div>
+        <ul class="pl-4 space-y-2">
+          <li><a href="@@HASH_PROGRAM@@"
+              class="cursor-pointer block p-2 text-sm text-spes-black/80 dark:text-spes-white/80 hover:text-spes-blue dark:hover:text-spes-yellow">Program
+              Overview</a></li>
+          <li><a href="https://www.facebook.com/DOLE10LDNPFO" target="_blank"
+              class="cursor-pointer block p-2 text-sm text-spes-black/80 dark:text-spes-white/80 hover:text-spes-blue dark:hover:text-spes-yellow">Guidelines</a>
+          </li>
+          <li><button data-modal-target="how-to-apply-modal" data-modal-toggle="how-to-apply-modal"
+              class="cursor-pointer block w-full text-left p-2 text-sm text-spes-black/80 dark:text-spes-white/80 hover:text-spes-blue dark:hover:text-spes-yellow">How
+              to Apply</button></li>
+        </ul>
+      </li>
+      <li><a href="@@HASH_LEGAL@@"
+          class="cursor-pointer flex items-center p-2 text-spes-black rounded-lg hover:bg-spes-blue/10 dark:text-spes-white dark:hover:bg-spes-white/10">Legal
+          Basis</a></li>
+      <li><a href="@@CONTACT_HREF@@"
+          class="cursor-pointer flex items-center p-2 text-spes-black rounded-lg hover:bg-spes-blue/10 dark:text-spes-white dark:hover:bg-spes-white/10">Contact</a>
+      </li>
+      <li>
+        <button id="theme-toggle-mobile" type="button"
+          class="cursor-pointer flex items-center w-full p-2 text-spes-black rounded-lg hover:bg-spes-blue/10 dark:text-spes-white/80 dark:hover:text-spes-yellow dark:hover:bg-spes-white/10">
+          <span class="dark:hidden flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M17.293 13.293A8 8 0 0 1 6.707 2.707a8.001 8.001 0 1 0 10.586 10.586z"></path>
+            </svg>
+            Switch to Darkmode
+          </span>
+          <span class="hidden dark:flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M10 2a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm4 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm-.464 4.95.707.707a1 1 0 0 0 1.414-1.414l-.707-.707a1 1 0 0 0-1.414 1.414zm2.12-10.607a1 1 0 0 1 0 1.414l-.706.707a1 1 0 1 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 0zM17 11a1 1 0 1 0 0-2h-1a1 1 0 1 0 0 2h1zm-7 4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zM5.05 6.464A1 1 0 1 0 6.465 5.05l-.708-.707a1 1 0 0 0-1.414 1.414l.707.707zm1.414 8.486-.707.707a1 1 0 0 1-1.414-1.414l.707-.707a1 1 0 0 1 1.414 1.414zM4 11a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2h1z">
+              </path>
+            </svg>
+            Switch to Lightmode
+          </span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</header>

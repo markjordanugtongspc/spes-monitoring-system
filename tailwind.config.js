@@ -5,6 +5,9 @@ export default {
   darkMode: "class",
   content: [
     "./index.html",
+    "./src/frontend/login/",
+    "./src/frontend/pages/**/*.html",
+    "./src/frontend/components/**/*.html",
     "./src/frontend/**/*.js",
     "./node_modules/flowbite/**/*.js"
   ],

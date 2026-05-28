@@ -2,35 +2,20 @@ import "../styles/tailwind.css";
 import "flowbite";
 import { initThemeToggle } from "./components/theme-toggle";
 import { initMobileSplashDrawer } from "./components/drawer";
+import { initAutoYear } from "./components/year";
 import {
   initPasswordVisibilityToggle,
   initRememberMePreferences
 } from "./components/auth";
+import { initScopedTextPlaceholders } from "./components/content-placeholders";
+import { initLoginCarousel } from "./components/carousel";
+import { initLoginHandler } from "./components/login-handler";
+import { initBeneficiaries } from "./components/beneficiaries";
 
-const apiBase =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
-async function pingHealth() {
-  if (typeof window !== "undefined" && window.location.protocol === "file:")
-    return;
-  const url = `${apiBase}/api/health`;
-  try {
-    const res = await fetch(url);
-    const body = await res.json();
-    console.info("[SPES] API health:", body);
-  } catch (err) {
-    console.warn(
-      "[SPES] API not reachable at",
-      url,
-      "— run npm run dev (Vite) or set VITE_API_BASE_URL if using a separate API",
-      err
-    );
-  }
-}
-
-pingHealth();
 
 function initAppVersionLabel() {
+
   const el = document.getElementById("app-version");
   const v = import.meta.env.VITE_APP_VERSION;
   if (el && v) el.textContent = `Version ${v}`;
@@ -39,7 +24,7 @@ function initAppVersionLabel() {
 // --- FUNCTION: SWAP BRANDING FLAT ICONS (START) ---
 function initLogoSwap() {
   const logos = [
-    "/src/frontend/assets/img/logos/spes.png",
+    "/src/frontend/assets/img/logos/c_spes.png",
     "/src/frontend/assets/img/logos/bph.png"
   ];
   const logoElements = Array.from(document.querySelectorAll(".js-swappable-logo"));
@@ -58,14 +43,6 @@ function initLogoSwap() {
 }
 // --- FUNCTION: SWAP BRANDING FLAT ICONS (END) ---
 
-// --- FUNCTION: AUTO INPUT CURRENT YEAR (START) ---
-function initAutoYear() {
-  const yearElement = document.getElementById("current-year");
-  if (!yearElement) return;
-  yearElement.textContent = String(new Date().getFullYear());
-}
-// --- FUNCTION: AUTO INPUT CURRENT YEAR (END) ---
-
 initThemeToggle();
 initAppVersionLabel();
 initLogoSwap();
@@ -73,3 +50,8 @@ initAutoYear();
 initMobileSplashDrawer();
 initPasswordVisibilityToggle();
 initRememberMePreferences();
+initScopedTextPlaceholders();
+initLoginCarousel();
+initLoginHandler();
+initBeneficiaries();
+

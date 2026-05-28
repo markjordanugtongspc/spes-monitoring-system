@@ -1,10 +1,9 @@
 // --- FUNCTION: INITIALIZE DARK MODE TOGGLE (START) ---
 export function initThemeToggle() {
   const root = document.documentElement;
-  const toggleButton = document.getElementById("theme-toggle");
+  const toggleButtons = Array.from(document.querySelectorAll("#theme-toggle, #theme-toggle-mobile"));
   const darkIcon = document.getElementById("theme-toggle-dark-icon");
   const lightIcon = document.getElementById("theme-toggle-light-icon");
-  if (!toggleButton) return;
 
   const savedTheme = localStorage.getItem("color-theme");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -19,10 +18,12 @@ export function initThemeToggle() {
 
   updateIcons();
 
-  toggleButton.addEventListener("click", () => {
-    root.classList.toggle("dark");
-    localStorage.setItem("color-theme", root.classList.contains("dark") ? "dark" : "light");
-    updateIcons();
+  toggleButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      root.classList.toggle("dark");
+      localStorage.setItem("color-theme", root.classList.contains("dark") ? "dark" : "light");
+      updateIcons();
+    });
   });
 }
 // --- FUNCTION: INITIALIZE DARK MODE TOGGLE (END) ---

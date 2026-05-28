@@ -58,20 +58,20 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-call "%~dp0setup-dev-firewall.bat" nopause
+call "%~dp0installers\setup-dev-firewall.bat" nopause
 if %errorLevel% neq 0 (
     echo Firewall step failed.
     pause
     exit /b 1
 )
 
-call "%~dp0setup-dev-hosts.bat" nopause
+call "%~dp0installers\setup-dev-hosts.bat" nopause
 
 echo.
 echo Build output: see folder release\
 echo   - DOLE SPES Portal Setup *.exe   ^(installer^)
 echo   - DOLE SPES Portal *portable*.exe   ^(no install^)
 echo.
-echo LAN phones/other PCs: on THIS machine run `npm run preview:lan`, then open http://^<this-IPv4^>:5173 from them.
+echo LAN phones/other PCs: run installers\run-lan-preview.bat on THIS machine, then open http://^<this-IPv4^>:5173 from them.
 echo Desktop wired + laptop Wi-Fi on same router still share the same LAN; use the hosting PC's IPv4 address.
 pause
