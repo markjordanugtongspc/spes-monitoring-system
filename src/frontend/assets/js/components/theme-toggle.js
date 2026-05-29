@@ -1,7 +1,7 @@
 // --- FUNCTION: INITIALIZE DARK MODE TOGGLE (START) ---
 export function initThemeToggle() {
   const root = document.documentElement;
-  const toggleButtons = Array.from(document.querySelectorAll("#theme-toggle, #theme-toggle-mobile, #quick-settings, #quick-settings-mob"));
+  const toggleButtons = Array.from(document.querySelectorAll("#theme-toggle, #theme-toggle-mobile, #quick-settings, #quick-settings-mob, #quick-settings-expanded, #quick-settings-expanded-mob"));
   const darkIcon = document.getElementById("theme-toggle-dark-icon");
   const lightIcon = document.getElementById("theme-toggle-light-icon");
 
@@ -16,12 +16,17 @@ export function initThemeToggle() {
     lightIcon?.classList.toggle("hidden", !isDark);
 
     // Dynamic text for Quick Access Theme Toggles
-    const txtEls = document.querySelectorAll("#quick-settings-text, #quick-settings-mob-text");
+    const txtEls = document.querySelectorAll("#quick-settings-text, #quick-settings-mob-text, #quick-settings-expanded-text, #quick-settings-expanded-mob-text");
     txtEls.forEach(el => {
       el.textContent = el.id.includes("mob") 
         ? (isDark ? "Light" : "Dark") 
         : (isDark ? "Light Mode" : "Dark Mode");
     });
+
+    const innerTxtEl = document.getElementById("quick-settings-expanded-inner-text");
+    if (innerTxtEl) {
+      innerTxtEl.textContent = isDark ? "Light" : "Dark";
+    }
   };
 
   updateIcons();

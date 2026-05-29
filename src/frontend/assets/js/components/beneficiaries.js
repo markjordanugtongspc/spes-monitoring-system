@@ -255,6 +255,8 @@ export function initBeneficiaries() {
       backdrop.onclick = closeDrawer;
     }
 
+    drawer.classList.remove("hidden");
+    drawer.offsetHeight;
     drawer.classList.remove("translate-y-full", "sm:translate-x-full");
     drawer.classList.add("translate-y-0", "sm:translate-x-0");
   };
@@ -270,6 +272,11 @@ export function initBeneficiaries() {
     }
     drawer.classList.remove("translate-y-0", "sm:translate-x-0");
     drawer.classList.add("translate-y-full", "sm:translate-x-full");
+    setTimeout(() => {
+      if (drawer.classList.contains("translate-y-full") || drawer.classList.contains("sm:translate-x-full")) {
+        drawer.classList.add("hidden");
+      }
+    }, 300);
   };
 
   closeBtn?.addEventListener("click", closeDrawer);
@@ -472,8 +479,10 @@ export function initBeneficiaries() {
     if (bdfTitle) bdfTitle.textContent = _bdfEditId ? "Edit Beneficiary" : "Add Beneficiary";
     if (bdfSubtitle) bdfSubtitle.textContent = _bdfEditId ? "Update the beneficiary record below." : "Fill in the details to register a new beneficiary.";
 
+    bdfDrawer.classList.remove("hidden");
     bdfDrawer.setAttribute("aria-hidden", "false");
     bdfOverlay.classList.remove("hidden");
+    bdfDrawer.offsetHeight;
     requestAnimationFrame(() => {
       bdfOverlay.classList.remove("opacity-0");
       bdfOverlay.classList.add("opacity-100");
@@ -502,6 +511,9 @@ export function initBeneficiaries() {
     bdfOverlay.classList.add("opacity-0");
     setTimeout(() => {
       bdfOverlay.classList.add("hidden");
+      if (bdfDrawer.classList.contains("translate-y-full") || bdfDrawer.classList.contains("sm:translate-x-full")) {
+        bdfDrawer.classList.add("hidden");
+      }
       document.body.classList.remove("overflow-hidden");
     }, 300);
   };

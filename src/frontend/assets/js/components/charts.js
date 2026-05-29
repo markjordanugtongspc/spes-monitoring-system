@@ -58,7 +58,7 @@ function _renderImplementorsByOffice(staffs) {
     series: [{ name: "Implementors", data: values }],
     chart: { type: "bar", height: 220, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
     plotOptions: {
-      bar: { horizontal: true, borderRadius: 4, barHeight: "70%", distributed: true, dataLabels: { position: "top" } }
+      bar: { horizontal: true, borderRadius: 4, barHeight: "35%", distributed: true, dataLabels: { position: "top" } }
     },
     colors: BLUE_SHADES.slice(0, values.length),
     dataLabels: {

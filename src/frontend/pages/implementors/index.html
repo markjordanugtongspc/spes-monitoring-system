@@ -59,7 +59,7 @@
       <!-- ════════════════════════════════════════════════════ -->
       <section
         class="relative overflow-visible rounded-xl border border-spes-blue/10 bg-spes-white shadow-sm dark:border-spes-white/10 dark:bg-spes-dark-primary">
-        <div class="inline-block min-w-full align-middle">
+        <div class="w-full align-middle">
           <div class="overflow-visible">
             <!-- Table Header Bar (Premium Gradient) -->
             <div
@@ -147,18 +147,22 @@
                       class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Busy</button>
 
                     <span
-                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive Status</span>
+                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive
+                      Status</span>
                     <button data-filter-key="archiveStatus" data-filter-val="active"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Active Only</button>
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Active
+                      Only</button>
                     <button data-filter-key="archiveStatus" data-filter-val="archived"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Archived Only</button>
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Archived
+                      Only</button>
                     <button data-filter-key="archiveStatus" data-filter-val="all"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Show All</button>
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Show
+                      All</button>
                   </div>
                 </div>
 
                 <!-- Search (wider default and medium sizing) -->
-                <div class="relative w-full sm:w-80 md:w-[420px] shrink-0">
+                <div class="relative flex-1 sm:w-80 md:w-[420px] sm:shrink-0">
                   <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5">
                     <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-width="2"
@@ -174,89 +178,154 @@
 
             <!-- Scrollable Table Wrapper -->
             <div class="overflow-x-auto w-full">
-            <!-- Table -->
-            <table class="w-full text-sm text-spes-black/70 dark:text-spes-white/70">
-              <thead
-                class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
-                <tr>
-                  <th scope="col" class="p-4 text-center w-4">
-                    <div class="flex items-center justify-center">
-                      <input id="staff-checkbox-all" type="checkbox"
-                        class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
-                    </div>
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left">ID No.</th>
-                  <th scope="col" class="px-6 py-3 text-left">Name</th>
-                  <th scope="col" class="px-6 py-3 text-center">Office</th>
-                  <th scope="col" class="px-6 py-3 text-center">Role</th>
-                  <th scope="col" class="px-6 py-3 text-center">Status</th>
-                  <th scope="col" class="px-6 py-3 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody id="staff-table-body">
-                <!-- Tabular List Skeleton Rows (5 Rows) -->
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
-                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
-                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-28 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
-                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-44"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
-                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-30 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div></td>
-                </tr>
-                <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
-                  <td class="p-4 text-center"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
-                  <td class="px-6 py-4">
-                    <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-26 mb-2"></div>
-                    <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-36"></div>
-                  </td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                  <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div></td>
-                </tr>
-              </tbody>
-            </table>
+              <!-- Table -->
+              <table class="w-full text-sm text-spes-black/70 dark:text-spes-white/70">
+                <thead
+                  class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
+                  <tr>
+                    <th scope="col" class="p-4 text-center w-4">
+                      <div class="flex items-center justify-center">
+                        <input id="staff-checkbox-all" type="checkbox"
+                          class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                      </div>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left">ID No.</th>
+                    <th scope="col" class="px-6 py-3 text-left">Name</th>
+                    <th scope="col" class="px-6 py-3 text-center">Office</th>
+                    <th scope="col" class="px-6 py-3 text-center">Role</th>
+                    <th scope="col" class="px-6 py-3 text-center">Status</th>
+                    <th scope="col" class="px-6 py-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="staff-table-body">
+                  <!-- Tabular List Skeleton Rows (5 Rows) -->
+                  <tr
+                    class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                    <td class="p-4 text-center">
+                      <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div>
+                    </td>
+                  </tr>
+                  <tr
+                    class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                    <td class="p-4 text-center">
+                      <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-28 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div>
+                    </td>
+                  </tr>
+                  <tr
+                    class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                    <td class="p-4 text-center">
+                      <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-44"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div>
+                    </td>
+                  </tr>
+                  <tr
+                    class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                    <td class="p-4 text-center">
+                      <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-30 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div>
+                    </td>
+                  </tr>
+                  <tr
+                    class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                    <td class="p-4 text-center">
+                      <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-26 mb-2"></div>
+                      <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-36"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-10 mx-auto"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div><!-- end overflow-x-auto table wrapper -->
 
             <!-- Pagination -->
@@ -267,13 +336,13 @@
                   class="font-semibold text-spes-black dark:text-spes-white">0</span>
               </span>
               <ul id="pagination-controls" class="flex -space-x-px text-sm">
-                <li><button
+                <li><button id="prev-page"
                     class="cursor-pointer rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
                 </li>
                 <li><button
                     class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-3 py-2 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
                 </li>
-                <li><button
+                <li><button id="next-page"
                     class="cursor-pointer rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
                 </li>
               </ul>
@@ -288,7 +357,7 @@
   <div id="implementors-drawer-overlay"
     class="fixed inset-0 z-[110] hidden bg-spes-black/50 backdrop-blur-sm transition-opacity"></div>
   <div id="implementors-drawer"
-    class="fixed z-[120] bg-spes-white transition-transform duration-300 dark:bg-spes-dark-secondary bottom-0 left-0 right-0 w-full rounded-t-3xl translate-y-full sm:translate-y-0 sm:top-0 sm:bottom-auto sm:right-0 sm:left-auto sm:w-[520px] sm:h-screen sm:rounded-none sm:translate-x-full shadow-2xl"
+    class="fixed z-[120] bg-spes-white transition-transform duration-300 dark:bg-spes-dark-secondary bottom-0 left-0 right-0 w-full rounded-t-3xl translate-y-full sm:translate-y-0 sm:top-0 sm:bottom-auto sm:right-0 sm:left-auto sm:w-[520px] sm:h-screen sm:rounded-none sm:translate-x-full shadow-2xl hidden"
     tabindex="-1">
     <div class="flex h-full flex-col">
       <!-- Header -->
@@ -297,7 +366,7 @@
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-3">
             <h5
-              class="font-montserrat text-xl font-black uppercase whitespace-nowrap text-spes-black dark:text-spes-white"
+              class="font-montserrat text-base sm:text-lg md:text-xl font-black uppercase text-spes-black dark:text-spes-white leading-tight"
               id="drawer-impl-name">Implementor Name</h5>
             <!-- Status Badge (Dot Only) -->
             <div id="drawer-impl-status-badge" class="flex items-center justify-center">
@@ -344,38 +413,41 @@
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">ID
                   Number</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-id">---</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-id">---</span>
               </div>
-              <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
+              <div class="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
-                  class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Address</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-address">---</span>
+                  class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Address</span>
+                <span class="text-xs text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
+                  id="drawer-impl-address">---</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Office</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-office">---</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-office">---</span>
               </div>
-              <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
+              <div class="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
-                  class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Office Location</span>
-                <span class="font-bold text-spes-black dark:text-spes-white whitespace-nowrap" id="drawer-impl-office-location">---</span>
+                  class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Office
+                  Location</span>
+                <span class="text-xs text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
+                  id="drawer-impl-office-location">---</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Religion</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-religion">---</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-religion">---</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Language</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-language">---</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-language">---</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Blood
                   Type</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-blood">---</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-blood">---</span>
               </div>
             </div>
           </div>
@@ -391,12 +463,12 @@
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Email
                   Address</span>
-                <span class="font-bold text-spes-blue dark:text-spes-yellow" id="drawer-impl-email">---</span>
+                <span class="text-xs font-normal text-spes-blue dark:text-spes-yellow" id="drawer-impl-email">---</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Phone</span>
-                <span class="font-bold text-spes-black dark:text-spes-white" id="drawer-impl-phone">---</span>
+                <span class="text-xs font-normal text-spes-black dark:text-spes-white" id="drawer-impl-phone">---</span>
               </div>
             </div>
           </div>
@@ -419,10 +491,11 @@
   <!-- ADD IMPLEMENTOR — BOTTOM OFFCANVAS DRAWER          -->
   <!-- ════════════════════════════════════════════════════ -->
   <div id="drawer-add-impl-overlay"
-    class="fixed inset-0 z-[130] hidden bg-spes-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    class="fixed inset-0 z-[130] hidden bg-spes-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+  </div>
 
   <div id="drawer-add-implementor"
-    class="fixed z-[140] flex flex-col bg-spes-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-spes-dark-secondary bottom-0 left-0 right-0 h-[92dvh] max-h-[92dvh] rounded-t-3xl translate-y-full sm:bottom-auto sm:left-auto sm:right-0 sm:top-0 sm:h-screen sm:max-h-screen sm:w-[520px] sm:rounded-none sm:translate-y-0 sm:translate-x-full border-t sm:border-t-0 sm:border-l border-spes-blue/10 dark:border-spes-white/10"
+    class="fixed z-[140] flex flex-col bg-spes-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-spes-dark-secondary bottom-0 left-0 right-0 w-full h-[92dvh] max-h-[92dvh] rounded-t-3xl translate-y-full sm:bottom-auto sm:left-auto sm:right-0 sm:top-0 sm:h-screen sm:max-h-screen sm:w-[520px] sm:rounded-none sm:translate-y-0 sm:translate-x-full border-t sm:border-t-0 sm:border-l border-spes-blue/10 dark:border-spes-white/10 hidden"
     tabindex="-1" aria-labelledby="drawer-add-impl-title" aria-hidden="true">
 
     <!-- Drag handle (mobile only) -->
@@ -436,7 +509,8 @@
       <div>
         <h5 id="drawer-add-impl-title"
           class="font-montserrat text-xl font-black uppercase text-spes-black dark:text-spes-white">Add Implementor</h5>
-        <p class="text-xs text-spes-black/50 dark:text-spes-white/50 mt-0.5">Fill in the details to create a new staff account.</p>
+        <p class="text-xs text-spes-black/50 dark:text-spes-white/50 mt-0.5">Fill in the details to create a new staff
+          account.</p>
       </div>
       <button type="button" id="btn-close-add-impl-drawer"
         class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-spes-black/50 hover:bg-spes-blue/10 hover:text-spes-blue dark:text-spes-white/50 dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow transition-colors">
@@ -450,12 +524,14 @@
     <div class="flex-1 overflow-y-auto px-6 py-6">
       <!-- Inline error banner -->
       <div id="aif-error"
-        class="mb-4 hidden rounded border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400"></div>
+        class="mb-4 hidden rounded border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400">
+      </div>
 
       <form id="form-add-implementor" autocomplete="off" novalidate class="space-y-5 pb-32">
         <!-- Row: Full Name -->
         <div>
-          <label for="aif-full-name" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+          <label for="aif-full-name"
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
             Full Name <span class="text-red-500">*</span>
           </label>
           <input type="text" id="aif-full-name" name="full_name" required
@@ -466,7 +542,8 @@
         <!-- Row: Username + Email -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="aif-username" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-username"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Username <span class="text-red-500">*</span>
             </label>
             <input type="text" id="aif-username" name="username" required
@@ -474,7 +551,8 @@
               placeholder="e.g. juandc" />
           </div>
           <div>
-            <label for="aif-email" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-email"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Email Address
             </label>
             <input type="email" id="aif-email" name="email"
@@ -486,7 +564,8 @@
         <!-- Row: Password + Confirm Password -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="aif-password" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-password"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Password <span class="text-red-500">*</span>
             </label>
             <input type="password" id="aif-password" name="password" required autocomplete="new-password"
@@ -494,10 +573,12 @@
               placeholder="••••••••" />
           </div>
           <div>
-            <label for="aif-confirm-password" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-confirm-password"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Confirm Password <span class="text-red-500">*</span>
             </label>
-            <input type="password" id="aif-confirm-password" name="confirm_password" required autocomplete="new-password"
+            <input type="password" id="aif-confirm-password" name="confirm_password" required
+              autocomplete="new-password"
               class="block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
               placeholder="••••••••" />
           </div>
@@ -506,7 +587,8 @@
         <!-- Row: Office + Role -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="aif-office" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-office"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Office <span class="text-red-500">*</span>
             </label>
             <select id="aif-office" name="office_id" required
@@ -515,7 +597,8 @@
             </select>
           </div>
           <div>
-            <label for="aif-role" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-role"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Role <span class="text-red-500">*</span>
             </label>
             <select id="aif-role" name="role_id" required
@@ -529,7 +612,8 @@
 
         <!-- Row: Address -->
         <div>
-          <label for="aif-address" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+          <label for="aif-address"
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
             Address
           </label>
           <input type="text" id="aif-address" name="address"
@@ -540,7 +624,8 @@
         <!-- Row: Religion + Language -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="aif-religion" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-religion"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Religion
             </label>
             <input type="text" id="aif-religion" name="religion"
@@ -548,7 +633,8 @@
               placeholder="e.g. Roman Catholic" />
           </div>
           <div>
-            <label for="aif-language" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-language"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Language
             </label>
             <input type="text" id="aif-language" name="language"
@@ -560,20 +646,26 @@
         <!-- Row: Blood Type + Phone -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label for="aif-blood-type" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-blood-type"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Blood Type
             </label>
             <select id="aif-blood-type" name="blood_type"
               class="block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
               <option value="">— Select —</option>
-              <option>A+</option><option>A-</option>
-              <option>B+</option><option>B-</option>
-              <option>AB+</option><option>AB-</option>
-              <option>O+</option><option>O-</option>
+              <option>A+</option>
+              <option>A-</option>
+              <option>B+</option>
+              <option>B-</option>
+              <option>AB+</option>
+              <option>AB-</option>
+              <option>O+</option>
+              <option>O-</option>
             </select>
           </div>
           <div>
-            <label for="aif-phone" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            <label for="aif-phone"
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Phone Number
             </label>
             <input type="tel" id="aif-phone" name="phone"

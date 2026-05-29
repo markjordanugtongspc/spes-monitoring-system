@@ -175,6 +175,11 @@ export function initImplementorsDrawer() {
     overlay.classList.add("hidden");
     overlay.classList.remove("block");
     document.body.classList.remove("overflow-hidden"); // Restore scrolling
+    setTimeout(() => {
+      if (drawer.classList.contains("translate-y-full") || drawer.classList.contains("sm:translate-x-full")) {
+        drawer.classList.add("hidden");
+      }
+    }, 300);
   };
 
   const openDrawer = (implementorData) => {
@@ -220,6 +225,8 @@ export function initImplementorsDrawer() {
     // Show Drawer
     overlay.classList.remove("hidden");
     overlay.classList.add("block");
+    drawer.classList.remove("hidden");
+    drawer.offsetHeight;
     drawer.classList.remove("translate-y-full", "sm:translate-x-full");
     drawer.classList.add("translate-y-0", "sm:translate-x-0");
     document.body.classList.add("overflow-hidden"); // Prevent background scrolling
@@ -343,8 +350,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
     }
 
+    drawerEl.classList.remove("hidden");
     drawerEl.setAttribute("aria-hidden", "false");
     overlay.classList.remove("hidden");
+    drawerEl.offsetHeight;
     requestAnimationFrame(() => {
       overlay.classList.remove("opacity-0");
       overlay.classList.add("opacity-100");
@@ -372,6 +381,9 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     overlay.classList.add("opacity-0");
     setTimeout(() => {
       overlay.classList.add("hidden");
+      if (drawerEl.classList.contains("translate-y-full") || drawerEl.classList.contains("sm:translate-x-full")) {
+        drawerEl.classList.add("hidden");
+      }
       document.body.classList.remove("overflow-hidden");
     }, 300);
   };

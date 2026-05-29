@@ -149,6 +149,7 @@ async function init(user) {
     initQuickAccessPremiumInteractions();
     await loadRecentBeneficiaries();
     setupDashboardListToggle(user);
+    initQuickAccessStatsToggle();
   }
   if (path.includes("/beneficiaries/")) initBeneficiaries();
 
@@ -215,15 +216,24 @@ function setActiveSidebarLink(navId) {
     const isSubLink = link.closest("ul[id^='sidebar-dropdown-']");
 
     if (isMatch) {
-      link.classList.add(
-        "underline",
-        "underline-offset-4",
-        "decoration-2",
-        "decoration-spes-blue",
-        "dark:decoration-spes-yellow",
-        "text-spes-blue",
-        "dark:text-spes-yellow"
-      );
+      if (isSubLink) {
+        link.classList.add(
+          "underline",
+          "underline-offset-4",
+          "decoration-2",
+          "decoration-spes-blue",
+          "dark:decoration-spes-yellow",
+          "text-spes-blue",
+          "dark:text-spes-yellow"
+        );
+      } else {
+        link.classList.add(
+          "bg-spes-blue/10",
+          "dark:bg-spes-yellow/15",
+          "text-spes-blue",
+          "dark:text-spes-yellow"
+        );
+      }
 
       if (isSubLink) {
         isSubLink.classList.remove("hidden");
@@ -240,6 +250,8 @@ function setActiveSidebarLink(navId) {
         "decoration-2",
         "decoration-spes-blue",
         "dark:decoration-spes-yellow",
+        "bg-spes-blue/10",
+        "dark:bg-spes-yellow/15",
         "text-spes-blue",
         "dark:text-spes-yellow",
         "bg-spes-blue/8",
@@ -402,7 +414,17 @@ function renderTableRows(implementors, userRole) {
             </div>
           </td>
           <td class="px-6 py-4 text-center">
-            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${escHtml(s.office)}</span>
+            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+              ${(() => {
+                let officeText = s.office || "";
+                if (/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i.test(officeText)) {
+                  officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i, "LGU - ");
+                } else if (/LOCAL\s+GOVERNMENT\s+UNIT/i.test(officeText)) {
+                  officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT/i, "LGU");
+                }
+                return escHtml(officeText);
+              })()}
+            </span>
           </td>
           ${["users:view","users:create","users:edit","users:delete","reports:export"].map(perm => `
           <td class="px-6 py-4 text-center">
@@ -446,7 +468,20 @@ function renderTableRows(implementors, userRole) {
         </div>
       </td>
       <td class="px-6 py-4 text-center">
-        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${escHtml(s.office)}</span>
+        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+          <span class="block md:hidden">
+            ${(() => {
+              let officeText = s.office || "";
+              if (/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i.test(officeText)) {
+                officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i, "LGU - ");
+              } else if (/LOCAL\s+GOVERNMENT\s+UNIT/i.test(officeText)) {
+                officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT/i, "LGU");
+              }
+              return escHtml(officeText);
+            })()}
+          </span>
+          <span class="hidden md:block">${escHtml(s.office)}</span>
+        </span>
       </td>
       <td class="px-6 py-4 text-center">
         <span class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black tracking-widest ${getRoleBadgeClasses(s.role)}">${s.role}</span>
@@ -1006,4 +1041,135 @@ function setupRealtimePermissionsListener() {
       }
     )
     .subscribe();
+}
+
+function initQuickAccessStatsToggle() {
+  const mainContainer = document.getElementById("main-dashboard-container");
+  const metricsRow = document.getElementById("dashboard-metrics-container");
+  const detailsRow = document.getElementById("dashboard-details-container");
+  const normalDesktopGrid = document.getElementById("quick-access-normal-desktop");
+  const normalMobileList = document.getElementById("quick-access-normal-mobile");
+  const expandedDesktopGrid = document.getElementById("quick-access-expanded-desktop");
+  const expandedMobileGrid = document.getElementById("quick-access-expanded-mobile");
+
+  const btnHeader = document.getElementById("header-toggle-stats");
+
+  const hideIconHeader = document.getElementById("header-hide-stats-icon");
+  const showIconHeader = document.getElementById("header-show-stats-icon");
+  const textHeader = document.getElementById("header-toggle-stats-text");
+
+  const applyState = (hide) => {
+    if (hide) {
+      metricsRow?.classList.add("hidden");
+      detailsRow?.classList.add("hidden");
+
+      normalDesktopGrid?.classList.add("hidden");
+      normalDesktopGrid?.classList.remove("md:grid");
+
+      expandedDesktopGrid?.classList.add("hidden");
+      expandedDesktopGrid?.classList.add("md:flex");
+
+      normalMobileList?.classList.add("hidden");
+      normalMobileList?.classList.remove("flex");
+
+      expandedMobileGrid?.classList.remove("hidden");
+      expandedMobileGrid?.classList.add("flex");
+
+      // Dynamic margin adjustment to prevent cards from getting hidden under the blue banner
+      mainContainer?.classList.remove("lg:-mt-16");
+      mainContainer?.classList.add("lg:mt-8");
+
+      // Header button update
+      hideIconHeader?.classList.add("hidden");
+      showIconHeader?.classList.remove("hidden");
+      if (textHeader) textHeader.textContent = "Show Stats";
+
+      // Normal Desktop button update
+      document.getElementById("hide-stats-icon")?.classList.add("hidden");
+      document.getElementById("show-stats-icon")?.classList.remove("hidden");
+      const quickToggleText = document.getElementById("quick-toggle-stats-text");
+      if (quickToggleText) quickToggleText.textContent = "Show Stats";
+
+      // Expanded Desktop button update
+      document.getElementById("hide-stats-icon-expanded")?.classList.add("hidden");
+      document.getElementById("show-stats-icon-expanded")?.classList.remove("hidden");
+      const quickToggleExpandedText = document.getElementById("quick-toggle-stats-expanded-text");
+      if (quickToggleExpandedText) quickToggleExpandedText.textContent = "Show Stats";
+
+      // Mobile button update
+      document.getElementById("hide-stats-icon-mob")?.classList.add("hidden");
+      document.getElementById("show-stats-icon-mob")?.classList.remove("hidden");
+      const quickToggleMobText = document.getElementById("quick-toggle-stats-mob-text");
+      if (quickToggleMobText) quickToggleMobText.textContent = "Show Stats";
+
+      // Mobile Expanded button update
+      document.getElementById("hide-stats-icon-expanded-mob")?.classList.add("hidden");
+      document.getElementById("show-stats-icon-expanded-mob")?.classList.remove("hidden");
+      const quickToggleExpandedMobText = document.getElementById("quick-toggle-stats-expanded-mob-text");
+      if (quickToggleExpandedMobText) quickToggleExpandedMobText.textContent = "Show Stats";
+    } else {
+      metricsRow?.classList.remove("hidden");
+      detailsRow?.classList.remove("hidden");
+
+      normalDesktopGrid?.classList.add("hidden");
+      normalDesktopGrid?.classList.add("md:grid");
+
+      expandedDesktopGrid?.classList.add("hidden");
+      expandedDesktopGrid?.classList.remove("md:flex");
+
+      normalMobileList?.classList.remove("hidden");
+      normalMobileList?.classList.add("flex");
+
+      expandedMobileGrid?.classList.add("hidden");
+      expandedMobileGrid?.classList.remove("flex");
+
+      // Revert margin back to overlapping style
+      mainContainer?.classList.add("lg:-mt-16");
+      mainContainer?.classList.remove("lg:mt-8");
+
+      // Header button update
+      hideIconHeader?.classList.remove("hidden");
+      showIconHeader?.classList.add("hidden");
+      if (textHeader) textHeader.textContent = "Hide Stats";
+
+      // Normal Desktop button update
+      document.getElementById("hide-stats-icon")?.classList.remove("hidden");
+      document.getElementById("show-stats-icon")?.classList.add("hidden");
+      const quickToggleText = document.getElementById("quick-toggle-stats-text");
+      if (quickToggleText) quickToggleText.textContent = "Hide Stats";
+
+      // Expanded Desktop button update
+      document.getElementById("hide-stats-icon-expanded")?.classList.remove("hidden");
+      document.getElementById("show-stats-icon-expanded")?.classList.add("hidden");
+      const quickToggleExpandedText = document.getElementById("quick-toggle-stats-expanded-text");
+      if (quickToggleExpandedText) quickToggleExpandedText.textContent = "Hide Stats";
+
+      // Mobile button update
+      document.getElementById("hide-stats-icon-mob")?.classList.remove("hidden");
+      document.getElementById("show-stats-icon-mob")?.classList.add("hidden");
+      const quickToggleMobText = document.getElementById("quick-toggle-stats-mob-text");
+      if (quickToggleMobText) quickToggleMobText.textContent = "Hide Stats";
+
+      // Mobile Expanded button update
+      document.getElementById("hide-stats-icon-expanded-mob")?.classList.remove("hidden");
+      document.getElementById("show-stats-icon-expanded-mob")?.classList.add("hidden");
+      const quickToggleExpandedMobText = document.getElementById("quick-toggle-stats-expanded-mob-text");
+      if (quickToggleExpandedMobText) quickToggleExpandedMobText.textContent = "Hide Stats";
+    }
+  };
+
+  const isHidden = localStorage.getItem("spes-dashboard-hide-cards") === "true";
+  applyState(isHidden);
+
+  const toggle = () => {
+    const nextHidden = !(localStorage.getItem("spes-dashboard-hide-cards") === "true");
+    localStorage.setItem("spes-dashboard-hide-cards", nextHidden ? "true" : "false");
+    applyState(nextHidden);
+  };
+
+  btnHeader?.addEventListener("click", toggle);
+  document.getElementById("quick-toggle-stats")?.addEventListener("click", toggle);
+  document.getElementById("quick-toggle-stats-expanded")?.addEventListener("click", toggle);
+  document.getElementById("quick-toggle-stats-mob")?.addEventListener("click", toggle);
+  document.getElementById("quick-toggle-stats-expanded-mob")?.addEventListener("click", toggle);
 }

@@ -51,7 +51,7 @@
       <!-- ════════════════════════════════════════════════════ -->
       <section
         class="relative overflow-visible rounded-xl border border-spes-blue/10 bg-spes-white shadow-sm dark:border-spes-white/10 dark:bg-spes-dark-primary">
-        <div class="inline-block min-w-full align-middle">
+        <div class="w-full align-middle">
           <div class="overflow-visible">
             <!-- Table Header Bar (Premium Gradient) -->
             <div
@@ -67,7 +67,7 @@
                   </svg>
                 </button>
                 <div id="staff-action-dropdown"
-                  class="z-50 hidden w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  class="z-50 hidden w-64 sm:w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
                   <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
                     <li><a id="btn-bulk-grant" href="#"
                         class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
@@ -205,15 +205,15 @@
                   class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
                   class="font-semibold text-spes-black dark:text-spes-white">0</span>
               </span>
-              <ul id="pagination-controls" class="flex -space-x-px text-sm">
-                <li><button
-                    class="cursor-pointer rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
+              <ul id="pagination-controls" class="flex w-full sm:w-auto -space-x-px text-sm justify-between sm:justify-start items-center">
+                <li class="flex-1 sm:flex-initial"><button id="prev-page"
+                    class="cursor-pointer w-full text-center rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2.5 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
                 </li>
-                <li><button
-                    class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-3 py-2 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
+                <li class="flex-none"><button
+                    class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-4 py-2.5 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
                 </li>
-                <li><button
-                    class="cursor-pointer rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
+                <li class="flex-1 sm:flex-initial"><button id="next-page"
+                    class="cursor-pointer w-full text-center rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2.5 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
                 </li>
               </ul>
             </nav>
