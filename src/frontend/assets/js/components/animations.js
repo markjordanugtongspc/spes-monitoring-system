@@ -476,3 +476,138 @@ function createPremiumParticles(event, element) {
   setTimeout(() => particleContainer.remove(), 700);
 }
 // --- FUNCTION: INITIALIZE QUICK ACCESS PREMIUM INTERACTIONS (END) ---
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 6 — LOGIN DOUBLE SLIDER ANIMATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// --- FUNCTION: INITIALIZE LOGIN SLIDER (START) ---
+export function initLoginSignupSlider() {
+  const btnShowRegister = document.getElementById('btn-show-register');
+  const btnShowLogin = document.getElementById('btn-show-login');
+  const leftTrack = document.getElementById('left-overlay-track');
+  const rightTrack = document.getElementById('right-form-track');
+  
+  const panelLeft = document.getElementById('panel-left');
+  const panelRight = document.getElementById('panel-right');
+  const loginContainer = document.getElementById('login-form-container');
+  const signupContainer = document.getElementById('signup-form-container');
+
+  if (!btnShowRegister || !btnShowLogin || !leftTrack || !rightTrack || !panelLeft || !panelRight) return;
+
+  btnShowRegister.addEventListener('click', () => {
+    // Pause the background image slider for 3 seconds to prevent motion sickness during swap
+    window.dispatchEvent(new CustomEvent('pause-login-carousel', { detail: { duration: 3000 } }));
+
+    const isMobile = window.innerWidth < 1024;
+
+    if (isMobile) {
+      // Mobile View: Custom Pop out / Pop up
+      panelLeft.style.transform = 'none';
+      panelRight.style.transform = 'none';
+      leftTrack.style.transform = 'none';
+      rightTrack.style.transform = 'none';
+
+      if (loginContainer && signupContainer) {
+        // Pop out login: scale down, fade out
+        loginContainer.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
+        
+        setTimeout(() => {
+          loginContainer.classList.add('max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
+          
+          // Pop up signup in front: prepare initial state, make visible, and scale up
+          signupContainer.classList.remove('max-lg:hidden');
+          signupContainer.style.zIndex = '30';
+          
+          // Micro-tick for browser paint animation
+          requestAnimationFrame(() => {
+            signupContainer.classList.remove('max-lg:opacity-0', 'max-lg:scale-95', 'max-lg:pointer-events-none');
+            signupContainer.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+          });
+        }, 300);
+      }
+    } else {
+      // Desktop View: Sliding animation
+      if (loginContainer && signupContainer) {
+        loginContainer.classList.remove('scale-95', 'opacity-0', 'pointer-events-none', 'max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
+        signupContainer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto', 'max-lg:hidden', 'scale-95', 'max-lg:opacity-0', 'max-lg:pointer-events-none');
+        signupContainer.style.zIndex = '';
+      }
+
+      panelLeft.style.transform = 'translateX(100%)';
+      panelRight.style.transform = 'translateX(-100%)';
+      leftTrack.style.transform = 'translateX(-50%)';
+      rightTrack.style.transform = 'translateX(-50%)';
+    }
+  });
+
+  btnShowLogin.addEventListener('click', () => {
+    // Pause the background image slider for 3 seconds to prevent motion sickness during swap
+    window.dispatchEvent(new CustomEvent('pause-login-carousel', { detail: { duration: 3000 } }));
+
+    const isMobile = window.innerWidth < 1024;
+
+    if (isMobile) {
+      panelLeft.style.transform = 'none';
+      panelRight.style.transform = 'none';
+      leftTrack.style.transform = 'none';
+      rightTrack.style.transform = 'none';
+
+      if (loginContainer && signupContainer) {
+        // Pop out signup
+        signupContainer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
+        signupContainer.classList.add('max-lg:opacity-0', 'max-lg:scale-95', 'max-lg:pointer-events-none');
+        
+        setTimeout(() => {
+          signupContainer.classList.add('max-lg:hidden');
+          
+          // Pop up login
+          loginContainer.classList.remove('max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
+          requestAnimationFrame(() => {
+            loginContainer.classList.remove('scale-95', 'opacity-0', 'pointer-events-none');
+            loginContainer.classList.add('scale-100', 'opacity-100', 'pointer-events-auto');
+          });
+        }, 300);
+      }
+    } else {
+      if (loginContainer && signupContainer) {
+        loginContainer.classList.remove('scale-95', 'opacity-0', 'pointer-events-none', 'max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
+        signupContainer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto', 'max-lg:hidden', 'scale-95', 'max-lg:opacity-0', 'max-lg:pointer-events-none');
+        signupContainer.style.zIndex = '';
+      }
+
+      panelLeft.style.transform = 'translateX(0)';
+      panelRight.style.transform = 'translateX(0)';
+      leftTrack.style.transform = 'translateX(0)';
+      rightTrack.style.transform = 'translateX(0)';
+    }
+  });
+}
+// --- FUNCTION: INITIALIZE LOGIN SLIDER (END) ---
+
+// --- FUNCTION: DYNAMIC PASSWORD REVEAL (START) ---
+export function initPasswordConfirmReveal() {
+  const regPassword = document.getElementById('reg-password');
+  const confirmContainer = document.getElementById('reg-confirm-password-container');
+
+  if (!regPassword || !confirmContainer) return;
+
+  regPassword.addEventListener('input', () => {
+    if (regPassword.value.length > 0) {
+      confirmContainer.classList.remove('hidden');
+      setTimeout(() => {
+        confirmContainer.classList.remove('opacity-0', 'translate-y-2');
+        confirmContainer.classList.add('opacity-100', 'translate-y-0');
+      }, 10);
+    } else {
+      confirmContainer.classList.remove('opacity-100', 'translate-y-0');
+      confirmContainer.classList.add('opacity-0', 'translate-y-2');
+      setTimeout(() => {
+        if (regPassword.value.length === 0) {
+          confirmContainer.classList.add('hidden');
+        }
+      }, 300);
+    }
+  });
+}
+// --- FUNCTION: DYNAMIC PASSWORD REVEAL (END) ---

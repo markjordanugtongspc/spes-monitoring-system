@@ -88,9 +88,10 @@ export async function loginImplementor(username, password) {
       permissions: dbPermissions
     };
 
-    // Update status to ONLINE in Supabase
+    // Update status to ONLINE in Supabase and fetch approved status
     if (implementor.id) {
-      await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", implementor.id);
+      const { data: updatedStaff } = await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", implementor.id).select("approved").single();
+      session.approved = updatedStaff?.approved || false;
       invalidateImplementorCache();
     }
 
@@ -99,6 +100,61 @@ export async function loginImplementor(username, password) {
   } catch (err) {
     if (import.meta.env.DEV) console.error("[SPES Auth] catch:", err?.message);
     return { success: false, error: "An unexpected error occurred." };
+  }
+}
+
+// ── Registration ────────────────────────────────────────────────
+/**
+ * Register a new staff member (Implementor).
+ * Posts directly to the `staffs` table. Password hashing is 
+ * handled by the DB trigger `hash_staff_password_trigger`.
+ *
+ * @param {object} staffData
+ * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
+ */
+export async function registerImplementor(staffData) {
+  try {
+    const { data, error } = await supabase
+      .from("staffs")
+      .insert([
+        {
+          full_name: staffData.full_name,
+          username: staffData.username,
+          email: staffData.email,
+          password: staffData.password, // DB handles hashing
+          office_id: staffData.office_id,
+          address: staffData.address || null,
+          phone: staffData.phone || null,
+          religion: staffData.religion || null,
+          language: staffData.language || null,
+          blood_type: staffData.blood_type || null,
+          status: "OFFLINE", // Default status
+          role_id: 2, // 2 = Officer role by default
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      if (import.meta.env.DEV) console.error("[SPES Auth] Register error code:", error.code);
+      
+      // Handle unique constraint violations
+      if (error.code === '23505') {
+        if (error.message.includes('staffs_email_key')) {
+          return { success: false, error: "This email is already in use." };
+        }
+        if (error.message.includes('staffs_username_key')) {
+          return { success: false, error: "This username is already taken." };
+        }
+      }
+      return { success: false, error: "Failed to register. Please check your inputs and try again." };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    // DO NOT console.log the raw inputs or password for security
+    if (import.meta.env.DEV) console.error("[SPES Auth] Register catch block error");
+    return { success: false, error: "An unexpected error occurred during registration." };
   }
 }
 
@@ -121,7 +177,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       .from("staffs")
       .select(`
         id, full_name, username, email, address, phone,
-        religion, language, blood_type, status,
+        religion, language, blood_type, status, approved,
         archive_at, role_id, office_id,
         roles   ( id, name ),
         offices ( id, name, location )
@@ -150,6 +206,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       religion:        s.religion || "",
       language:        s.language || "",
       blood_type:      s.blood_type || "",
+      approved:        s.approved || false,
     }));
 
     _writeImplCache(list);
@@ -187,17 +244,17 @@ export async function logoutImplementor() {
  * Extend this if you add new roles to the `roles` table.
  */
 function _mapToRbacRole(role) {
-  if (!role) return "student";
+  if (!role) return "officer";
 
   if (typeof role === "number" || (typeof role === "string" && !isNaN(role))) {
     const id = parseInt(role, 10);
     if (id === 1) return "admin";
     if (id === 2) return "officer";
-    return "student";
+    return "officer";
   }
 
   const lower = String(role).toLowerCase();
   if (lower.includes("admin"))   return "admin";
   if (lower.includes("officer")) return "officer";
-  return "student";
+  return "officer";
 }

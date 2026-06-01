@@ -171,6 +171,24 @@ export async function unarchiveStaff(id) {
   return { success: true };
 }
 
+// ── Bulk approval / disapproval ──────────────────────────────────
+export async function updateStaffApprovalBulk(ids, approved) {
+  if (!ids || ids.length === 0) return { success: true };
+
+  const { data, error } = await supabase
+    .from("staffs")
+    .update({ approved, updated_at: new Date().toISOString() })
+    .in("id", ids);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Staff] updateStaffApprovalBulk error:", error.code, error.hint);
+    return { success: false, error: "Failed to update selection's approval status. Please try again." };
+  }
+
+  invalidateStaffCache();
+  return { success: true, data };
+}
+
 // ── Input sanitiser ────────────────────────────────────────────
 function _sanitize(p) {
   const str = (v) => String(v ?? "").trim() || null;
@@ -187,5 +205,6 @@ function _sanitize(p) {
     role_id:    p.role_id ? parseInt(p.role_id, 10) : null,
     office_id:  p.office_id ? parseInt(p.office_id, 10) : null,
     status:     str(p.status) ?? "OFFLINE",
+    approved:   Boolean(p.approved),
   };
 }

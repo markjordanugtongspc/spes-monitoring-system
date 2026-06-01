@@ -49,13 +49,8 @@ export function initLoginHandler() {
       modals.close();
 
       if (result.success) {
-        // Redirect based on role
-        const role = result.user.role;
-        if (role === "student") {
-          window.location.href = "../pages/students/dashboard/";
-        } else {
-          window.location.href = "../pages/dashboard/";
-        }
+        // Redirect directly to the unified dashboard
+        window.location.href = "../pages/dashboard/";
       } else {
         modals.error("Login Failed", result.error || "Invalid username or password.");
         signInBtn.disabled = false;

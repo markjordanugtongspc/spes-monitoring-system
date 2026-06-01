@@ -10,9 +10,14 @@ import {
 import { initScopedTextPlaceholders } from "./components/content-placeholders";
 import { initLoginCarousel } from "./components/carousel";
 import { initLoginHandler } from "./components/login-handler";
+import { initRegisterHandler } from "./components/register-handler";
 import { initBeneficiaries } from "./components/beneficiaries";
-import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations";
-
+import { 
+  initQuickAccessCarousel, 
+  initQuickAccessPremiumInteractions,
+  initLoginSignupSlider,
+  initPasswordConfirmReveal
+} from "./components/animations";
 
 
 function initAppVersionLabel() {
@@ -47,19 +52,50 @@ function initLogoSwap() {
 import { supabase } from "../../../backend/api/supabase.js";
 import Swal from "sweetalert2";
 
-initThemeToggle();
-initAppVersionLabel();
-initLogoSwap();
-initAutoYear();
-initMobileSplashDrawer();
-initPasswordVisibilityToggle();
-initRememberMePreferences();
-initScopedTextPlaceholders();
-initLoginCarousel();
-initLoginHandler();
-initBeneficiaries();
-initQuickAccessCarousel();
-initQuickAccessPremiumInteractions();
+document.addEventListener("DOMContentLoaded", () => {
+  initThemeToggle();
+  initAppVersionLabel();
+  initLogoSwap();
+  initAutoYear();
+  initMobileSplashDrawer();
+  initLoginHandler();
+  initRegisterHandler();
+  initPasswordVisibilityToggle();
+  initRememberMePreferences();
+  initScopedTextPlaceholders();
+  initLoginCarousel();
+  initBeneficiaries();
+  initQuickAccessCarousel();
+  initQuickAccessPremiumInteractions();
+  initLoginSignupSlider();
+  initPasswordConfirmReveal();
+});
+
+// ── Populate Registration Offices ───────────────────────────────
+async function populateRegistrationOffices() {
+  const officeSelect = document.getElementById("reg-office");
+  if (!officeSelect) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("offices")
+      .select("id, name")
+      .order("name");
+
+    if (!error && data && data.length > 0) {
+      officeSelect.innerHTML = '<option value="">Select Office...</option>';
+      data.forEach(office => {
+        const option = document.createElement("option");
+        option.value = office.id;
+        option.textContent = office.name;
+        officeSelect.appendChild(option);
+      });
+    }
+  } catch (err) {
+    console.error("Failed to fetch offices:", err);
+  }
+}
+populateRegistrationOffices();
 
 // ── Supabase Realtime Permissions Listener ────────────────────────
 function setupRealtimePermissionsListener() {
@@ -106,4 +142,3 @@ function setupRealtimePermissionsListener() {
 }
 
 setupRealtimePermissionsListener();
-

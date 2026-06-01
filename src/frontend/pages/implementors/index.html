@@ -77,6 +77,10 @@
                 <div id="staff-action-dropdown"
                   class="z-10 hidden w-44 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
                   <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
+                    <li><button id="btn-approve-selected-impl"
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Approve Selected</button></li>
+                    <li><button id="btn-disapprove-selected-impl"
+                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Disapprove Selected</button></li>
                     <li><button id="btn-archive-selected-impl"
                         class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Archive
                         Selected</button></li>
@@ -449,6 +453,11 @@
                   Type</span>
                 <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-blood">---</span>
               </div>
+              <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
+                <span
+                  class="text-[11px] font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Approval Status</span>
+                <span class="text-xs text-spes-black dark:text-spes-white" id="drawer-impl-approved">---</span>
+              </div>
             </div>
           </div>
         </div>
@@ -671,6 +680,20 @@
             <input type="tel" id="aif-phone" name="phone"
               class="block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
               placeholder="e.g. 09171234567" />
+          </div>
+        </div>
+
+        <!-- Row: Approved Status (Toggle switch) -->
+        <div class="pt-2">
+          <div class="flex items-center justify-between rounded-lg border border-spes-blue/15 bg-spes-blue/5 p-4 dark:border-spes-white/10 dark:bg-spes-white/5">
+            <div class="flex flex-col">
+              <span class="text-xs font-bold uppercase tracking-wider text-spes-black dark:text-spes-white">Approved Officer</span>
+              <span class="text-[10px] text-spes-black/50 dark:text-spes-white/50 mt-0.5">Toggle to allow this officer to view and access full student directory data.</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="aif-approved" name="approved" class="sr-only peer cursor-pointer" />
+              <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 cursor-pointer"></div>
+            </label>
           </div>
         </div>
 

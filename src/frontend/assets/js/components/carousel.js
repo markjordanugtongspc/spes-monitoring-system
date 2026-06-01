@@ -52,6 +52,17 @@ export function initLoginCarousel() {
     }, duration);
   }
 
+  // Listen for pause event (e.g. during panel swap)
+  window.addEventListener('pause-login-carousel', (e) => {
+    const pauseDuration = e.detail?.duration || 3000;
+    if (cycleTimeout) clearTimeout(cycleTimeout);
+    
+    // Pause for the duration, then resume
+    cycleTimeout = setTimeout(() => {
+      carousel.next();
+    }, pauseDuration);
+  });
+
   // Initial start
   startCustomCycle(0);
 }

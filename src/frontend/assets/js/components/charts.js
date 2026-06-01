@@ -168,6 +168,12 @@ function _renderImplementorStatus(beneficiaries) {
 
 // Chart 3 — Beneficiaries by Year Period (grouped bar)
 function _renderBeneficiariesByYear(beneficiaries) {
+  const countEl = document.getElementById("added-students-count");
+  if (countEl) {
+    countEl.innerHTML = `<span class="text-xl font-black text-spes-black dark:text-white leading-none">${beneficiaries.length.toLocaleString()}</span>`;
+    countEl.className = "text-xl font-black text-spes-black dark:text-white leading-none";
+  }
+
   const el = document.getElementById("column-chart");
   if (!el) return;
   el.innerHTML = "";

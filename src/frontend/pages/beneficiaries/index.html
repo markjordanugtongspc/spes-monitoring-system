@@ -54,6 +54,11 @@
     </header>
 
     <div class="mx-auto -mt-16 max-w-7xl 2xl:max-w-[2200px] px-6 pb-12 relative z-20">
+      <!-- Current Logged In Office Info (Name of Office - Top of Table) -->
+      <div id="officer-assigned-office-info-top" class="hidden mb-3 px-1 text-xs uppercase tracking-wider whitespace-nowrap overflow-visible">
+        <span class="font-black text-white">Name of Office:</span> <span id="assigned-office-name" class="font-medium text-white/90">---</span>
+      </div>
+
       <!-- ════════════════════════════════════════════════════ -->
       <!-- BENEFICIARY DIRECTORY TABLE -->
       <!-- ════════════════════════════════════════════════════ -->
@@ -170,7 +175,7 @@
                     <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
                     <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Period of Employment</th>
-                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Amount of Insurance</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Contact No.</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -259,10 +264,9 @@
         </div>
       </section>
 
-      <!-- Current Logged In Office Info (Floating with no div background, hidden by default, shown via JS) -->
-      <div id="officer-assigned-office-info" class="hidden mt-6 px-4 flex flex-col md:flex-row justify-between gap-2 text-base font-semibold text-spes-black/70 dark:text-spes-white/70">
-        <div>Name of Office: <span id="assigned-office-name" class="font-extrabold text-spes-blue dark:text-spes-yellow">---</span></div>
-        <div class="text-right">Office Address: <span id="assigned-office-location" class="font-extrabold text-spes-black dark:text-spes-white">---</span></div>
+      <!-- Current Logged In Office Info (Office Address - Bottom of Table) -->
+      <div id="officer-assigned-office-info-bottom" class="hidden mt-6 px-4 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-left justify-start whitespace-normal break-words">
+        Office Address: <span id="assigned-office-location" class="font-extrabold text-gray-800 dark:text-white">---</span>
       </div>
 
       <!-- ════════════════════════════════════════════════════ -->
@@ -404,16 +408,8 @@
           </div>
         </div>
 
-        <!-- Insurance + Contact -->
+        <!-- Contact & Gender -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label for="bdf-insurance" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
-              Insurance Amount (₱)
-            </label>
-            <input type="text" id="bdf-insurance" name="insurance"
-              class="block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
-              placeholder="e.g. 50" />
-          </div>
           <div>
             <label for="bdf-contact" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Contact Number
@@ -421,6 +417,17 @@
             <input type="tel" id="bdf-contact" name="contact_number"
               class="block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
               placeholder="+63 9XX XXX XXXX" />
+          </div>
+          <div>
+            <label for="bdf-gender" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              Gender <span class="text-red-500">*</span>
+            </label>
+            <select id="bdf-gender" name="gender" required
+              class="cursor-pointer block w-full rounded-lg border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+              <option value="">— Select Gender —</option>
+              <option value="MALE">MALE</option>
+              <option value="FEMALE">FEMALE</option>
+            </select>
           </div>
         </div>
 

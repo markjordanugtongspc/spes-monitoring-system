@@ -201,6 +201,25 @@ export function initImplementorsDrawer() {
     document.getElementById("drawer-impl-language").textContent = implementorData.language || "—";
     document.getElementById("drawer-impl-blood").textContent = implementorData.blood_type || "—";
     document.getElementById("drawer-impl-phone").textContent = implementorData.phone || "—";
+
+    const approvedEl = document.getElementById("drawer-impl-approved");
+    if (approvedEl) {
+      if (implementorData.approved) {
+        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+          <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          Approved
+        </span>`;
+      } else {
+        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
+          <svg class="h-3.5 w-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+          Not Approved
+        </span>`;
+      }
+    }
     const notesEl = document.getElementById("drawer-impl-notes");
     if (notesEl) notesEl.closest(".space-y-6") && (notesEl.textContent = "—");
 
@@ -341,6 +360,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-language").value = staffData.language || "";
       document.getElementById("aif-blood-type").value = staffData.blood_type || "";
       document.getElementById("aif-phone").value = staffData.phone || "";
+      document.getElementById("aif-approved").checked = Boolean(staffData.approved);
     } else {
       currentEditId = null;
       titleEl.textContent = "Add Implementor";
@@ -348,6 +368,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`;
       pwdLabel.innerHTML = `Password <span class="text-red-500">*</span>`;
       confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
+      document.getElementById("aif-approved").checked = false;
     }
 
     drawerEl.classList.remove("hidden");
@@ -413,6 +434,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       language:   document.getElementById("aif-language").value.trim() || null,
       blood_type: document.getElementById("aif-blood-type").value || null,
       phone:      document.getElementById("aif-phone").value.trim() || null,
+      approved:   document.getElementById("aif-approved")?.checked || false,
     };
     
     if (pwd) {

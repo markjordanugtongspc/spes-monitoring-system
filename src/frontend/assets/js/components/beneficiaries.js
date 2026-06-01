@@ -52,7 +52,6 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
-// ── Beneficiary form drawer helpers ───────────────────────────
 function _bdfCollect() {
   const g = (id) => document.getElementById(id)?.value?.trim() ?? "";
   return {
@@ -62,8 +61,8 @@ function _bdfCollect() {
     address:        g("bdf-address"),
     month_period:   g("bdf-month-period"),
     year_period:    g("bdf-year-period"),
-    insurance:      g("bdf-insurance"),
     contact_number: g("bdf-contact"),
+    gender:         g("bdf-gender"),
     birthday:       g("bdf-birthday") || null,
     age:            g("bdf-age") || null,
     education:      g("bdf-education"),
@@ -78,8 +77,8 @@ function _bdfFill(defaults = {}) {
   set("bdf-address",      defaults.address);
   set("bdf-month-period", defaults.month_period);
   set("bdf-year-period",  defaults.year_period ?? new Date().getFullYear());
-  set("bdf-insurance",    defaults.insurance);
   set("bdf-contact",      defaults.contact_number);
+  set("bdf-gender",       defaults.gender);
   set("bdf-birthday",     defaults.birthday);
   set("bdf-age",          defaults.age);
   set("bdf-education",    defaults.education);
@@ -104,14 +103,14 @@ export function initBeneficiaries() {
         if (!error && data) {
           officerOffice = data;
           
-          const officeInfoContainer = document.getElementById("officer-assigned-office-info");
+          const officeInfoTop = document.getElementById("officer-assigned-office-info-top");
+          const officeInfoBottom = document.getElementById("officer-assigned-office-info-bottom");
           const officeNameEl = document.getElementById("assigned-office-name");
           const officeLocEl = document.getElementById("assigned-office-location");
-          if (officeInfoContainer && officeNameEl && officeLocEl) {
-            officeNameEl.textContent = data.name.toUpperCase();
-            officeLocEl.textContent = data.location.toUpperCase();
-            officeInfoContainer.classList.remove("hidden");
-          }
+          if (officeNameEl) officeNameEl.textContent = data.name.toUpperCase();
+          if (officeLocEl) officeLocEl.textContent = data.location.toUpperCase();
+          if (officeInfoTop) officeInfoTop.classList.remove("hidden");
+          if (officeInfoBottom) officeInfoBottom.classList.remove("hidden");
         }
       } catch (err) {
         console.warn("[SPES] loadOfficerOffice error:", err);
@@ -177,7 +176,7 @@ export function initBeneficiaries() {
       <div class="space-y-4 text-xs">
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Contact No.</span>
-          <span class="font-black ${b.contact_number ? "text-spes-black dark:text-white" : "italic text-spes-black/30 dark:text-white/30"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
+          <span class="font-black ${b.contact_number ? "text-indigo-600 dark:text-indigo-400" : "italic text-spes-black/30 dark:text-white/30"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
         </div>
         <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Address</span>
@@ -196,8 +195,8 @@ export function initBeneficiaries() {
           <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(period)}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Insurance</span>
-          <span class="font-extrabold text-emerald-600 dark:text-emerald-400">${escHtml(insurance)}</span>
+          <span class="font-bold text-spes-black/55 dark:text-white/50">Gender</span>
+          <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(b.gender || "N/A")}</span>
         </div>
         <div class="flex justify-between items-center py-1">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Education</span>
@@ -206,19 +205,6 @@ export function initBeneficiaries() {
             ${escHtml(b.education || "Not Provided")}
           </span>
         </div>
-      </div>
-
-      <div class="flex gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-white/10">
-        <button id="btn-drawer-edit"
-          class="cursor-pointer flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-spes-blue px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white hover:bg-spes-blue/90 transition-all shadow-sm">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-          Edit
-        </button>
-        <button id="btn-drawer-archive"
-          class="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg border border-spes-red/30 px-3 py-2 text-[11px] font-black uppercase tracking-wider text-spes-red hover:bg-spes-red/10 transition-all">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8" /></svg>
-          Archive
-        </button>
       </div>
     `;
 
@@ -290,7 +276,6 @@ export function initBeneficiaries() {
     tbody.innerHTML = page.map((b, idx) => {
       const absIdx   = start + idx;
       const period   = formatPeriod(b);
-      const ins      = formatInsurance(b.insurance);
       return `
         <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer"
             data-bene-idx="${absIdx}">
@@ -302,7 +287,7 @@ export function initBeneficiaries() {
           <td class="px-6 py-4 text-left font-extrabold text-spes-black dark:text-spes-white whitespace-nowrap">${escHtml(b.full_name?.toUpperCase() || "—")}</td>
           <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
           <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(period)}</td>
-          <td class="px-6 py-4 text-center font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">${escHtml(ins)}</td>
+          <td class="px-6 py-4 text-center font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap">${escHtml(b.contact_number || "—")}</td>
           <td class="px-6 py-4 text-center whitespace-nowrap">
             <button class="btn-edit-bene cursor-pointer inline-flex items-center justify-center rounded-lg p-2 text-spes-blue transition-colors hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10" data-bene-idx="${absIdx}" title="Edit">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -430,7 +415,18 @@ export function initBeneficiaries() {
   };
   const _bdfSetLoading = (loading) => {
     if (!bdfSubmitBtn) return;
-    bdfSubmitBtn.disabled = loading;
+    
+    const isUnapprovedOfficer = session && session.role !== "admin" && String(session.approved).toLowerCase() === "false";
+    bdfSubmitBtn.disabled = loading || isUnapprovedOfficer;
+    
+    if (isUnapprovedOfficer) {
+      bdfSubmitBtn.title = "Action disabled. You are not yet approved.";
+      bdfSubmitBtn.classList.add("cursor-not-allowed", "opacity-50");
+    } else {
+      bdfSubmitBtn.title = "";
+      bdfSubmitBtn.classList.remove("cursor-not-allowed", "opacity-50");
+    }
+
     bdfSubmitBtn.innerHTML = loading
       ? `<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> Saving…`
       : `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> <span>${_bdfEditId ? "Save Changes" : "Save Beneficiary"}</span>`;

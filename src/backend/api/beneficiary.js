@@ -134,7 +134,7 @@ function _sanitize(p) {
     address:        str(p.address),
     month_period:   str(p.month_period)?.toUpperCase() ?? null,
     year_period:    str(p.year_period),
-    insurance:      str(p.insurance),
+    gender:         str(p.gender),
     designated:     str(p.designated),
     relationship:   str(p.relationship)?.toUpperCase() ?? null,
     contact_number: str(p.contact_number),

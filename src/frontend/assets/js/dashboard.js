@@ -8,7 +8,7 @@ import "flowbite";
 import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { fetchImplementorList, invalidateImplementorCache } from "../../../backend/api/auth.js";
-import { updateStaff, archiveStaff, unarchiveStaff, fetchOffices, fetchRoles } from "../../../backend/api/staff.js";
+import { updateStaff, archiveStaff, unarchiveStaff, fetchOffices, fetchRoles, updateStaffApprovalBulk } from "../../../backend/api/staff.js";
 import { fetchAllRolePermissions, upsertRolePermissions } from "../../../backend/api/permissions.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
@@ -89,6 +89,18 @@ async function init(user) {
     }
   }
 
+  // Refresh approved status
+  if (user && user.id) {
+    try {
+      const { supabase } = await import("../../../backend/api/supabase.js");
+      const { data: staffData } = await supabase.from("staffs").select("approved").eq("id", user.id).single();
+      if (staffData) {
+        user.approved = staffData.approved;
+        localStorage.setItem("spes_session", JSON.stringify(user));
+      }
+    } catch (e) {}
+  }
+
   populateSidebar(user);
   initClock();
 
@@ -129,6 +141,8 @@ async function init(user) {
     initImplementorsDrawer();
     _wireAddImplementorBtn(user);
     _wireArchiveSelectedBtn();
+    _wireApproveSelectedBtn();
+    _wireDisapproveSelectedBtn();
     window._spesDashboardRole = user.role;
 
     if (window.location.hash === "#add") {
@@ -143,6 +157,10 @@ async function init(user) {
   updateDynamicBadges();
 
   if (path.includes("/dashboard/")) {
+    const viewAllLink = document.getElementById("dashboard-view-all-link");
+    if (viewAllLink) {
+      viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
+    }
     initDashboardCharts();
     _loadTimelineMetrics();
     initQuickAccessCarousel();
@@ -154,6 +172,7 @@ async function init(user) {
   if (path.includes("/beneficiaries/")) initBeneficiaries();
 
   setupRealtimePermissionsListener();
+  setupRealtimeApprovalListener();
 
   document.getElementById("sign-out-btn")?.addEventListener("click", signOut);
   initAutoYear();
@@ -264,6 +283,19 @@ function setActiveSidebarLink(navId) {
   });
 }
 
+function _formatOfficeName(officeText) {
+  let text = officeText || "";
+  if (/CITY\s+GOVERNMENT\s+OF\s+ILIGAN\s*\(LGU\)/i.test(text)) {
+    return "LGU - ILIGAN";
+  }
+  if (/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i.test(text)) {
+    text = text.replace(/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i, "LGU - ");
+  } else if (/LOCAL\s+GOVERNMENT\s+UNIT/i.test(text)) {
+    text = text.replace(/LOCAL\s+GOVERNMENT\s+UNIT/i, "LGU");
+  }
+  return text;
+}
+
 // ── Implementor table ─────────────────────────────────────────
 let allImplementors = [];
 let allRolePermissions = {};
@@ -272,9 +304,10 @@ const rowsPerPage = (window.location.pathname.includes("/implementors/") || wind
 
 async function loadImplementorTable(userRole) {
   const isRolesPage = window.location.pathname.includes("/roles/");
+  const isImplPage = window.location.pathname.includes("/implementors/");
 
-  // Fetch implementors from DB
-  const data = await fetchImplementorList();
+  // Fetch implementors from DB. Force refresh if on management pages to avoid caching delays.
+  const data = await fetchImplementorList({ forceRefresh: isRolesPage || isImplPage });
   allImplementors = data;
 
   // For the roles page, also fetch the live permissions map
@@ -387,6 +420,16 @@ function renderTableRows(implementors, userRole) {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   const isAdminSession = session.role === "admin";
   const canEdit = isAdminSession || (session.permissions && session.permissions.edit_users);
+  const isApproved = isAdminSession || session.approved;
+
+  if (!isApproved) {
+    if (isRolesPage) {
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
+    }
+    return;
+  }
 
   if (isRolesPage) {
     tbody.innerHTML = implementors.map(s => {
@@ -408,22 +451,33 @@ function renderTableRows(implementors, userRole) {
           </div></td>
           <td class="px-6 py-4 text-left text-xs font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${String(s.id).padStart(2, "0")}</td>
           <td class="px-6 py-4 text-left whitespace-nowrap">
-            <div class="flex flex-col">
-              <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}</span>
-              <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)} · ${escHtml(displayRole)}</span>
+            <div class="flex items-center gap-3">
+              <!-- Approval Status Icon + Tooltip -->
+              <div class="relative group cursor-pointer inline-flex shrink-0">
+                ${s.approved 
+                  ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                     </svg>`
+                  : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                     </svg>`
+                }
+                <!-- Tooltip -->
+                <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                  ${s.approved ? "Approved" : "Not Approved"}
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
+                </div>
+              </div>
+
+              <div class="flex flex-col">
+                <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}</span>
+                <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)} · ${escHtml(displayRole)}</span>
+              </div>
             </div>
           </td>
           <td class="px-6 py-4 text-center">
             <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
-              ${(() => {
-                let officeText = s.office || "";
-                if (/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i.test(officeText)) {
-                  officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i, "LGU - ");
-                } else if (/LOCAL\s+GOVERNMENT\s+UNIT/i.test(officeText)) {
-                  officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT/i, "LGU");
-                }
-                return escHtml(officeText);
-              })()}
+              ${escHtml(_formatOfficeName(s.office))}
             </span>
           </td>
           ${["users:view","users:create","users:edit","users:delete","reports:export"].map(perm => `
@@ -462,25 +516,33 @@ function renderTableRows(implementors, userRole) {
       </div></td>` : ""}
       <td class="px-6 py-4 text-left text-xs font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${String(s.id).padStart(2, "0")}</td>
       <td class="px-6 py-4 text-left">
-        <div class="flex flex-col">
-          <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}${isArchived ? ' <span class="ml-1 inline-flex rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">Archived</span>' : ""}</span>
-          <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)}</span>
+        <div class="flex items-center gap-3">
+          <!-- Approval Status Icon + Tooltip -->
+          <div class="relative group cursor-pointer inline-flex shrink-0">
+            ${s.approved 
+              ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                 </svg>`
+              : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                 </svg>`
+            }
+            <!-- Tooltip -->
+            <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+              ${s.approved ? "Approved" : "Not Approved"}
+              <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
+            </div>
+          </div>
+
+          <div class="flex flex-col">
+            <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}${isArchived ? ' <span class="ml-1 inline-flex rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">Archived</span>' : ""}</span>
+            <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)}</span>
+          </div>
         </div>
       </td>
       <td class="px-6 py-4 text-center">
         <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
-          <span class="block md:hidden">
-            ${(() => {
-              let officeText = s.office || "";
-              if (/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i.test(officeText)) {
-                officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT\s+OF\s+/i, "LGU - ");
-              } else if (/LOCAL\s+GOVERNMENT\s+UNIT/i.test(officeText)) {
-                officeText = officeText.replace(/LOCAL\s+GOVERNMENT\s+UNIT/i, "LGU");
-              }
-              return escHtml(officeText);
-            })()}
-          </span>
-          <span class="hidden md:block">${escHtml(s.office)}</span>
+          ${escHtml(_formatOfficeName(s.office))}
         </span>
       </td>
       <td class="px-6 py-4 text-center">
@@ -717,6 +779,74 @@ function _wireArchiveSelectedBtn() {
   });
 }
 
+function _wireApproveSelectedBtn() {
+  const btn = document.getElementById("btn-approve-selected-impl");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const checked = [...document.querySelectorAll(".staff-row-checkbox:checked")];
+    if (!checked.length) { modals.warning("No Selection", "Please select one or more implementors first."); return; }
+
+    const res = await modals.confirm(
+      "Approve Selected",
+      `Approve ${checked.length} selected officer(s)? Approved officers will be granted access to view the full student directory.`,
+      "Approve", "Cancel"
+    );
+    if (!res.isConfirmed) return;
+
+    modals.loading("Approving...", "Please wait...");
+    const ids = checked.map(cb => {
+      const row = cb.closest("tr");
+      try { return JSON.parse(decodeURIComponent(row?.getAttribute("data-impl-info") || "{}")).id; } catch { return null; }
+    }).filter(Boolean);
+
+    const result = await updateStaffApprovalBulk(ids, true);
+    modals.close();
+
+    if (result.success) {
+      await modals.success("Approved", `${ids.length} officer(s) approved successfully.`);
+    } else {
+      modals.error("Error", result.error);
+    }
+
+    invalidateImplementorCache();
+    await loadImplementorTable(window._spesDashboardRole || "officer");
+  });
+}
+
+function _wireDisapproveSelectedBtn() {
+  const btn = document.getElementById("btn-disapprove-selected-impl");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const checked = [...document.querySelectorAll(".staff-row-checkbox:checked")];
+    if (!checked.length) { modals.warning("No Selection", "Please select one or more implementors first."); return; }
+
+    const res = await modals.confirm(
+      "Disapprove Selected",
+      `Disapprove ${checked.length} selected officer(s)? Disapproved officers will have their list view access revoked.`,
+      "Disapprove", "Cancel"
+    );
+    if (!res.isConfirmed) return;
+
+    modals.loading("Disapproving...", "Please wait...");
+    const ids = checked.map(cb => {
+      const row = cb.closest("tr");
+      try { return JSON.parse(decodeURIComponent(row?.getAttribute("data-impl-info") || "{}")).id; } catch { return null; }
+    }).filter(Boolean);
+
+    const result = await updateStaffApprovalBulk(ids, false);
+    modals.close();
+
+    if (result.success) {
+      await modals.success("Disapproved", `${ids.length} officer(s) disapproved successfully.`);
+    } else {
+      modals.error("Error", result.error);
+    }
+
+    invalidateImplementorCache();
+    await loadImplementorTable(window._spesDashboardRole || "officer");
+  });
+}
+
 async function showEditStaffModal(staff) {
   modals.loading("Loading", "Fetching form data...");
   const formHtml = await _buildStaffFormHtml(staff);
@@ -932,6 +1062,15 @@ async function loadRecentBeneficiaries() {
   const tbody = document.getElementById("dashboard-beneficiary-table-body");
   if (!tbody) return;
 
+  const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  const isAdmin = session.role === "admin";
+  const isApproved = isAdmin || session.approved;
+
+  if (!isApproved) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
+    return;
+  }
+
   try {
     const { fetchBeneficiaries } = await import("../../../backend/api/beneficiary.js");
     const { data } = await fetchBeneficiaries();
@@ -944,8 +1083,6 @@ async function loadRecentBeneficiaries() {
 
     tbody.innerHTML = recent.map(b => {
       const period = [b.month_period, b.year_period].filter(Boolean).join(" ") || "N/A";
-      const insVal = parseFloat(String(b.insurance).replace(/[^0-9.]/g, ""));
-      const formattedIns = !isNaN(insVal) ? `₱${insVal.toFixed(2)}` : (b.insurance || "N/A");
 
       return `
         <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 transition-colors duration-200">
@@ -953,7 +1090,7 @@ async function loadRecentBeneficiaries() {
           <td class="px-6 py-4 text-left whitespace-nowrap font-extrabold text-spes-black dark:text-spes-white">${escHtml(b.full_name?.toUpperCase() || "—")}</td>
           <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70">${escHtml(b.address || "N/A")}</td>
           <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 uppercase">${escHtml(period)}</td>
-          <td class="px-6 py-4 text-center font-black text-emerald-600 dark:text-emerald-400">${escHtml(formattedIns)}</td>
+          <td class="px-6 py-4 text-center font-black text-indigo-600 dark:text-indigo-400">${escHtml(b.contact_number || "—")}</td>
         </tr>`;
     }).join("");
   } catch (err) {
@@ -1027,6 +1164,50 @@ function setupRealtimePermissionsListener() {
             text: "Your access permissions have been updated in real-time. Reloading the page...",
             icon: "info",
             timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            customClass: {
+              popup: "rounded-2xl border-none shadow-2xl"
+            },
+            background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
+            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
+          }).then(() => {
+            window.location.reload();
+          });
+        }
+      }
+    )
+    .subscribe();
+}
+
+function setupRealtimeApprovalListener() {
+  const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  if (!session || !session.id || session.role === "admin") return;
+
+  supabase
+    .channel("dashboard-approval-channel")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "staffs",
+        filter: `id=eq.${session.id}`
+      },
+      (payload) => {
+        const newApproved = payload.new.approved;
+        if (String(session.approved) !== String(newApproved)) {
+          session.approved = newApproved;
+          localStorage.setItem("spes_session", JSON.stringify(session));
+
+          const isApproved = String(newApproved).toLowerCase() === "true";
+          Swal.fire({
+            title: isApproved ? "Account Approved!" : "Account Disapproved",
+            text: isApproved 
+              ? "Your officer account has been approved in real-time. Reloading the page to grant full access..."
+              : "Your officer account has been disapproved. Reloading the page to revoke access...",
+            icon: isApproved ? "success" : "warning",
+            timer: 3500,
             timerProgressBar: true,
             showConfirmButton: false,
             customClass: {

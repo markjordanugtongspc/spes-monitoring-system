@@ -13,6 +13,7 @@ const ACTIVE_NAV =
 function applyHeaderFooterTokens(fragment, tokens) {
   return fragment
     .replaceAll("@@LOGO_HREF@@", tokens.LOGO_HREF)
+    .replaceAll("@@LOGO_IMG_SRC@@", tokens.LOGO_IMG_SRC)
     .replaceAll("@@LOGIN_HREF@@", tokens.LOGIN_HREF)
     .replaceAll("@@CONTACT_HREF@@", tokens.CONTACT_HREF)
     .replaceAll("@@HASH_HOME@@", tokens.HASH_HOME)
@@ -57,6 +58,7 @@ function spesSitePartials() {
         const tokens = isContact
           ? {
               LOGO_HREF: indexHtml,
+              LOGO_IMG_SRC: "../assets/img/logos/c_spes.png",
               LOGIN_HREF: "../login/index.html",
               CONTACT_HREF: "./contact.html",
               HASH_HOME: `${indexHtml}#home`,
@@ -67,6 +69,7 @@ function spesSitePartials() {
             }
           : {
               LOGO_HREF: "#home",
+              LOGO_IMG_SRC: "./src/frontend/assets/img/logos/c_spes.png",
               LOGIN_HREF: "./src/frontend/login/",
               CONTACT_HREF: "./src/frontend/components/",
               HASH_HOME: "#home",
