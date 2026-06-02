@@ -18,6 +18,7 @@ import {
   initLoginSignupSlider,
   initPasswordConfirmReveal
 } from "./components/animations";
+import { setupRegOfficeCombobox } from "./components/sort-filtration";
 
 
 function initAppVersionLabel() {
@@ -69,12 +70,14 @@ document.addEventListener("DOMContentLoaded", () => {
   initQuickAccessPremiumInteractions();
   initLoginSignupSlider();
   initPasswordConfirmReveal();
+  setupRegOfficeCombobox();
 });
 
 // ── Populate Registration Offices ───────────────────────────────
 async function populateRegistrationOffices() {
-  const officeSelect = document.getElementById("reg-office");
-  if (!officeSelect) return;
+  const officeHiddenInput = document.getElementById("reg-office");
+  const officeOptionsContainer = document.getElementById("reg-office-options");
+  if (!officeHiddenInput || !officeOptionsContainer) return;
 
   try {
     const { data, error } = await supabase
@@ -83,12 +86,16 @@ async function populateRegistrationOffices() {
       .order("name");
 
     if (!error && data && data.length > 0) {
-      officeSelect.innerHTML = '<option value="">Select Office...</option>';
+      officeOptionsContainer.innerHTML = '';
       data.forEach(office => {
-        const option = document.createElement("option");
-        option.value = office.id;
-        option.textContent = office.name;
-        officeSelect.appendChild(option);
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5";
+        btn.dataset.value = office.id;
+        btn.textContent = office.name;
+        li.appendChild(btn);
+        officeOptionsContainer.appendChild(li);
       });
     }
   } catch (err) {

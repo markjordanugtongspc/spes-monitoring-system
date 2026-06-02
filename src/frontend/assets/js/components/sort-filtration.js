@@ -168,6 +168,95 @@ export function setupSortFiltration({
     updateData(newData) {
       originalData = newData;
       applySortAndFilter();
+    },
+    resetFilters() {
+      activeFilters = { ...defaultFilters };
+      activeSort = "none";
+      
+      // Clear visual highlights in filter/sort dropdowns
+      if (dropdownFilter) {
+        dropdownFilter.querySelectorAll("[data-filter-key]").forEach(s => s.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+        // Re-apply default filter highlights if any
+        Object.keys(activeFilters).forEach(key => {
+          const val = activeFilters[key];
+          const match = dropdownFilter.querySelector(`[data-filter-key="${key}"][data-filter-val="${val}"]`);
+          if (match) match.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+        });
+      }
+      
+      if (dropdownSort) {
+        dropdownSort.querySelectorAll("[data-sort-val]").forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+        dropdownSort.querySelector('[data-sort-val="none"]')?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+      }
+      
+      // Clear search input
+      const searchInput = document.getElementById("staff-search-input");
+      if (searchInput) searchInput.value = "";
+      
+      applySortAndFilter();
+    },
+    setFilter(key, val) {
+      if (val === "all" || val === null || val === undefined) {
+        delete activeFilters[key];
+      } else {
+        activeFilters[key] = val.toString();
+      }
+      applySortAndFilter();
     }
   };
 }
+
+// --- START: Registration Office Combobox Logic ---
+export function setupRegOfficeCombobox() {
+  const officeSearch = document.getElementById("reg-office-search");
+  const officeDropdown = document.getElementById("reg-office-dropdown");
+  const officeHiddenInput = document.getElementById("reg-office");
+  const officeNotFound = document.getElementById("reg-office-not-found");
+  const officeOptionsContainer = document.getElementById("reg-office-options");
+
+  if (!officeSearch || !officeDropdown) return;
+
+  officeSearch.addEventListener("focus", () => {
+    officeDropdown.classList.remove("hidden");
+  });
+  
+  officeSearch.addEventListener("input", (e) => {
+    const val = e.target.value.toLowerCase();
+    let hasMatch = false;
+    const options = officeOptionsContainer.querySelectorAll("button");
+    options.forEach(btn => {
+      if (btn.textContent.toLowerCase().includes(val)) {
+        btn.parentElement.style.display = "";
+        hasMatch = true;
+      } else {
+        btn.parentElement.style.display = "none";
+      }
+    });
+    if (!hasMatch && val !== "") {
+       if (officeNotFound) officeNotFound.classList.remove("hidden");
+    } else {
+       if (officeNotFound) officeNotFound.classList.add("hidden");
+    }
+  });
+
+  officeOptionsContainer.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (btn) {
+      if (officeHiddenInput) officeHiddenInput.value = btn.dataset.value;
+      officeSearch.value = btn.textContent;
+      officeDropdown.classList.add("hidden");
+      if (officeNotFound) officeNotFound.classList.add("hidden");
+      
+      // Reset list visibility
+      const options = officeOptionsContainer.querySelectorAll("button");
+      options.forEach(b => b.parentElement.style.display = "");
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!officeSearch.contains(e.target) && !officeDropdown.contains(e.target)) {
+      officeDropdown.classList.add("hidden");
+    }
+  });
+}
+// --- END: Registration Office Combobox Logic ---

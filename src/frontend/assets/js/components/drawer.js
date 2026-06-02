@@ -192,7 +192,7 @@ export function initImplementorsDrawer() {
     document.getElementById("drawer-impl-role").textContent = implementorData.role || "N/A";
     document.getElementById("drawer-impl-id").textContent = implementorData.id ? `DOLE-${implementorData.id.toString().padStart(4, '0')}` : "---";
     const officeStr = implementorData.office || "---";
-    document.getElementById("drawer-impl-office").innerHTML = `<span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${officeStr}</span>`;
+    document.getElementById("drawer-impl-office").innerHTML = `<span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${officeStr}</span>`;
     document.getElementById("drawer-impl-office-location").textContent = implementorData.office_location || "—";
     document.getElementById("drawer-impl-email").textContent = implementorData.email || "---";
     
@@ -205,14 +205,14 @@ export function initImplementorsDrawer() {
     const approvedEl = document.getElementById("drawer-impl-approved");
     if (approvedEl) {
       if (implementorData.approved) {
-        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
           <svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
           </svg>
           Approved
         </span>`;
       } else {
-        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
+        approvedEl.innerHTML = `<span class="inline-flex items-center gap-1 rounded bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-rose-600 dark:bg-rose-500/20 dark:text-rose-400">
           <svg class="h-3.5 w-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -222,6 +222,35 @@ export function initImplementorsDrawer() {
     }
     const notesEl = document.getElementById("drawer-impl-notes");
     if (notesEl) notesEl.closest(".space-y-6") && (notesEl.textContent = "—");
+
+    // Calculate and display total beneficiaries
+    const totalBenefEl = document.getElementById("drawer-impl-total-benef");
+    if (totalBenefEl) {
+      totalBenefEl.textContent = "Loading...";
+      // Reset color classes to avoid stacking
+      totalBenefEl.className = "text-sm font-black";
+
+      import("./beneficiaries.js").then(mod => {
+        mod.calculateTotalBeneficiariesByImplementor(implementorData.office_location)
+          .then(count => {
+            totalBenefEl.textContent = count;
+            if (count >= 0 && count <= 13) {
+              totalBenefEl.classList.add("text-rose-500", "dark:text-rose-400");
+            } else if (count >= 14 && count <= 20) {
+              totalBenefEl.classList.add("text-spes-blue", "dark:text-spes-yellow");
+            } else {
+              totalBenefEl.classList.add("text-emerald-600", "dark:text-emerald-400");
+            }
+          })
+          .catch(() => {
+            totalBenefEl.textContent = "0";
+            totalBenefEl.classList.add("text-rose-500", "dark:text-rose-400");
+          });
+      }).catch(() => {
+        totalBenefEl.textContent = "0";
+        totalBenefEl.classList.add("text-rose-500", "dark:text-rose-400");
+      });
+    }
 
     // Dynamic Status Badge (Dot Only)
     const statusText = (implementorData.status || "offline").toUpperCase();
@@ -272,6 +301,72 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
   if (!drawerEl || !overlay || !form) return { open: () => {}, close: () => {} };
 
+  // --- START: Office Combobox Logic ---
+  const officeSearch = document.getElementById("aif-office-search");
+  const officeDropdown = document.getElementById("aif-office-dropdown");
+  const officeHiddenInput = document.getElementById("aif-office");
+  const officeNotFound = document.getElementById("aif-office-not-found");
+  const officeOptionsContainer = document.getElementById("aif-office-options");
+
+  if (officeSearch && officeDropdown) {
+    officeSearch.addEventListener("focus", () => {
+      officeDropdown.classList.remove("hidden");
+    });
+    
+    officeSearch.addEventListener("input", (e) => {
+      const val = e.target.value.toLowerCase();
+      let hasMatch = false;
+      const options = officeOptionsContainer.querySelectorAll("button");
+      options.forEach(btn => {
+        if (btn.textContent.toLowerCase().includes(val)) {
+          btn.parentElement.style.display = "";
+          hasMatch = true;
+        } else {
+          btn.parentElement.style.display = "none";
+        }
+      });
+      if (!hasMatch && val !== "") {
+         officeNotFound.classList.remove("hidden");
+      } else {
+         officeNotFound.classList.add("hidden");
+      }
+    });
+
+    officeOptionsContainer.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (btn) {
+        officeHiddenInput.value = btn.dataset.id;
+        officeSearch.value = btn.textContent;
+        officeDropdown.classList.add("hidden");
+        officeNotFound.classList.add("hidden");
+        
+        // Reset list visibility
+        const options = officeOptionsContainer.querySelectorAll("button");
+        options.forEach(b => b.parentElement.style.display = "");
+      }
+    });
+
+    const btnAddOffice = document.getElementById("btn-aif-add-office");
+    if (btnAddOffice) {
+      btnAddOffice.addEventListener("click", () => {
+        officeHiddenInput.value = officeSearch.value;
+        officeDropdown.classList.add("hidden");
+        officeNotFound.classList.add("hidden");
+        
+        // Reset list visibility
+        const options = officeOptionsContainer.querySelectorAll("button");
+        options.forEach(b => b.parentElement.style.display = "");
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!officeSearch.contains(e.target) && !officeDropdown.contains(e.target)) {
+        officeDropdown.classList.add("hidden");
+      }
+    });
+  }
+  // --- END: Office Combobox Logic ---
+
   let _addStaff, _fetchOffices, _fetchRoles;
   let currentEditId = null;
   let _updateStaff;
@@ -304,7 +399,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
   const _populateDropdowns = async () => {
     await _loadApis();
-    const officeSelect = document.getElementById("aif-office");
+    const officeOptionsContainer = document.getElementById("aif-office-options");
     const roleSelect = document.getElementById("aif-role");
 
     const [officesResult, rolesResult] = await Promise.all([
@@ -312,13 +407,19 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       _fetchRoles({ forceRefresh: true }),
     ]);
 
-    officeSelect.innerHTML = `<option value="">— Select Office —</option>`;
-    (officesResult.data ?? []).forEach((o) => {
-      const opt = document.createElement("option");
-      opt.value = o.id;
-      opt.textContent = o.name;
-      officeSelect.appendChild(opt);
-    });
+    if (officeOptionsContainer) {
+      officeOptionsContainer.innerHTML = "";
+      (officesResult.data ?? []).forEach((o) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "aif-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5";
+        btn.textContent = o.name;
+        btn.dataset.id = o.id;
+        li.appendChild(btn);
+        officeOptionsContainer.appendChild(li);
+      });
+    }
 
     roleSelect.innerHTML = `<option value="">— Select Role —</option>`;
     (rolesResult.data ?? []).forEach((r) => {
@@ -353,7 +454,15 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-full-name").value = staffData.full_name || "";
       document.getElementById("aif-username").value = staffData.username || "";
       document.getElementById("aif-email").value = staffData.email || "";
-      document.getElementById("aif-office").value = staffData.office_id || "";
+      
+      const offId = staffData.office_id || "";
+      document.getElementById("aif-office").value = offId;
+      const officeSearch = document.getElementById("aif-office-search");
+      if (officeSearch) {
+        const officeBtn = document.querySelector(`#aif-office-options button[data-id="${offId}"]`);
+        officeSearch.value = officeBtn ? officeBtn.textContent : "";
+      }
+
       document.getElementById("aif-role").value = staffData.role_id || "";
       document.getElementById("aif-address").value = staffData.address || "";
       document.getElementById("aif-religion").value = staffData.religion || "";
@@ -369,6 +478,12 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       pwdLabel.innerHTML = `Password <span class="text-red-500">*</span>`;
       confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
       document.getElementById("aif-approved").checked = false;
+      const officeSearch = document.getElementById("aif-office-search");
+      if (officeSearch) officeSearch.value = "";
+      const officeOptions = document.querySelectorAll("#aif-office-options button");
+      officeOptions.forEach(b => b.parentElement.style.display = "");
+      const notFound = document.getElementById("aif-office-not-found");
+      if(notFound) notFound.classList.add("hidden");
     }
 
     drawerEl.classList.remove("hidden");

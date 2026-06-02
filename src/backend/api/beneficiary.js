@@ -141,5 +141,6 @@ function _sanitize(p) {
     birthday:       p.birthday || null,
     age:            p.age !== "" && p.age != null ? parseInt(p.age, 10) : null,
     education:      str(p.education),
+    batch:          p.batch !== "" && p.batch != null ? parseInt(p.batch, 10) : null,
   };
 }
