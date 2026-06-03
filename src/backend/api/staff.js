@@ -43,7 +43,7 @@ export async function fetchOffices(options = {}) {
 
   const { data, error } = await supabase
     .from("offices")
-    .select("id, name")
+    .select("id, name, type")
     .is("archived_at", null)
     .order("name");
 
@@ -55,6 +55,26 @@ export async function fetchOffices(options = {}) {
   _ss_write(OFFICES_CACHE_KEY, data ?? []);
   return { data: data ?? [] };
 }
+
+export async function addOffice(name, type = "public") {
+  const cleanName = String(name ?? "").trim();
+  if (!cleanName) return { success: false, error: "Office name is required." };
+
+  const { data, error } = await supabase
+    .from("offices")
+    .insert([{ name: cleanName, type: type, location: "ILIGAN CITY" }])
+    .select()
+    .single();
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Staff] addOffice error:", error.code, error.hint);
+    return { success: false, error: "Failed to add office." };
+  }
+
+  try { sessionStorage.removeItem(OFFICES_CACHE_KEY); } catch {}
+  return { success: true, data };
+}
+
 
 export async function fetchRoles(options = {}) {
   if (!options.forceRefresh) {

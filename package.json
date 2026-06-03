@@ -1,6 +1,6 @@
 {
   "name": "spes",
-  "version": "0.1.26",
+  "version": "0.1.41",
   "description": "DOLE SPES Portal desktop and web client",
   "author": "DOLE SPES",
   "private": true,
@@ -77,6 +77,7 @@
     "apexcharts": "^3.46.0",
     "dotenv": "^17.4.2",
     "flowbite": "^4.0.1",
+    "pg": "^8.21.0",
     "sweetalert2": "^11.26.24"
   },
   "spes": {

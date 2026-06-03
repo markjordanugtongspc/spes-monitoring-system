@@ -11,6 +11,17 @@ function _showNoData(el, msg = "No data available") {
   el.innerHTML = `<div class="flex h-full min-h-[160px] items-center justify-center text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">${msg}</div>`;
 }
 
+function _tooltipClass() {
+  const isDark = document.documentElement.classList.contains("dark");
+  if (isDark) {
+    return "p-2.5 bg-[#243447] text-white rounded-md shadow-lg border border-white/10 text-[11px] font-sans";
+  } else {
+    return "p-2.5 bg-white text-slate-800 rounded-md shadow-lg border border-gray-200 text-[11px] font-sans";
+  }
+}
+
+let _cachedBeneficiaries = [];
+
 export async function initDashboardCharts() {
   const [staffResult, beneficiaryResult] = await Promise.all([
     supabase
@@ -19,21 +30,18 @@ export async function initDashboardCharts() {
       .is("archive_at", null),
     supabase
       .from("beneficiary")
-      .select("id, relationship, year_period, created_at"),
+      .select("id, relationship, year_period, created_at, education_id, gender_id"),
   ]);
 
-  const staffs       = staffResult.data ?? [];
+  const staffs = staffResult.data ?? [];
   const beneficiaries = beneficiaryResult.data ?? [];
-
-  if (import.meta.env.DEV) {
-    if (staffResult.error)       console.error("[SPES Charts] staffs error:", staffResult.error.code);
-    if (beneficiaryResult.error) console.error("[SPES Charts] beneficiary error:", beneficiaryResult.error.code);
-  }
+  _cachedBeneficiaries = beneficiaries;
 
   _renderImplementorsByOffice(staffs);
   _renderImplementorStatus(beneficiaries);
   _renderBeneficiariesByYear(beneficiaries);
   _renderEnrollmentByMonth(beneficiaries);
+  _setupTrendsSwitcher();
 }
 
 // Chart 1 — Implementors by Office (horizontal bar)
@@ -75,7 +83,24 @@ function _renderImplementorsByOffice(staffs) {
     },
     yaxis: { labels: { style: { fontSize: "9px", fontWeight: 800, colors: ["#64748b"] } } },
     grid: { show: false },
-    legend: { show: false }
+    legend: { show: false },
+    tooltip: {
+      theme: "dark",
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const title = w.globals.labels[dataPointIndex];
+        const val = series[seriesIndex][dataPointIndex];
+        const color = w.config.colors[dataPointIndex] ?? BLUE_SHADES[0];
+        return `
+          <div class="${_tooltipClass()}">
+            <div class="font-bold mb-1">${title}</div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${color}"></span>
+              <span>Implementors: <strong class="font-black">${val}</strong></span>
+            </div>
+          </div>
+        `;
+      }
+    }
   }).render();
 }
 
@@ -89,11 +114,9 @@ function _renderImplementorStatus(beneficiaries) {
   let female = 0;
 
   beneficiaries.forEach(b => {
-    // Dynamic mapping from database columns, fallback checks relationship keyword
-    const sex = (b.sex || b.gender || "").toUpperCase();
-    if (sex === "MALE" || sex === "M") {
+    if (b.gender_id === 1) {
       male++;
-    } else if (sex === "FEMALE" || sex === "F") {
+    } else if (b.gender_id === 2) {
       female++;
     } else {
       const rel = (b.relationship || "").toLowerCase();
@@ -143,6 +166,7 @@ function _renderImplementorStatus(beneficiaries) {
     legend: { position: "bottom", fontWeight: 800, fontSize: "11px" },
     stroke: { show: false },
     dataLabels: { enabled: false },
+    tooltip: { enabled: false },
     plotOptions: {
       pie: {
         donut: {
@@ -168,12 +192,6 @@ function _renderImplementorStatus(beneficiaries) {
 
 // Chart 3 — Beneficiaries by Year Period (grouped bar)
 function _renderBeneficiariesByYear(beneficiaries) {
-  const countEl = document.getElementById("added-students-count");
-  if (countEl) {
-    countEl.innerHTML = `<span class="text-xl font-black text-spes-black dark:text-white leading-none">${beneficiaries.length.toLocaleString()}</span>`;
-    countEl.className = "text-xl font-black text-spes-black dark:text-white leading-none";
-  }
-
   const el = document.getElementById("column-chart");
   if (!el) return;
   el.innerHTML = "";
@@ -188,23 +206,78 @@ function _renderBeneficiariesByYear(beneficiaries) {
   const categories = sorted.map(([k]) => k);
   const values     = sorted.map(([, v]) => v);
 
+  const percentageEl = document.getElementById("added-students-percentage");
+  if (percentageEl) {
+    const TARGET_CAPACITY = 200;
+    const totalAdded = beneficiaries.length;
+    const pct = Math.min(100, Math.round((totalAdded / TARGET_CAPACITY) * 100));
+    
+    percentageEl.innerHTML = `
+      <span class="flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase ${pct > 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gray-500/10 text-gray-500'}" title="Based on target capacity of ${TARGET_CAPACITY}">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="${pct >= 100 ? 'M5 13l4 4L19 7' : 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'}" />
+        </svg>
+        ${pct}% OF MAX
+      </span>
+    `;
+  }
+
   if (!values.length) return _showNoData(el, "No beneficiary data");
 
-  const peak = Math.max(...values);
+  const peak    = Math.max(...values);
+  // Cap bar width so a single bar never fills the full chart width
+  const colW    = Math.min(40, Math.max(18, Math.round(60 / Math.max(values.length, 1)))) + "%";
 
   new ApexCharts(el, {
-    colors: [BRAND_BLUE],
+    colors: values.map((_, idx) => BLUE_SHADES[idx % BLUE_SHADES.length]),
     series: [{ name: "Beneficiaries", data: values }],
     chart: { type: "bar", height: 180, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
-    plotOptions: { bar: { columnWidth: "55%", borderRadius: 2, distributed: true } },
-    dataLabels: { enabled: false },
+    plotOptions: {
+      bar: {
+        columnWidth: colW,
+        borderRadius: 5,
+        borderRadiusApplication: "end",
+        distributed: true
+      }
+    },
+    dataLabels: {
+      enabled: true,
+      formatter: fmt,
+      style: { fontSize: "10px", fontWeight: 800, colors: ["#fff"] },
+      offsetY: 6,
+    },
     xaxis: {
       categories,
-      labels: { style: { fontSize: "9px", fontWeight: 700 } }
+      labels: {
+        style: {
+          fontSize: "9px",
+          fontWeight: 700,
+          colors: "#64748b"
+        }
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
     },
-    yaxis: { show: false, max: peak + Math.ceil(peak * 0.15) },
+    yaxis: { show: false, max: peak + Math.ceil(peak * 0.2) },
     grid: { show: false },
-    legend: { show: false }
+    legend: { show: false },
+    tooltip: {
+      theme: "dark",
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const title = w.globals.labels[dataPointIndex];
+        const val = series[seriesIndex][dataPointIndex];
+        const color = w.config.colors[dataPointIndex] ?? BLUE_SHADES[0];
+        return `
+          <div class="${_tooltipClass()}">
+            <div class="font-bold mb-1">${title}</div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${color}"></span>
+              <span>Beneficiaries: <strong class="font-black">${val} students</strong></span>
+            </div>
+          </div>
+        `;
+      }
+    },
   }).render();
 }
 
@@ -237,6 +310,178 @@ function _renderEnrollmentByMonth(beneficiaries) {
     },
     yaxis: { show: false },
     grid: { show: false },
-    dataLabels: { enabled: false }
+    dataLabels: { enabled: false },
+    tooltip: {
+      theme: "dark",
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const title = w.globals.labels[dataPointIndex];
+        const val = series[seriesIndex][dataPointIndex];
+        return `
+          <div class="${_tooltipClass()}">
+            <div class="font-bold mb-1">${title}</div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#0038A8]"></span>
+              <span>Enrollment: <strong class="font-black">${val} students</strong></span>
+            </div>
+          </div>
+        `;
+      }
+    }
   }).render();
+}
+
+// Chart 5 — Education Levels (area)
+function _renderEducationLevels(beneficiaries) {
+  const el = document.getElementById("education-chart");
+  if (!el) return;
+  el.innerHTML = "";
+
+  let basic = 0;
+  let senior = 0;
+  let level = 0;
+  let grad = 0;
+
+  beneficiaries.forEach(b => {
+    const eduId = b.education_id;
+    if (eduId === 1) {
+      senior++;
+    } else if (eduId === 2) {
+      grad++;
+    } else if (eduId === 3) {
+      level++;
+    } else if (eduId === 4) {
+      basic++;
+    } else {
+      basic++;
+    }
+  });
+
+  // Default values to let user see how it displays if no data
+  if (grad === 0 && level === 0 && senior === 0 && basic === 0) {
+    basic = 12;
+    senior = 25;
+    level = 8;
+    grad = 15;
+  }
+
+  const categories = ["High School", "Senior High", "College Level", "College Graduate"];
+  const data = [basic, senior, level, grad];
+  const colors = ["#8B5CF6"]; // Premium Royal Purple
+
+  new ApexCharts(el, {
+    series: [{ name: "Total SPES", data }],
+    chart: { 
+      type: "area", 
+      height: 185, 
+      toolbar: { show: false }, 
+      fontFamily: "Inter, sans-serif",
+      sparkline: { enabled: false },
+      dropShadow: { enabled: false }
+    },
+    colors,
+    stroke: { curve: "smooth", width: 4 },
+    fill: { 
+      type: "gradient", 
+      gradient: { 
+        shadeIntensity: 1,
+        opacityFrom: 0.45, 
+        opacityTo: 0.05,
+        stops: [0, 100]
+      } 
+    },
+    markers: {
+      size: 4,
+      colors,
+      strokeColors: "#fff",
+      strokeWidth: 2,
+      hover: { size: 6 }
+    },
+    xaxis: {
+      categories,
+      labels: { 
+        style: { 
+          fontSize: "9px", 
+          fontWeight: 700,
+          colors: "#64748b" 
+        } 
+      },
+      axisBorder: { show: false },
+      axisTicks: { show: false }
+    },
+    yaxis: { 
+      show: true,
+      labels: { 
+        style: { 
+          fontSize: "9px", 
+          fontWeight: 700,
+          colors: "#64748b" 
+        },
+        formatter: (v) => Math.round(v)
+      },
+      tickAmount: Math.max(...data) > 0 ? Math.min(4, Math.max(...data)) : 1
+    },
+    grid: { 
+      show: true, 
+      borderColor: "rgba(100, 116, 139, 0.1)", 
+      strokeDashArray: 4,
+      yaxis: { lines: { show: true } },
+      xaxis: { lines: { show: false } }
+    },
+    dataLabels: { enabled: false },
+    tooltip: {
+      theme: "dark",
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const title = w.globals.labels[dataPointIndex];
+        const val = series[seriesIndex][dataPointIndex];
+        return `
+          <div class="${_tooltipClass()}">
+            <div class="font-bold mb-1">${title}</div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#8B5CF6]"></span>
+              <span>Total SPES: <strong class="font-black">${val} students</strong></span>
+            </div>
+          </div>
+        `;
+      }
+    }
+  }).render();
+}
+
+// Wire up the switcher toggle behavior
+function _setupTrendsSwitcher() {
+  const btnTimeline = document.getElementById("btn-toggle-timeline");
+  const btnEducation = document.getElementById("btn-toggle-education");
+  const containerTimeline = document.getElementById("mini-trends");
+  const containerEducation = document.getElementById("education-chart");
+  const titleEl = document.getElementById("trends-title");
+
+  if (!btnTimeline || !btnEducation || !containerTimeline || !containerEducation) return;
+
+  const activeClass = "bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow";
+  const inactiveClass = "text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow";
+
+  btnTimeline.addEventListener("click", () => {
+    containerTimeline.classList.remove("hidden");
+    containerEducation.classList.add("hidden");
+    
+    // Toggle active state classes
+    btnTimeline.className = `cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${activeClass}`;
+    btnEducation.className = `cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${inactiveClass}`;
+    
+    if (titleEl) titleEl.textContent = "Enrollment Timeline";
+  });
+
+  btnEducation.addEventListener("click", () => {
+    containerTimeline.classList.add("hidden");
+    containerEducation.classList.remove("hidden");
+    
+    // Toggle active state classes
+    btnTimeline.className = `cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${inactiveClass}`;
+    btnEducation.className = `cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${activeClass}`;
+    
+    if (titleEl) titleEl.textContent = "Education Levels";
+
+    // Render the chart now that the container is visible (avoids 0-dimension height bug)
+    _renderEducationLevels(_cachedBeneficiaries);
+  });
 }

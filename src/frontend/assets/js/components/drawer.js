@@ -3,6 +3,7 @@ import {
   animateMobileSplashVisibility,
   applyDrawerAnimationClasses
 } from "./animations";
+import { modals } from "./modals.js";
 
 // --- FUNCTION: MOBILE SPLASH + FLOWBITE DRAWER BRIDGE (START) ---
 export function initMobileSplashDrawer() {
@@ -308,54 +309,140 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   const officeNotFound = document.getElementById("aif-office-not-found");
   const officeOptionsContainer = document.getElementById("aif-office-options");
 
+  const tabPublic = document.getElementById("aif-tab-public");
+  const tabAcademic = document.getElementById("aif-tab-academic");
+
+  let allOffices = [];
+  let activeOfficeTab = "public"; // "public" or "academic"
+
+  const renderOfficeOptions = () => {
+    if (!officeOptionsContainer) return;
+    officeOptionsContainer.innerHTML = "";
+
+    const query = (officeSearch?.value ?? "").toLowerCase().trim();
+    
+    // Filter by type: 'academic' vs 'public'
+    const filteredByType = allOffices.filter(o => {
+      const isAcad = o.type === "academic";
+      return activeOfficeTab === "academic" ? isAcad : !isAcad;
+    });
+
+    // Filter by search query
+    const filteredBySearch = filteredByType.filter(o => 
+      o.name.toLowerCase().includes(query)
+    );
+
+    if (filteredBySearch.length === 0) {
+      if (query !== "") {
+        officeNotFound?.classList.remove("hidden");
+      } else {
+        officeNotFound?.classList.add("hidden");
+        const li = document.createElement("li");
+        li.className = "px-3.5 py-3 text-center text-xs text-spes-black/40 dark:text-white/30 italic";
+        li.textContent = "No offices found.";
+        officeOptionsContainer.appendChild(li);
+      }
+    } else {
+      officeNotFound?.classList.add("hidden");
+      filteredBySearch.forEach((o) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "aif-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 font-bold text-sm text-left transition-colors duration-150";
+        btn.textContent = o.name;
+        btn.dataset.id = o.id;
+        li.appendChild(btn);
+        officeOptionsContainer.appendChild(li);
+      });
+    }
+  };
+
+  const setTabActive = (tabName) => {
+    activeOfficeTab = tabName;
+    
+    const activeCls = ["bg-white", "text-spes-blue", "shadow-sm", "dark:bg-spes-yellow", "dark:text-spes-dark-primary"];
+    const inactiveCls = ["text-spes-black/60", "dark:text-white/60", "hover:text-spes-blue", "dark:hover:text-spes-yellow"];
+
+    if (tabName === "public") {
+      tabPublic?.classList.add(...activeCls);
+      tabPublic?.classList.remove(...inactiveCls);
+      tabAcademic?.classList.remove(...activeCls);
+      tabAcademic?.classList.add(...inactiveCls);
+    } else {
+      tabAcademic?.classList.add(...activeCls);
+      tabAcademic?.classList.remove(...inactiveCls);
+      tabPublic?.classList.remove(...activeCls);
+      tabPublic?.classList.add(...inactiveCls);
+    }
+
+    renderOfficeOptions();
+  };
+
   if (officeSearch && officeDropdown) {
     officeSearch.addEventListener("focus", () => {
       officeDropdown.classList.remove("hidden");
     });
     
-    officeSearch.addEventListener("input", (e) => {
-      const val = e.target.value.toLowerCase();
-      let hasMatch = false;
-      const options = officeOptionsContainer.querySelectorAll("button");
-      options.forEach(btn => {
-        if (btn.textContent.toLowerCase().includes(val)) {
-          btn.parentElement.style.display = "";
-          hasMatch = true;
-        } else {
-          btn.parentElement.style.display = "none";
-        }
-      });
-      if (!hasMatch && val !== "") {
-         officeNotFound.classList.remove("hidden");
-      } else {
-         officeNotFound.classList.add("hidden");
-      }
+    officeSearch.addEventListener("input", () => {
+      renderOfficeOptions();
     });
 
-    officeOptionsContainer.addEventListener("click", (e) => {
+    officeOptionsContainer?.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (btn) {
         officeHiddenInput.value = btn.dataset.id;
         officeSearch.value = btn.textContent;
         officeDropdown.classList.add("hidden");
-        officeNotFound.classList.add("hidden");
-        
-        // Reset list visibility
-        const options = officeOptionsContainer.querySelectorAll("button");
-        options.forEach(b => b.parentElement.style.display = "");
+        officeNotFound?.classList.add("hidden");
       }
+    });
+
+    tabPublic?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setTabActive("public");
+    });
+
+    tabAcademic?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setTabActive("academic");
     });
 
     const btnAddOffice = document.getElementById("btn-aif-add-office");
     if (btnAddOffice) {
-      btnAddOffice.addEventListener("click", () => {
-        officeHiddenInput.value = officeSearch.value;
-        officeDropdown.classList.add("hidden");
-        officeNotFound.classList.add("hidden");
+      btnAddOffice.addEventListener("click", async () => {
+        const newOfficeName = officeSearch.value.trim();
+        if (!newOfficeName) return;
+
+        btnAddOffice.disabled = true;
+        const origText = btnAddOffice.textContent;
+        btnAddOffice.textContent = "ADDING...";
+
+        await _loadApis();
+        const res = await _addOffice(newOfficeName, activeOfficeTab);
         
-        // Reset list visibility
-        const options = officeOptionsContainer.querySelectorAll("button");
-        options.forEach(b => b.parentElement.style.display = "");
+        btnAddOffice.disabled = false;
+        btnAddOffice.textContent = origText;
+
+        if (res.success && res.data) {
+          allOffices.push(res.data);
+          
+          officeHiddenInput.value = res.data.id;
+          officeSearch.value = res.data.name;
+          
+          officeDropdown.classList.add("hidden");
+          officeNotFound?.classList.add("hidden");
+          renderOfficeOptions();
+
+          await modals.success(
+            "Office Added!",
+            `"${res.data.name}" has been registered as an ${activeOfficeTab} office.`
+          );
+        } else {
+          await modals.error(
+            "Failed to add office",
+            res.error || "Please try again."
+          );
+        }
       });
     }
 
@@ -370,6 +457,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   let _addStaff, _fetchOffices, _fetchRoles;
   let currentEditId = null;
   let _updateStaff;
+  let _addOffice;
 
   const _loadApis = async () => {
     if (_addStaff) return;
@@ -378,6 +466,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     _updateStaff = mod.updateStaff;
     _fetchOffices = mod.fetchOffices;
     _fetchRoles = mod.fetchRoles;
+    _addOffice = mod.addOffice;
   };
 
   const _showError = (msg) => {
@@ -399,7 +488,6 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
   const _populateDropdowns = async () => {
     await _loadApis();
-    const officeOptionsContainer = document.getElementById("aif-office-options");
     const roleSelect = document.getElementById("aif-role");
 
     const [officesResult, rolesResult] = await Promise.all([
@@ -407,19 +495,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       _fetchRoles({ forceRefresh: true }),
     ]);
 
-    if (officeOptionsContainer) {
-      officeOptionsContainer.innerHTML = "";
-      (officesResult.data ?? []).forEach((o) => {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "aif-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5";
-        btn.textContent = o.name;
-        btn.dataset.id = o.id;
-        li.appendChild(btn);
-        officeOptionsContainer.appendChild(li);
-      });
-    }
+    allOffices = officesResult.data ?? [];
+    renderOfficeOptions();
 
     roleSelect.innerHTML = `<option value="">— Select Role —</option>`;
     (rolesResult.data ?? []).forEach((r) => {
@@ -459,8 +536,11 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-office").value = offId;
       const officeSearch = document.getElementById("aif-office-search");
       if (officeSearch) {
-        const officeBtn = document.querySelector(`#aif-office-options button[data-id="${offId}"]`);
-        officeSearch.value = officeBtn ? officeBtn.textContent : "";
+        const office = allOffices.find(o => String(o.id) === String(offId));
+        officeSearch.value = office ? office.name : "";
+        if (office) {
+          setTabActive(office.type === "academic" ? "academic" : "public");
+        }
       }
 
       document.getElementById("aif-role").value = staffData.role_id || "";
@@ -480,8 +560,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-approved").checked = false;
       const officeSearch = document.getElementById("aif-office-search");
       if (officeSearch) officeSearch.value = "";
-      const officeOptions = document.querySelectorAll("#aif-office-options button");
-      officeOptions.forEach(b => b.parentElement.style.display = "");
+      setTabActive("public");
       const notFound = document.getElementById("aif-office-not-found");
       if(notFound) notFound.classList.add("hidden");
     }

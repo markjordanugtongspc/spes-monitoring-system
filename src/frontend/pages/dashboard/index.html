@@ -100,12 +100,11 @@
       <div id="dashboard-metrics-container" class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3 order-2 lg:order-1 transition-all duration-300">
         <!-- Card 1: Total Implementors -->
         <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
-          <div class="mb-4 flex items-center justify-between">
-            <h3
-              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
-              Total Implementors</h3>
-            <span id="badge-staff-metric"
-              class="rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
+          <div class="mb-4 flex items-start justify-between border-b border-gray-100 pb-4 dark:border-white/5">
+            <div class="flex flex-col items-start gap-3">
+              <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Total Implementors</h3>
+            </div>
+            <span id="badge-staff-metric" class="mt-1 flex items-center justify-center rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
           </div>
           <div id="distribution-chart" class="h-[220px] pr-4">
             <!-- Flowbite Widget Skeleton (Horizontal Bars) -->
@@ -133,12 +132,11 @@
 
         <!-- Card 2: Total SPES (Male/Female) -->
         <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
-          <div class="mb-4 flex items-center justify-between">
-            <h3
-              class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
-              TOTAL GENDER STATS</h3>
-            <span id="badge-student-metric"
-              class="rounded-full bg-emerald-500/5 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-500">...</span>
+          <div class="mb-4 flex items-start justify-between border-b border-gray-100 pb-4 dark:border-white/5">
+            <div class="flex flex-col items-start gap-3">
+              <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Total Gender Stats</h3>
+            </div>
+            <span id="badge-student-metric" class="mt-1 flex items-center justify-center rounded-full bg-emerald-500/5 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-500">...</span>
           </div>
           <div id="spes-gender-chart" class="h-[250px] pr-4">
             <!-- Card Placeholder Skeleton -->
@@ -158,28 +156,13 @@
 
         <!-- Card 3: Added SPES (Bar Chart) -->
         <div class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col">
-          <div class="mb-3 flex justify-between border-b border-gray-100 pb-3 dark:border-white/5">
-            <div class="flex items-center">
-              <div
-                class="me-3 flex h-10 w-10 items-center justify-center rounded-full border border-spes-blue/10 bg-spes-blue/5 text-spes-blue dark:border-spes-yellow/10 dark:bg-spes-yellow/5 dark:text-spes-yellow">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-width="2"
-                    d="M12 4.354a4 4 0 1 1 0 5.292M15 21H3v-1a6 6 0 0 1 12 0v1Zm0 0h6v-1a6 6 0 0 0-9-5.197M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
-                </svg>
-              </div>
-              <div>
-                <div id="added-students-count" class="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-white/10"></div>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-spes-black/40 dark:text-spes-white/40">
-                  Students Added</p>
-              </div>
+          <div class="mb-4 flex items-start justify-between border-b border-gray-100 pb-4 dark:border-white/5">
+            <div class="flex flex-col items-start gap-3">
+              <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Students Added</h3>
             </div>
-            <span
-              class="inline-flex h-fit items-center rounded-sm border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-              <svg class="me-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-              12%
-            </span>
+            <div id="added-students-percentage" class="flex items-center justify-center mt-1">
+              <div class="h-6 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-white/10"></div>
+            </div>
           </div>
 
           <div id="column-chart" class="flex-1 min-h-[160px]">
@@ -204,9 +187,32 @@
         <div
           class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col justify-between">
           <div>
-            <h3
-              class="mb-4 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
-              Enrollment Timeline</h3>
+            <div class="mb-4 flex items-center justify-between gap-2">
+              <h3
+                id="trends-title"
+                class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Enrollment Timeline</h3>
+              
+              <!-- Switcher Button (Modern Toggle/Pill) -->
+              <div class="flex items-center rounded-lg bg-gray-100 p-0.5 dark:bg-white/5 shadow-sm border border-black/5 dark:border-white/5">
+                <button
+                  type="button"
+                  id="btn-toggle-timeline"
+                  class="cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow"
+                  data-tooltip-target="tooltip-toggle-timeline">
+                  Timeline
+                </button>
+                <button
+                  type="button"
+                  id="btn-toggle-education"
+                  class="cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow"
+                  data-tooltip-target="tooltip-toggle-education">
+                  Education
+                </button>
+              </div>
+            </div>
+
+            <!-- Enrollment Timeline Chart -->
             <div id="mini-trends" class="h-[185px]">
               <!-- Flowbite Widget Skeleton (Chart) -->
               <div role="status" class="w-full p-4 animate-pulse bg-transparent">
@@ -217,6 +223,19 @@
                       <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
                       <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
                       <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
+                  </div>
+                  <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+
+            <!-- Education Levels Chart -->
+            <div id="education-chart" class="hidden h-[185px]">
+              <!-- Flowbite Widget Skeleton (Chart) -->
+              <div role="status" class="w-full p-4 animate-pulse bg-transparent">
+                  <div class="flex items-baseline space-x-3 h-28 pt-2 justify-center">
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-12"></div>
+                      <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
                   </div>
                   <span class="sr-only">Loading...</span>
               </div>
@@ -499,10 +518,10 @@
         <!-- 2. Expanded View (Shown when stats are hidden) -->
         <!-- Desktop Expanded View (Hidden by default, shown when user clicks Hide Stats) -->
         <div id="quick-access-expanded-desktop" class="hidden flex-col items-center gap-10 w-full py-8">
-          <!-- Giant Skewed Buttons Grid (3-Column Grid) -->
-          <div class="grid grid-cols-3 gap-16 max-w-5xl w-full justify-items-center mb-6">
+          <!-- Top Row Buttons (Flex container for auto-centering and reflow) -->
+          <div class="flex flex-wrap justify-center gap-16 max-w-3xl w-full mb-6">
             <!-- Add Implementor (Giant) -->
-            <div class="flex flex-col items-center gap-4 w-full" data-permission="users:view">
+            <div class="flex flex-col items-center gap-4" data-permission="users:view">
               <a href="../implementors/#add" id="quick-add-implementor-expanded" data-tooltip-target="tooltip-add-implementor-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -515,7 +534,7 @@
             </div>
 
             <!-- Dark Mode (Giant - Now in Middle) -->
-            <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex flex-col items-center gap-4">
               <button id="quick-settings-expanded" data-tooltip-target="tooltip-settings-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -531,7 +550,7 @@
             </div>
 
             <!-- Add Beneficiary (Giant) -->
-            <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex flex-col items-center gap-4">
               <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded" data-tooltip-target="tooltip-add-beneficiary-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -542,10 +561,7 @@
               </a>
               <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add Beneficiary</span>
             </div>
-          </div>
-
-          <!-- Giant Centered Show Stats Button (Row 2 - Centered Alone in the Middle - Blue by default, Gray on Hover) -->
-          <div class="flex justify-center w-full mt-4 mb-6">
+            <!-- Giant Centered Show Stats Button -->
             <div class="flex flex-col items-center gap-4">
               <button id="quick-toggle-stats-expanded" data-tooltip-target="tooltip-toggle-stats-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
@@ -564,9 +580,9 @@
           </div>
 
           <!-- Giant Skewed Buttons Grid (Row 3 - Audit, Roles, Export - Same Giant Size in the Bottom) -->
-          <div class="grid grid-cols-3 gap-16 max-w-5xl w-full justify-items-center mb-6">
+          <div class="flex flex-wrap justify-center gap-16 max-w-3xl w-full mb-6">
             <!-- System Audit (Giant) -->
-            <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex flex-col items-center gap-4">
               <button id="quick-audit-expanded" data-tooltip-target="tooltip-audit-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -579,7 +595,7 @@
             </div>
 
             <!-- Roles Setup (Giant) -->
-            <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex flex-col items-center gap-4" data-permission="roles:view">
               <button id="quick-roles-expanded" data-tooltip-target="tooltip-roles-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -592,7 +608,7 @@
             </div>
 
             <!-- Export Reports (Giant) -->
-            <div class="flex flex-col items-center gap-4 w-full">
+            <div class="flex flex-col items-center gap-4">
               <button id="quick-export-expanded" data-tooltip-target="tooltip-export-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:-translate-y-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -606,13 +622,13 @@
           </div>
         </div>
 
-        <!-- Mobile Expanded View (2-Column Grid Medium Size Buttons, Stats in the middle row next to Dark Mode) -->
-        <div id="quick-access-expanded-mobile" class="hidden md:hidden flex-col items-center gap-6 w-full py-6 px-2">
-          <!-- 2-Column Responsive Grid -->
-          <div class="grid grid-cols-2 gap-6 w-full justify-items-center">
+        <!-- Mobile Expanded View (Flexible Wrap Container, optimized heights to prevent overflow) -->
+        <div id="quick-access-expanded-mobile" class="hidden md:hidden flex-col items-center gap-4 w-full py-6 px-2">
+          <!-- Responsive Flex Container -->
+          <div class="flex flex-wrap justify-center gap-6 w-full max-w-sm">
             <!-- Add Implementor -->
-            <div class="flex flex-col items-center gap-2 w-full" data-permission="users:view">
-              <a href="../implementors/#add" id="quick-add-implementor-expanded-mob" class="group cursor-pointer h-20 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
+            <div class="flex flex-col items-center gap-2" data-permission="users:view">
+              <a href="../implementors/#add" id="quick-add-implementor-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -624,8 +640,8 @@
             </div>
 
             <!-- Add Beneficiary -->
-            <div class="flex flex-col items-center gap-2 w-full">
-              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded-mob" class="group cursor-pointer h-20 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
+            <div class="flex flex-col items-center gap-2">
+              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -637,8 +653,8 @@
             </div>
 
             <!-- Theme Toggle / Dark Mode (Blue by default, Gray on Hover) -->
-            <div class="flex flex-col items-center gap-2 w-full">
-              <button id="quick-settings-expanded-mob" class="group cursor-pointer h-20 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
+            <div class="flex flex-col items-center gap-2">
+              <button id="quick-settings-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
@@ -654,7 +670,7 @@
 
             <!-- Show Stats Button (Stats in the middle center in between the rest of the buttons!) -->
             <div class="flex flex-col items-center gap-2">
-              <button id="quick-toggle-stats-expanded-mob" class="group cursor-pointer h-20 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
+              <button id="quick-toggle-stats-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg id="hide-stats-icon-expanded-mob" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
@@ -670,8 +686,8 @@
             </div>
 
             <!-- System Audit -->
-            <div class="flex flex-col items-center gap-2 w-full">
-              <button id="quick-audit-expanded-mob" class="group cursor-pointer h-20 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+            <div class="flex flex-col items-center gap-2">
+              <button id="quick-audit-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -683,8 +699,8 @@
             </div>
 
             <!-- Roles Setup -->
-            <div class="flex flex-col items-center gap-2 w-full">
-              <button id="quick-roles-expanded-mob" class="group cursor-pointer h-20 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+            <div class="flex flex-col items-center gap-2" data-permission="roles:view">
+              <button id="quick-roles-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -696,8 +712,8 @@
             </div>
 
             <!-- Export Reports (Centered alone at the bottom) -->
-            <div class="col-span-2 flex flex-col items-center gap-2 w-full">
-              <button id="quick-export-expanded-mob" class="group cursor-pointer h-20 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+            <div class="flex flex-col items-center gap-2">
+              <button id="quick-export-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -869,6 +885,16 @@
       </div>
       <div id="tooltip-toggle-stats-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Hide or show statistics cards
+        <div class="tooltip-arrow" data-popper-arrow></div>
+      </div>
+      
+      <!-- Chart Switcher Tooltips -->
+      <div id="tooltip-toggle-timeline" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+        Show student enrollment timeline chart
+        <div class="tooltip-arrow" data-popper-arrow></div>
+      </div>
+      <div id="tooltip-toggle-education" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+        Show student education level distribution chart
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
     </div>

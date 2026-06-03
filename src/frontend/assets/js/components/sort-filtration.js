@@ -138,6 +138,11 @@ export function setupSortFiltration({
         } else if (activeValue === "archived") {
           processed = processed.filter(item => !!item.archive_at);
         }
+      } else if (key === "batch_number") {
+        processed = processed.filter(item => {
+          const num = item.batch?.batch_number;
+          return num != null && String(num) === activeValue;
+        });
       } else {
         processed = processed.filter(item => {
           const itemVal = (item[key] || "").toString().toLowerCase();
@@ -214,29 +219,102 @@ export function setupRegOfficeCombobox() {
   const officeNotFound = document.getElementById("reg-office-not-found");
   const officeOptionsContainer = document.getElementById("reg-office-options");
 
+  const tabPublic = document.getElementById("reg-tab-public");
+  const tabAcademic = document.getElementById("reg-tab-academic");
+
   if (!officeSearch || !officeDropdown) return;
+
+  let allOffices = [];
+  let activeOfficeTab = "public"; // "public" or "academic"
+
+  const renderOfficeOptions = () => {
+    if (!officeOptionsContainer) return;
+    officeOptionsContainer.innerHTML = "";
+
+    const query = (officeSearch?.value ?? "").toLowerCase().trim();
+    
+    // Filter by type: 'academic' vs 'public'
+    const filteredByType = allOffices.filter(o => {
+      const isAcad = o.type === "academic";
+      return activeOfficeTab === "academic" ? isAcad : !isAcad;
+    });
+
+    // Filter by search query
+    const filteredBySearch = filteredByType.filter(o => 
+      o.name.toLowerCase().includes(query)
+    );
+
+    if (filteredBySearch.length === 0) {
+      if (query !== "") {
+        officeNotFound?.classList.remove("hidden");
+      } else {
+        officeNotFound?.classList.add("hidden");
+        const li = document.createElement("li");
+        li.className = "px-3.5 py-3 text-center text-xs text-spes-black/40 dark:text-white/30 italic";
+        li.textContent = "No offices found.";
+        officeOptionsContainer.appendChild(li);
+      }
+    } else {
+      officeNotFound?.classList.add("hidden");
+      filteredBySearch.forEach((o) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 text-sm text-left transition-colors duration-150";
+        btn.textContent = o.name;
+        btn.dataset.value = o.id;
+        li.appendChild(btn);
+        officeOptionsContainer.appendChild(li);
+      });
+    }
+  };
+
+  const setTabActive = (tabName) => {
+    activeOfficeTab = tabName;
+    
+    const activeCls = ["bg-white", "text-spes-blue", "shadow-sm", "dark:bg-spes-yellow", "dark:text-spes-dark-primary"];
+    const inactiveCls = ["text-spes-black/60", "dark:text-white/60", "hover:text-spes-blue", "dark:hover:text-spes-yellow"];
+
+    if (tabName === "public") {
+      tabPublic?.classList.add(...activeCls);
+      tabPublic?.classList.remove(...inactiveCls);
+      tabAcademic?.classList.remove(...activeCls);
+      tabAcademic?.classList.add(...inactiveCls);
+    } else {
+      tabAcademic?.classList.add(...activeCls);
+      tabAcademic?.classList.remove(...inactiveCls);
+      tabPublic?.classList.remove(...activeCls);
+      tabPublic?.classList.add(...inactiveCls);
+    }
+
+    renderOfficeOptions();
+  };
+
+  const loadOffices = async () => {
+    try {
+      const { supabase } = await import("../../../../backend/api/supabase.js");
+      const { data, error } = await supabase
+        .from("offices")
+        .select("id, name, type")
+        .order("name");
+
+      if (!error && data) {
+        allOffices = data;
+        renderOfficeOptions();
+      }
+    } catch (err) {
+      console.error("Failed to fetch offices:", err);
+    }
+  };
+
+  loadOffices();
 
   officeSearch.addEventListener("focus", () => {
     officeDropdown.classList.remove("hidden");
   });
   
-  officeSearch.addEventListener("input", (e) => {
-    const val = e.target.value.toLowerCase();
-    let hasMatch = false;
-    const options = officeOptionsContainer.querySelectorAll("button");
-    options.forEach(btn => {
-      if (btn.textContent.toLowerCase().includes(val)) {
-        btn.parentElement.style.display = "";
-        hasMatch = true;
-      } else {
-        btn.parentElement.style.display = "none";
-      }
-    });
-    if (!hasMatch && val !== "") {
-       if (officeNotFound) officeNotFound.classList.remove("hidden");
-    } else {
-       if (officeNotFound) officeNotFound.classList.add("hidden");
-    }
+  officeSearch.addEventListener("input", () => {
+    renderOfficeOptions();
   });
 
   officeOptionsContainer.addEventListener("click", (e) => {
@@ -246,11 +324,19 @@ export function setupRegOfficeCombobox() {
       officeSearch.value = btn.textContent;
       officeDropdown.classList.add("hidden");
       if (officeNotFound) officeNotFound.classList.add("hidden");
-      
-      // Reset list visibility
-      const options = officeOptionsContainer.querySelectorAll("button");
-      options.forEach(b => b.parentElement.style.display = "");
     }
+  });
+
+  tabPublic?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setTabActive("public");
+    officeSearch.focus();
+  });
+
+  tabAcademic?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setTabActive("academic");
+    officeSearch.focus();
   });
 
   document.addEventListener("click", (e) => {

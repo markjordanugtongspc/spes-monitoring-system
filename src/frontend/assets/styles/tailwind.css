@@ -47,3 +47,8 @@
   border-width: 0 24px 24px 0;
 }
 /* ── DASHBOARD: STICKY NOTE EFFECT (END) ── */
+
+/* ApexCharts Tooltip Title Border Removal */
+.apexcharts-tooltip-title {
+  border-bottom: none !important;
+}

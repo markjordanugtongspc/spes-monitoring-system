@@ -11,6 +11,9 @@ import {
   addBeneficiary,
   updateBeneficiary,
   archiveBeneficiary,
+  fetchBatches,
+  addBatch,
+  invalidateBatchCache,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { getSession } from "../rbac/guard.js";
@@ -32,7 +35,26 @@ const OFFICE_BADGE_PALETTES = [
 
 // ── Constants ─────────────────────────────────────────────────
 const ROWS_PER_PAGE = 10;
-const STATIC_BATCHES = [1, 2, 3, 4, 5];
+
+// ── URL state helpers ─────────────────────────────────────────
+function _getUrlParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+function _setUrlParam(key, val) {
+  const params = new URLSearchParams(window.location.search);
+  if (val === null || val === undefined) {
+    params.delete(key);
+  } else {
+    params.set(key, val);
+  }
+  const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+  history.replaceState(null, "", newUrl);
+}
+
+function _clearUrlParam(key) {
+  _setUrlParam(key, null);
+}
 
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -65,11 +87,11 @@ function _bdfCollect() {
     month_period: g("bdf-month-period"),
     year_period: g("bdf-year-period"),
     contact_number: g("bdf-contact"),
-    gender: g("bdf-gender"),
+    gender_id: g("bdf-gender") !== "" && g("bdf-gender") != null ? parseInt(g("bdf-gender"), 10) : null,
     birthday: g("bdf-birthday") || null,
     age: g("bdf-age") || null,
-    education: g("bdf-education"),
-    batch: g("bdf-batch"),
+    education_id: g("bdf-education") !== "" && g("bdf-education") != null ? parseInt(g("bdf-education"), 10) : null,
+    batch_id: g("bdf-batch-id") || null,
   };
 }
 
@@ -82,11 +104,11 @@ function _bdfFill(defaults = {}) {
   set("bdf-month-period", defaults.month_period);
   set("bdf-year-period", defaults.year_period ?? new Date().getFullYear());
   set("bdf-contact", defaults.contact_number);
-  set("bdf-gender", defaults.gender);
+  set("bdf-gender", defaults.gender_id);
   set("bdf-birthday", defaults.birthday);
   set("bdf-age", defaults.age);
-  set("bdf-education", defaults.education);
-  set("bdf-batch", defaults.batch);
+  set("bdf-education", defaults.education_id);
+  set("bdf-batch-id", defaults.batch_id);
 
   // Sync custom education dropdown visually
   const eduInput = document.getElementById("bdf-education");
@@ -317,8 +339,8 @@ function initOfficeSortPanel(onFilter) {
   return panel;
 }
 
-// ── Batch Sort Panel ──────────────────────────────────────────
-function initBatchSortPanel(getBatches, onFilter) {
+// ── Batch Sort Panel (DB-driven) ──────────────────────────────
+function initBatchSortPanel(onFilter) {
   const BATCH_PALETTES = [
     { bg: "bg-rose-500/20",    text: "text-rose-200",    border: "border-rose-500/30"    },
     { bg: "bg-sky-500/20",     text: "text-sky-200",     border: "border-sky-500/30"     },
@@ -330,8 +352,11 @@ function initBatchSortPanel(getBatches, onFilter) {
     { bg: "bg-orange-500/20",  text: "text-orange-200",  border: "border-orange-500/30"  },
   ];
 
-  // Wrapper elements that get hidden when Sort Batch panel is open
   const COLLAPSE_IDS = ["sort-btn-wrap", "filter-btn-wrap", "staff-search-wrap"];
+
+  // Session role check — only admins can add batches
+  const session = getSession();
+  const _isAdmin = session && session.role === "admin";
 
   const inner = initAnimatedBadgePanel({
     panelId:       "sort-batch-panel",
@@ -342,22 +367,25 @@ function initBatchSortPanel(getBatches, onFilter) {
     badgesListId:  "batch-badges-list",
     allLabel:      "All Batches",
     fetchItems:    async () => {
-      const batches = getBatches();
-      // If data hasn't loaded yet, return empty so panel shows nothing odd
-      return batches;
+      const { data, error } = await fetchBatches({ forceRefresh: true });
+      if (error && import.meta.env.DEV) console.error("[SPES] Sort Batch fetch error:", error);
+      return data ?? [];
     },
-    getLabel:      (b) => `BATCH ${b}`,
-    getId:         (b) => String(b),
+    getLabel:      (b) => `BATCH ${b.batch_number}`,
+    getId:         (b) => String(b.batch_number),
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
     onOpen() {
-      // Shrink title + hide sort/filter/search controls
       const title = document.getElementById("table-title");
       if (title) { title.classList.add("truncate", "max-w-[120px]", "sm:max-w-[200px]"); }
       COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.add("hidden"));
+
+      // Append the "Add Batch" button after badges list renders (admin only)
+      if (_isAdmin) {
+        setTimeout(() => _appendAddBatchBtn(), 80);
+      }
     },
     onClose() {
-      // Restore title + show controls
       const title = document.getElementById("table-title");
       if (title) { title.classList.remove("truncate", "max-w-[120px]", "sm:max-w-[200px]"); }
       COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.remove("hidden"));
@@ -365,6 +393,96 @@ function initBatchSortPanel(getBatches, onFilter) {
   });
 
   addDragScroll(document.getElementById("batch-badges-list"));
+
+  // ── Add Batch inline widget ───────────────────────────────────
+  function _appendAddBatchBtn() {
+    const badgesList = document.getElementById("batch-badges-list");
+    if (!badgesList) return;
+    // Remove existing if already appended
+    badgesList.querySelector(".add-batch-widget")?.remove();
+
+    const widget = document.createElement("div");
+    widget.className = "add-batch-widget shrink-0 inline-flex items-center gap-1 opacity-0 scale-75 transition-all duration-200";
+
+    // "+" add button
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.title = "Add Batch";
+    addBtn.className =
+      "add-batch-trigger cursor-pointer shrink-0 inline-flex items-center justify-center rounded border border-emerald-400/50 bg-emerald-500/20 px-2 py-1 text-emerald-300 hover:bg-emerald-500/40 hover:border-emerald-400/80 transition-all duration-200";
+    addBtn.innerHTML = `<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>`;
+
+    // Inline input row (hidden by default)
+    const inputRow = document.createElement("div");
+    inputRow.className = "add-batch-input-row hidden items-center gap-1";
+    inputRow.innerHTML = `
+      <input type="number" min="1" max="99" placeholder="No."
+        class="add-batch-num h-7 w-16 rounded border border-white/25 bg-white/10 px-2 text-[11px] text-white placeholder:text-white/40 focus:border-white/50 focus:bg-white/15 focus:outline-none transition-all"
+        autocomplete="off" />
+      <span class="text-[9px] font-black uppercase tracking-wider text-white/60 select-none">BATCH</span>
+      <button type="button" title="Add Batch" class="add-batch-confirm cursor-pointer inline-flex items-center justify-center h-6 w-6 rounded border border-emerald-400/50 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40 transition-all">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+      </button>
+      <button type="button" title="Cancel" class="add-batch-cancel cursor-pointer inline-flex items-center justify-center h-6 w-6 rounded border border-white/20 bg-white/10 text-white/60 hover:bg-white/20 transition-all">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    `;
+
+    widget.appendChild(addBtn);
+    widget.appendChild(inputRow);
+    badgesList.appendChild(widget);
+
+    // Animate in
+    setTimeout(() => {
+      widget.classList.remove("opacity-0", "scale-75");
+      widget.classList.add("opacity-100", "scale-100");
+    }, 60);
+
+    const numInput = widget.querySelector(".add-batch-num");
+    const confirmBtn = widget.querySelector(".add-batch-confirm");
+    const cancelBtn = widget.querySelector(".add-batch-cancel");
+
+    const _showInput = () => {
+      addBtn.classList.add("hidden");
+      inputRow.classList.remove("hidden");
+      inputRow.classList.add("flex");
+      numInput.value = "";
+      numInput.focus();
+    };
+
+    const _hideInput = () => {
+      addBtn.classList.remove("hidden");
+      inputRow.classList.add("hidden");
+      inputRow.classList.remove("flex");
+    };
+
+    const _submit = async () => {
+      const num = numInput.value.trim();
+      if (!num) return;
+      confirmBtn.disabled = true;
+      const res = await addBatch(num);
+      confirmBtn.disabled = false;
+      if (!res.success) {
+        modals.error("Add Batch Failed", res.error);
+        return;
+      }
+      invalidateBatchCache();
+      _hideInput();
+      // Rebuild panel so new badge appears
+      inner.rebuild();
+    };
+
+    addBtn.addEventListener("click", (e) => { e.stopPropagation(); _showInput(); });
+    cancelBtn.addEventListener("click", (e) => { e.stopPropagation(); _hideInput(); });
+    confirmBtn.addEventListener("click", (e) => { e.stopPropagation(); _submit(); });
+    numInput.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") _submit();
+      if (e.key === "Escape") _hideInput();
+    });
+    numInput.addEventListener("click", (e) => e.stopPropagation());
+  }
+
   return inner;
 }
 
@@ -437,12 +555,11 @@ export function initBeneficiaries() {
 
   // ── Batch Sort Panel (admin + officer, beneficiary view) ─────
   const batchSortPanel = initBatchSortPanel(
-    () => STATIC_BATCHES,
     (batchId) => {
       if (batchId === null) {
-        sortFilterInstance?.setFilter("batch", "all");
+        sortFilterInstance?.setFilter("batch_number", "all");
       } else {
-        sortFilterInstance?.setFilter("batch", batchId);
+        sortFilterInstance?.setFilter("batch_number", batchId);
       }
     }
   );
@@ -494,10 +611,13 @@ export function initBeneficiaries() {
     tbody.innerHTML = rowsHtml;
   }
 
-  async function switchToBeneficiariesView(officeName, officeLocation) {
+  async function switchToBeneficiariesView(officeName, officeLocation, officeId) {
     if (!isAdmin) return;
     viewMode = "beneficiaries";
     currentOfficeLocation = officeLocation;
+
+    // Persist to URL — just the office id; location/name resolved from cache on restore
+    _setUrlParam("office", officeId ?? officeLocation);
 
     // Hide Sort Offices panel when drilling into a specific office
     officeSortPanel.hide();
@@ -557,6 +677,10 @@ export function initBeneficiaries() {
     viewMode = "implementors";
     currentOfficeLocation = "";
 
+    // Clear URL state — back to implementors list
+    _clearUrlParam("office");
+    _clearUrlParam("b");
+
     // Update Title and hide back button
     const tableTitle = document.getElementById("table-title");
     if (tableTitle) {
@@ -607,6 +731,9 @@ export function initBeneficiaries() {
   // ── Drawer ──────────────────────────────────────────────────
   const openDrawer = (b, index) => {
     if (!drawer || !content) return;
+
+    // Persist drawer state to URL — short key "b" for beneficiary id
+    _setUrlParam("b", b.id);
 
     const drawerLabel = document.getElementById("drawer-label");
     if (drawerLabel) {
@@ -670,13 +797,20 @@ export function initBeneficiaries() {
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Gender</span>
-          <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(b.gender || "N/A")}</span>
+          <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(b.gender?.name || "N/A")}</span>
+        </div>
+        <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
+          <span class="font-bold text-spes-black/55 dark:text-white/50">Batch</span>
+          ${b.batch?.batch_number != null
+            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">BATCH ${escHtml(String(b.batch.batch_number))}</span>`
+            : `<span class="italic text-[10px] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
+          }
         </div>
         <div class="flex justify-between items-center py-1">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Education</span>
           <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[10px] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
-            ${escHtml(b.education || "Not Provided")}
+            ${escHtml(b.education?.name || "Not Provided")}
           </span>
         </div>
       </div>
@@ -723,6 +857,7 @@ export function initBeneficiaries() {
 
   const closeDrawer = () => {
     if (!drawer) return;
+    _clearUrlParam("b");
     const backdrop = document.getElementById("drawer-backdrop");
     if (backdrop) {
       backdrop.classList.remove("opacity-100");
@@ -810,7 +945,7 @@ export function initBeneficiaries() {
           if (impl) {
             const isRowAdmin = String(impl.role).toLowerCase().includes("admin") || String(impl.full_name).toLowerCase().includes("system administrator");
             if (isRowAdmin) return; // ignore clicks for admins
-            switchToBeneficiariesView(impl.office, impl.office_location);
+            switchToBeneficiariesView(impl.office, impl.office_location, impl.office_id ?? impl.id);
           }
         });
       });
@@ -836,7 +971,7 @@ export function initBeneficiaries() {
       tbody.innerHTML = page.map((b, idx) => {
         const absIdx   = start + idx;
         const period   = formatPeriod(b);
-        const batchNum = b.batch !== null && b.batch !== undefined && b.batch !== "" ? Number(b.batch) : null;
+        const batchNum = b.batch?.batch_number != null ? Number(b.batch.batch_number) : null;
         const chipCls  = batchNum !== null
           ? (BATCH_CHIP_PALETTES[batchNum] || "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-white/60")
           : "";
@@ -1026,7 +1161,7 @@ export function initBeneficiaries() {
       : `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> <span>${_bdfEditId ? "Save Changes" : "Save Beneficiary"}</span>`;
   };
 
-  const openBdfDrawer = (defaults = null) => {
+  const openBdfDrawer = async (defaults = null) => {
     if (!bdfDrawer || !bdfOverlay) return;
     _bdfEditId = defaults?.id ?? null;
     _bdfHideError();
@@ -1035,7 +1170,7 @@ export function initBeneficiaries() {
 
     const activeOfficeLoc = isAdmin ? currentOfficeLocation : officerOffice?.location;
     if (defaults) {
-      _bdfFill(defaults);
+      await _patchedBdfFill(defaults, true);
       if (activeOfficeLoc) {
         const addressInput = document.getElementById("bdf-address");
         if (addressInput) {
@@ -1050,7 +1185,7 @@ export function initBeneficiaries() {
         }
       }
     } else {
-      _bdfFill({ year_period: new Date().getFullYear() });
+      await _patchedBdfFill({ year_period: new Date().getFullYear() });
       if (activeOfficeLoc) {
         const addressInput = document.getElementById("bdf-address");
         if (addressInput) {
@@ -1256,10 +1391,204 @@ export function initBeneficiaries() {
   }
   // --- END: Custom Education Dropdown ---
 
+  // --- START: Batch Dropdown (DB-driven) ---
+  const batchDropdownBtn  = document.getElementById("btn-batch-dropdown");
+  const batchDropdownMenu = document.getElementById("menu-batch-dropdown");
+  const batchHiddenInput  = document.getElementById("bdf-batch-id");
+  const batchSelectedText = document.getElementById("batch-selected-text");
+  const batchOptionsList  = document.getElementById("batch-options-list");
+  const batchAddRow       = document.getElementById("batch-add-row");
+  const batchAddInput     = document.getElementById("batch-add-input");
+  const batchAddConfirm   = document.getElementById("batch-add-confirm");
+  const batchAddCancel    = document.getElementById("batch-add-cancel");
+
+  // true = ADD mode (show "Add Batch" row), false = EDIT mode (read-only list)
+  let _batchIsAddMode = true;
+
+  async function _populateBatchDropdown() {
+    if (!batchOptionsList) return;
+    const { data } = await fetchBatches({ forceRefresh: false });
+    batchOptionsList.innerHTML = "";
+
+    // "— None —" option always first
+    const noneBtn = document.createElement("button");
+    noneBtn.type = "button";
+    noneBtn.className = "batch-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors italic text-spes-black/40 dark:text-white/40 text-sm";
+    noneBtn.dataset.batchId = "";
+    noneBtn.dataset.batchLabel = "— None —";
+    noneBtn.textContent = "— None —";
+    const noneLi = document.createElement("li");
+    noneLi.appendChild(noneBtn);
+    batchOptionsList.appendChild(noneLi);
+
+    (data ?? []).forEach(b => {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "batch-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors font-bold text-sm";
+      btn.dataset.batchId    = b.id;
+      btn.dataset.batchLabel = `BATCH ${b.batch_number}`;
+      btn.textContent = `BATCH ${b.batch_number}`;
+      li.appendChild(btn);
+      batchOptionsList.appendChild(li);
+    });
+  }
+
+  function _syncBatchDropdownDisplay(batchId) {
+    if (!batchSelectedText || !batchHiddenInput) return;
+    if (!batchId) {
+      batchSelectedText.textContent = "— Select —";
+      batchHiddenInput.value = "";
+      return;
+    }
+    const match = batchOptionsList?.querySelector(`[data-batch-id="${batchId}"]`);
+    if (match) {
+      batchSelectedText.textContent = match.dataset.batchLabel;
+      batchHiddenInput.value = batchId;
+    }
+  }
+
+  const btnRevealBatchAdd = document.getElementById("btn-reveal-batch-add");
+  const batchAddForm      = document.getElementById("batch-add-form");
+
+  function _showBatchAddRow(show) {
+    if (!batchAddRow) return;
+    if (show) {
+      batchAddRow.classList.remove("hidden");
+      batchAddRow.classList.add("flex");
+      // Reset state to show button, hide form
+      if (btnRevealBatchAdd) btnRevealBatchAdd.classList.remove("hidden");
+      if (batchAddForm) {
+        batchAddForm.classList.remove("flex");
+        batchAddForm.classList.add("hidden");
+      }
+    } else {
+      batchAddRow.classList.add("hidden");
+      batchAddRow.classList.remove("flex");
+    }
+  }
+
+  if (batchDropdownBtn && batchDropdownMenu) {
+    batchDropdownBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (batchDropdownMenu.classList.contains("hidden")) {
+        await _populateBatchDropdown();
+        _showBatchAddRow(_batchIsAddMode);
+        batchDropdownMenu.classList.remove("hidden");
+      } else {
+        batchDropdownMenu.classList.add("hidden");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!batchDropdownBtn.contains(e.target) && !batchDropdownMenu.contains(e.target)) {
+        batchDropdownMenu.classList.add("hidden");
+      }
+    });
+
+    batchOptionsList?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".batch-option");
+      if (!btn) return;
+      _syncBatchDropdownDisplay(btn.dataset.batchId);
+      batchDropdownMenu.classList.add("hidden");
+    });
+
+    // Add Batch confirm
+    const _submitNewBatch = async () => {
+      const num = batchAddInput?.value?.trim();
+      if (!num) return;
+      if (batchAddConfirm) batchAddConfirm.disabled = true;
+      const res = await addBatch(num);
+      if (batchAddConfirm) batchAddConfirm.disabled = false;
+      if (!res.success) { modals.error("Add Batch Failed", res.error); return; }
+      invalidateBatchCache();
+      await _populateBatchDropdown();
+      // Auto-select the newly added batch
+      const newBtn = batchOptionsList?.querySelector(`[data-batch-id="${res.data.id}"]`);
+      if (newBtn) { _syncBatchDropdownDisplay(res.data.id); }
+      batchDropdownMenu.classList.add("hidden");
+    };
+
+    batchAddConfirm?.addEventListener("click", (e) => { e.stopPropagation(); _submitNewBatch(); });
+    batchAddCancel?.addEventListener("click",  (e) => { 
+      e.stopPropagation(); 
+      if (batchAddForm) {
+        batchAddForm.classList.remove("flex");
+        batchAddForm.classList.add("hidden");
+      }
+      if (btnRevealBatchAdd) btnRevealBatchAdd.classList.remove("hidden");
+    });
+    
+    if (btnRevealBatchAdd && batchAddForm) {
+      btnRevealBatchAdd.addEventListener("click", (e) => {
+        e.stopPropagation();
+        btnRevealBatchAdd.classList.add("hidden");
+        batchAddForm.classList.remove("hidden");
+        batchAddForm.classList.add("flex");
+        if (batchAddInput) { batchAddInput.value = ""; batchAddInput.focus(); }
+      });
+    }
+
+    batchAddInput?.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") _submitNewBatch();
+      if (e.key === "Escape") {
+        if (batchAddForm) {
+          batchAddForm.classList.remove("flex");
+          batchAddForm.classList.add("hidden");
+        }
+        if (btnRevealBatchAdd) btnRevealBatchAdd.classList.remove("hidden");
+      }
+    });
+    batchAddInput?.addEventListener("click", (e) => e.stopPropagation());
+  }
+
+  // Patch _bdfFill to also sync the batch dropdown visually
+  const _origBdfFill = _bdfFill;
+  const _patchedBdfFill = async (defaults = {}, isEdit = false) => {
+    _origBdfFill(defaults);
+    _batchIsAddMode = !isEdit;
+    await _populateBatchDropdown();
+    _syncBatchDropdownDisplay(defaults.batch_id ?? "");
+  };
+  // --- END: Batch Dropdown ---
+
   // ── Bootstrap ────────────────────────────────────────────────
   (async () => {
     await loadOfficerOffice();
-    await loadData();
+
+    // ── Restore URL state ────────────────────────────────────────
+    const urlOffice = _getUrlParam("office");
+    const urlBene   = _getUrlParam("b");
+
+    if (isAdmin && urlOffice) {
+      // Fetch implementors fresh to get correct office name + location
+      const staffs = await fetchImplementorList({ forceRefresh: true });
+      // Only match on office_id (never fall back to staff row id)
+      const match = staffs
+        .filter(s => !s.archive_at && s.office_id != null)
+        .find(s => String(s.office_id) === String(urlOffice));
+      if (match) {
+        await switchToBeneficiariesView(match.office, match.office_location, urlOffice);
+      } else {
+        _clearUrlParam("office");
+        _clearUrlParam("b");
+        await loadData();
+      }
+    } else {
+      await loadData();
+    }
+
+    // ── Restore beneficiary drawer ────────────────────────────────
+    if (urlBene) {
+      const idx = activeBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
+      if (idx !== -1) {
+        openDrawer(activeBeneficiaries[idx], idx);
+      } else {
+        // onRender is sync after fetch, so if not found the id is simply gone
+        _clearUrlParam("b");
+      }
+    }
   })();
 }
 

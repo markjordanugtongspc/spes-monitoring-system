@@ -73,36 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRegOfficeCombobox();
 });
 
-// ── Populate Registration Offices ───────────────────────────────
-async function populateRegistrationOffices() {
-  const officeHiddenInput = document.getElementById("reg-office");
-  const officeOptionsContainer = document.getElementById("reg-office-options");
-  if (!officeHiddenInput || !officeOptionsContainer) return;
 
-  try {
-    const { data, error } = await supabase
-      .from("offices")
-      .select("id, name")
-      .order("name");
-
-    if (!error && data && data.length > 0) {
-      officeOptionsContainer.innerHTML = '';
-      data.forEach(office => {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5";
-        btn.dataset.value = office.id;
-        btn.textContent = office.name;
-        li.appendChild(btn);
-        officeOptionsContainer.appendChild(li);
-      });
-    }
-  } catch (err) {
-    console.error("Failed to fetch offices:", err);
-  }
-}
-populateRegistrationOffices();
 
 // ── Supabase Realtime Permissions Listener ────────────────────────
 function setupRealtimePermissionsListener() {

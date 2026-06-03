@@ -532,7 +532,7 @@
           <div>
             <label for="bdf-month-period"
               class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
-              Month of Employment
+              Month
             </label>
             <select id="bdf-month-period" name="month_period"
               class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
@@ -561,13 +561,48 @@
               placeholder="e.g. 2025" />
           </div>
           <div>
-            <label for="bdf-batch"
+            <label
               class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Batch
             </label>
-            <input type="number" id="bdf-batch" name="batch" min="1" max="20"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
-              placeholder="e.g. 1" />
+            <div class="relative" id="dropdown-batch-wrapper">
+              <input type="hidden" id="bdf-batch-id" name="batch_id" value="" />
+              <button type="button" id="btn-batch-dropdown"
+                class="flex w-full cursor-pointer items-center justify-between rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+                <span class="text-spes-black/50 dark:text-spes-white/50" id="batch-selected-text">— Select —</span>
+                <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div id="menu-batch-dropdown"
+                class="absolute left-0 top-full z-[150] mt-1 hidden w-full border border-spes-blue/15 bg-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                <!-- Add Batch inline input (shown in ADD mode only) -->
+                <div id="batch-add-row" class="hidden flex-col border-b border-spes-blue/10 dark:border-white/10 px-3 py-2 gap-2">
+                  <button type="button" id="btn-reveal-batch-add"
+                    class="cursor-pointer flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-spes-blue/30 dark:border-white/30 bg-spes-blue/5 dark:bg-white/5 py-1.5 text-[10px] font-black uppercase tracking-wider text-spes-blue dark:text-white hover:bg-spes-blue/10 dark:hover:bg-white/10 transition-colors">
+                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                    Add Batch
+                  </button>
+                  <div id="batch-add-form" class="hidden relative items-center w-full">
+                    <input type="number" id="batch-add-input" min="1" max="99" placeholder="Enter Batch No..."
+                      class="w-full border border-spes-blue/20 dark:border-white/15 bg-transparent pl-3 pr-16 py-1.5 text-xs text-spes-black dark:text-spes-white placeholder:text-spes-black/30 dark:placeholder:text-white/30 focus:border-spes-blue dark:focus:border-spes-yellow focus:outline-none transition" />
+                    <div class="absolute right-1 flex items-center gap-1">
+                      <button type="button" id="batch-add-confirm" title="Add Batch"
+                        class="cursor-pointer inline-flex items-center justify-center h-5 w-5 border border-emerald-400/60 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                      </button>
+                      <button type="button" id="batch-add-cancel" title="Cancel"
+                        class="cursor-pointer inline-flex items-center justify-center h-5 w-5 border border-red-300/60 bg-red-500/10 text-red-500 dark:text-red-400 hover:bg-red-500/20 transition-colors">
+                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <ul id="batch-options-list" class="max-h-44 overflow-y-auto py-1 text-sm text-spes-black dark:text-spes-white">
+                  <!-- populated by JS -->
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -587,11 +622,11 @@
               class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Gender <span class="text-red-500">*</span>
             </label>
-            <select id="bdf-gender" name="gender" required
+            <select id="bdf-gender" name="gender_id" required
               class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
               <option value="">— Select Gender —</option>
-              <option value="MALE">MALE</option>
-              <option value="FEMALE">FEMALE</option>
+              <option value="1">MALE</option>
+              <option value="2">FEMALE</option>
             </select>
           </div>
         </div>
@@ -651,7 +686,7 @@
                 <li>
                   <button type="button"
                     class="edu-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
-                    data-value="Senior Highschool">
+                    data-value="1">
                     <svg class="h-4 w-4 text-spes-blue dark:text-spes-yellow" fill="none" viewBox="0 0 24 24"
                       stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -663,7 +698,7 @@
                 <li>
                   <button type="button"
                     class="edu-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
-                    data-value="Highschool">
+                    data-value="4">
                     <svg class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
@@ -674,7 +709,7 @@
                 <li>
                   <button type="button"
                     class="edu-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
-                    data-value="College Level">
+                    data-value="3">
                     <svg class="h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -685,7 +720,7 @@
                 <li>
                   <button type="button"
                     class="edu-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
-                    data-value="College Graduate">
+                    data-value="2">
                     <svg class="h-4 w-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
@@ -705,11 +740,11 @@
     <div
       class="shrink-0 flex items-center justify-end gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
       <button type="button" id="btn-cancel-bene-form"
-        class="cursor-pointer rounded-lg border border-spes-blue/20 px-5 py-2.5 text-sm font-semibold text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-white transition">
+        class="cursor-pointer border border-spes-blue/20 px-5 py-2.5 text-sm font-semibold text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-spes-blue dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-spes-white transition-all duration-150">
         Cancel
       </button>
       <button type="submit" form="form-bene-drawer" id="btn-submit-bene-form"
-        class="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-emerald-600 active:scale-95 disabled:opacity-60 disabled:pointer-events-none transition">
+        class="cursor-pointer inline-flex items-center gap-2 bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
         </svg>

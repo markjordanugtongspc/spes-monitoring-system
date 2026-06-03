@@ -1,7 +1,66 @@
 import { supabase } from "./supabase.js";
 
-const CACHE_KEY = "spes_beneficiaries_v1";
+const CACHE_KEY = "spes_beneficiaries_v3";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// ── Batch cache ────────────────────────────────────────────────
+const BATCH_CACHE_KEY = "spes_batches_v1";
+const BATCH_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+function _readBatchCache() {
+  try {
+    const raw = localStorage.getItem(BATCH_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > BATCH_CACHE_TTL) { localStorage.removeItem(BATCH_CACHE_KEY); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function _writeBatchCache(data) {
+  try { localStorage.setItem(BATCH_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
+export function invalidateBatchCache() {
+  try { localStorage.removeItem(BATCH_CACHE_KEY); } catch {}
+}
+
+export async function fetchBatches({ forceRefresh = false } = {}) {
+  if (!forceRefresh) {
+    const cached = _readBatchCache();
+    if (cached) return { data: cached, fromCache: true };
+  }
+  const { data, error } = await supabase
+    .from("batch")
+    .select("*")
+    .order("batch_number", { ascending: true });
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] fetch error:", error.code, error.hint);
+    return { data: [], error: "Unable to load batches." };
+  }
+  const records = data ?? [];
+  _writeBatchCache(records);
+  return { data: records };
+}
+
+export async function addBatch(batchNumber) {
+  const num = parseInt(batchNumber, 10);
+  if (!num || num < 1) return { success: false, error: "Invalid batch number." };
+  const { data, error } = await supabase
+    .from("batch")
+    .insert([{ batch_number: num }])
+    .select()
+    .single();
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] insert error:", error.code, error.hint);
+    const msg = error.code === "23505"
+      ? `Batch ${num} already exists.`
+      : "Failed to add batch. Please try again.";
+    return { success: false, error: msg };
+  }
+  invalidateBatchCache();
+  return { success: true, data };
+}
 
 // ── Cache helpers ──────────────────────────────────────────────
 function _readCache() {
@@ -40,14 +99,20 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     if (cached) return { data: cached, fromCache: true };
   }
 
-  let query = supabase.from("beneficiary").select("*").order("created_at", { ascending: false });
+  let query = supabase
+    .from("beneficiary")
+    .select("*, batch:batch_id(id, batch_number), education:education_id(id, name), gender:gender_id(id, name)")
+    .order("created_at", { ascending: false });
 
   let result = await query;
 
   // Column doesn't exist yet (migration not run) — cache the flag and retry without filter
   if (result.error?.code === "42703") {
     sessionStorage.setItem(ARCHIVE_COL_FLAG, "1");
-    result = await supabase.from("beneficiary").select("*").order("created_at", { ascending: false });
+    result = await supabase
+      .from("beneficiary")
+      .select("*, batch:batch_id(id, batch_number), education:education_id(id, name), gender:gender_id(id, name)")
+      .order("created_at", { ascending: false });
   }
 
   if (result.error) {
@@ -134,13 +199,13 @@ function _sanitize(p) {
     address:        str(p.address),
     month_period:   str(p.month_period)?.toUpperCase() ?? null,
     year_period:    str(p.year_period),
-    gender:         str(p.gender),
+    gender_id:      p.gender_id !== "" && p.gender_id != null ? parseInt(p.gender_id, 10) : null,
     designated:     str(p.designated),
     relationship:   str(p.relationship)?.toUpperCase() ?? null,
     contact_number: str(p.contact_number),
     birthday:       p.birthday || null,
     age:            p.age !== "" && p.age != null ? parseInt(p.age, 10) : null,
-    education:      str(p.education),
-    batch:          p.batch !== "" && p.batch != null ? parseInt(p.batch, 10) : null,
+    education_id:   p.education_id !== "" && p.education_id != null ? parseInt(p.education_id, 10) : null,
+    batch_id:       p.batch_id !== "" && p.batch_id != null ? parseInt(p.batch_id, 10) : null,
   };
 }

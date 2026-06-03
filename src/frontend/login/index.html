@@ -308,11 +308,18 @@
                       </div>
                     </div>
                     
-                    <div id="reg-office-dropdown" class="absolute left-0 top-full z-[150] mt-1 hidden w-full rounded-xl border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+                    <div id="reg-office-dropdown" class="absolute left-0 top-full z-[150] mt-1 hidden w-full rounded-xl border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-secondary overflow-hidden">
+                      <!-- Selector Tabs -->
+                      <div class="flex border-b border-spes-blue/10 dark:border-white/10 bg-spes-blue/5 dark:bg-white/5 divide-x divide-spes-blue/10 dark:divide-white/10">
+                        <button type="button" id="reg-tab-public" class="cursor-pointer flex-1 py-2 text-xs font-black uppercase tracking-wider text-center transition-all bg-white text-spes-blue shadow-sm dark:bg-spes-yellow dark:text-spes-dark-primary">
+                          Public
+                        </button>
+                        <button type="button" id="reg-tab-academic" class="cursor-pointer flex-1 py-2 text-xs font-black uppercase tracking-wider text-center transition-all text-spes-black/60 dark:text-white/60 hover:text-spes-blue dark:hover:text-spes-yellow">
+                          Academic
+                        </button>
+                      </div>
                       <ul id="reg-office-options" class="max-h-48 overflow-y-auto py-1 text-sm text-spes-black dark:text-spes-white">
-                        <li><button type="button" class="reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5" data-value="Regional Office">Regional Office</button></li>
-                        <li><button type="button" class="reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5" data-value="Provincial Office">Provincial Office</button></li>
-                        <li><button type="button" class="reg-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5" data-value="Field Office">Field Office</button></li>
+                        <li class="px-3.5 py-3 text-center text-xs text-spes-black/40 dark:text-white/30 italic">Loading offices...</li>
                       </ul>
                       <div id="reg-office-not-found" class="hidden p-2 text-center text-xs text-spes-black/50 dark:text-spes-white/50">
                         NOT FOUND
