@@ -66,7 +66,7 @@ function _renderImplementorsByOffice(staffs) {
     series: [{ name: "Implementors", data: values }],
     chart: { type: "bar", height: 220, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
     plotOptions: {
-      bar: { horizontal: true, borderRadius: 4, barHeight: "35%", distributed: true, dataLabels: { position: "top" } }
+      bar: { horizontal: true, borderRadius: 0, barHeight: "35%", distributed: true, dataLabels: { position: "top" } }
     },
     colors: BLUE_SHADES.slice(0, values.length),
     dataLabels: {
@@ -77,12 +77,21 @@ function _renderImplementorsByOffice(staffs) {
     },
     xaxis: {
       categories,
-      labels: { show: false },
-      axisBorder: { show: false },
-      axisTicks: { show: false }
+      labels: { 
+        show: true,
+        style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" }
+      },
+      axisBorder: { show: true, color: "rgba(100, 116, 139, 0.15)" },
+      axisTicks: { show: true, color: "rgba(100, 116, 139, 0.15)" }
     },
-    yaxis: { labels: { style: { fontSize: "9px", fontWeight: 800, colors: ["#64748b"] } } },
-    grid: { show: false },
+    yaxis: { labels: { style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" } } },
+    grid: { 
+      show: true,
+      borderColor: "rgba(100, 116, 139, 0.1)",
+      strokeDashArray: 4,
+      xaxis: { lines: { show: true } },
+      yaxis: { lines: { show: false } }
+    },
     legend: { show: false },
     tooltip: {
       theme: "dark",
@@ -158,7 +167,7 @@ function _renderImplementorStatus(beneficiaries) {
     studentBadge.className = "rounded-full bg-gray-100 px-3 py-1 text-[10px] font-black uppercase dark:bg-white/5 shadow-sm";
   }
 
-  new ApexCharts(el, {
+  const chart = new ApexCharts(el, {
     series,
     chart: { type: "donut", height: 250, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
     labels,
@@ -169,6 +178,8 @@ function _renderImplementorStatus(beneficiaries) {
     tooltip: { enabled: false },
     plotOptions: {
       pie: {
+        startAngle: -90,
+        endAngle: 270,
         donut: {
           size: "75%",
           labels: {
@@ -187,24 +198,109 @@ function _renderImplementorStatus(beneficiaries) {
         }
       }
     }
-  }).render();
+  });
+
+  chart.render().then(() => {
+    _drawGenderConnectorLines(el, series, total);
+  });
+
+  if (!el.dataset.resizeListenerAttached) {
+    el.dataset.resizeListenerAttached = "true";
+    window.addEventListener("resize", () => {
+      setTimeout(() => {
+        _drawGenderConnectorLines(el, series, total);
+      }, 150);
+    });
+  }
 }
 
-// Chart 3 — Beneficiaries by Year Period (grouped bar)
+function _drawGenderConnectorLines(el, series, total) {
+  const pieGroup = el.querySelector(".apexcharts-pie");
+  if (!pieGroup) return;
+
+  const rect = pieGroup.getBoundingClientRect();
+  const containerRect = el.getBoundingClientRect();
+  const centerX = (rect.left - containerRect.left) + rect.width / 2;
+  const centerY = (rect.top - containerRect.top) + rect.height / 2;
+  const radius = rect.width / 2;
+
+  const oldOverlay = el.querySelector(".custom-chart-overlay");
+  if (oldOverlay) oldOverlay.remove();
+
+  const overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  overlay.setAttribute("class", "custom-chart-overlay absolute inset-0 pointer-events-none w-full h-full z-10");
+  overlay.style.position = "absolute";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100%";
+  overlay.style.height = "100%";
+
+  let currentAngle = -Math.PI / 2;
+  series.forEach((val, idx) => {
+    if (val === 0) return;
+    const angleSpan = (val / total) * 2 * Math.PI;
+    const midAngle = currentAngle + angleSpan / 2;
+    currentAngle += angleSpan;
+
+    const cos = Math.cos(midAngle);
+    const sin = Math.sin(midAngle);
+
+    const startX = centerX + cos * radius;
+    const startY = centerY + sin * radius;
+
+    const endX = centerX + cos * (radius + 20);
+    const endY = centerY + sin * (radius + 20);
+
+    const elbowX = endX + (cos >= 0 ? 15 : -15);
+    const elbowY = endY;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", `M ${startX} ${startY} L ${endX} ${endY} L ${elbowX} ${elbowY}`);
+    path.setAttribute("stroke", "#94a3b8");
+    path.setAttribute("stroke-width", "1");
+    path.setAttribute("fill", "none");
+    overlay.appendChild(path);
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    const textX = elbowX + (cos >= 0 ? 5 : -5);
+    const textY = elbowY + 4;
+    text.setAttribute("x", textX);
+    text.setAttribute("y", textY);
+    text.setAttribute("text-anchor", cos >= 0 ? "start" : "end");
+    text.setAttribute("fill", idx === 0 ? "#4F91FF" : "#FF5B9B");
+    text.style.fontFamily = "Inter, sans-serif";
+    text.style.fontSize = "10px";
+    text.style.fontWeight = "bold";
+    text.textContent = `${val} (${Math.round((val / total) * 100)}%)`;
+    overlay.appendChild(text);
+  });
+
+  el.style.position = "relative";
+  el.appendChild(overlay);
+}
+
+// Chart 3 — Beneficiaries Progress and Status (yearly added SPES column chart)
 function _renderBeneficiariesByYear(beneficiaries) {
   const el = document.getElementById("column-chart");
   if (!el) return;
   el.innerHTML = "";
 
-  const counts = {};
-  beneficiaries.forEach(b => {
-    const yr = b.year_period ?? "Unknown";
-    counts[yr] = (counts[yr] ?? 0) + 1;
+  const targetYears = ["2024", "2025", "2026", "2027"];
+  const countsByYear = {};
+  targetYears.forEach(yr => {
+    countsByYear[yr] = { total: 0 };
   });
 
-  const sorted     = Object.entries(counts).sort(([a], [b]) => String(a).localeCompare(String(b)));
-  const categories = sorted.map(([k]) => k);
-  const values     = sorted.map(([, v]) => v);
+  beneficiaries.forEach(b => {
+    const yr = String(b.year_period ?? "");
+    if (targetYears.includes(yr)) {
+      countsByYear[yr].total++;
+    }
+  });
+
+  const categories = targetYears;
+  const totalData = targetYears.map(yr => countsByYear[yr].total);
+  const colors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"]; // 2024: Blue, 2025: Green, 2026: Amber, 2027: Purple
 
   const percentageEl = document.getElementById("added-students-percentage");
   if (percentageEl) {
@@ -222,63 +318,162 @@ function _renderBeneficiariesByYear(beneficiaries) {
     `;
   }
 
-  if (!values.length) return _showNoData(el, "No beneficiary data");
+  const summaryEl = document.getElementById("chart-progress-summary");
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="flex flex-col gap-1.5 mt-4 text-xs font-medium text-spes-black/60 dark:text-spes-white/60 leading-relaxed border-t border-gray-100 pt-3 dark:border-white/5">
+        <p class="text-xs text-spes-black/75 dark:text-spes-white/75 font-semibold">
+          Roster Summary: <span class="font-extrabold text-spes-blue dark:text-spes-yellow">${beneficiaries.length} total students</span> registered.
+        </p>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-spes-black/60 dark:text-spes-white/50">
+          <span class="year-legend-item cursor-pointer inline-flex items-center gap-1 hover:text-spes-blue dark:hover:text-spes-yellow transition-colors duration-150">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3B82F6]"></span>
+            2024: <strong>${countsByYear["2024"]?.total ?? 0}</strong>
+          </span>
+          <span>|</span>
+          <span class="year-legend-item cursor-pointer inline-flex items-center gap-1 hover:text-spes-blue dark:hover:text-spes-yellow transition-colors duration-150">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
+            2025: <strong>${countsByYear["2025"]?.total ?? 0}</strong>
+          </span>
+          <span>|</span>
+          <span class="year-legend-item cursor-pointer inline-flex items-center gap-1 hover:text-spes-blue dark:hover:text-spes-yellow transition-colors duration-150">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
+            2026: <strong>${countsByYear["2026"]?.total ?? 0}</strong>
+          </span>
+          <span>|</span>
+          <span class="year-legend-item cursor-pointer inline-flex items-center gap-1 hover:text-spes-blue dark:hover:text-spes-yellow transition-colors duration-150">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]"></span>
+            2027: <strong>${countsByYear["2027"]?.total ?? 0}</strong>
+          </span>
+        </div>
+      </div>
+    `;
+  }
 
-  const peak    = Math.max(...values);
-  // Cap bar width so a single bar never fills the full chart width
-  const colW    = Math.min(40, Math.max(18, Math.round(60 / Math.max(values.length, 1)))) + "%";
+  const peak = Math.max(...totalData);
+  const yearColorsList = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
 
-  new ApexCharts(el, {
-    colors: values.map((_, idx) => BLUE_SHADES[idx % BLUE_SHADES.length]),
-    series: [{ name: "Beneficiaries", data: values }],
-    chart: { type: "bar", height: 180, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
-    plotOptions: {
-      bar: {
-        columnWidth: colW,
-        borderRadius: 5,
-        borderRadiusApplication: "end",
-        distributed: true
+  const isDark = document.documentElement.classList.contains("dark");
+  const lineThemeColor = isDark ? "#ffffff" : "#F87171";
+
+  const chart = new ApexCharts(el, {
+    series: [
+      {
+        name: "Added SPES",
+        type: "column",
+        data: targetYears.map((yr, idx) => ({
+          x: yr,
+          y: countsByYear[yr].total,
+          fillColor: yearColorsList[idx]
+        }))
+      },
+      {
+        name: "Overall Trend",
+        type: "line",
+        data: targetYears.map(yr => ({
+          x: yr,
+          y: countsByYear[yr].total
+        }))
       }
+    ],
+    chart: { type: "line", height: 180, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
+    stroke: { width: [0, 3], curve: "smooth" },
+    colors: ["#3B82F6", lineThemeColor], // Column default mapping (overridden by fillColor) and dynamic trend line color
+    plotOptions: {
+      bar: { columnWidth: "25%", borderRadius: 0, distributed: false, dataLabels: { position: "top" } }
     },
     dataLabels: {
       enabled: true,
+      enabledOnSeries: [0], // Only show data labels on the column series
       formatter: fmt,
-      style: { fontSize: "10px", fontWeight: 800, colors: ["#fff"] },
-      offsetY: 6,
+      offsetY: -20,
+      style: { fontSize: "10px", fontWeight: 800, colors: ["#64748b"] }
     },
     xaxis: {
       categories,
-      labels: {
-        style: {
-          fontSize: "9px",
-          fontWeight: 700,
-          colors: "#64748b"
-        }
-      },
+      labels: { style: { fontSize: "9px", fontWeight: 700, colors: "#64748b" } },
       axisBorder: { show: false },
-      axisTicks: { show: false },
+      axisTicks: { show: false }
     },
-    yaxis: { show: false, max: peak + Math.ceil(peak * 0.2) },
-    grid: { show: false },
+    yaxis: {
+      show: true,
+      min: 0, // Prevent negative values
+      labels: {
+        style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" },
+        formatter: (v) => Math.round(v)
+      },
+      tickAmount: peak > 0 ? Math.min(4, peak) : 4,
+      max: peak > 0 ? peak + Math.ceil(peak * 0.15) : 5
+    },
+    grid: {
+      show: true,
+      borderColor: "rgba(100, 116, 139, 0.1)",
+      strokeDashArray: 4,
+      yaxis: { lines: { show: true } },
+      xaxis: { lines: { show: false } }
+    },
     legend: { show: false },
     tooltip: {
       theme: "dark",
+      shared: true,
+      intersect: false,
       custom: function({ series, seriesIndex, dataPointIndex, w }) {
-        const title = w.globals.labels[dataPointIndex];
-        const val = series[seriesIndex][dataPointIndex];
-        const color = w.config.colors[dataPointIndex] ?? BLUE_SHADES[0];
+        const year = w.globals.labels[dataPointIndex];
+        const val = series[0][dataPointIndex];
+        const yearColor = yearColorsList[dataPointIndex] ?? "#3B82F6";
         return `
           <div class="${_tooltipClass()}">
-            <div class="font-bold mb-1">${title}</div>
-            <div class="flex items-center gap-1.5">
-              <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${color}"></span>
-              <span>Beneficiaries: <strong class="font-black">${val} students</strong></span>
+            <div class="font-bold mb-1">${year}</div>
+            <div class="flex items-center gap-1.5 text-xs font-semibold">
+              <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${yearColor}"></span>
+              <span>Added SPES: <strong class="font-black">${val}</strong></span>
             </div>
           </div>
         `;
       }
-    },
-  }).render();
+    }
+  });
+
+  chart.render().then(() => {
+    // Dynamic theme changer listener for trend line
+    window.addEventListener("theme-changed", () => {
+      const currentDark = document.documentElement.classList.contains("dark");
+      const newLineColor = currentDark ? "#ffffff" : "#F87171";
+      chart.updateOptions({
+        colors: ["#3B82F6", newLineColor]
+      });
+    });
+
+    if (summaryEl) {
+      // Hover on individual year items
+      const spans = summaryEl.querySelectorAll(".year-legend-item");
+      spans.forEach((span, idx) => {
+        span.addEventListener("mouseenter", () => {
+          const paths = el.querySelectorAll("path.apexcharts-bar-area");
+          paths.forEach((path, pathIdx) => {
+            if (pathIdx === idx) {
+              path.style.opacity = "1";
+            } else {
+              path.style.opacity = "0.35"; // dim other years
+            }
+          });
+          if (paths[idx]) {
+            paths[idx].dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+            paths[idx].dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
+          }
+        });
+        span.addEventListener("mouseleave", () => {
+          const paths = el.querySelectorAll("path.apexcharts-bar-area");
+          paths.forEach((path) => {
+            path.style.opacity = "1"; // reset all opacities
+          });
+          if (paths[idx]) {
+            paths[idx].dispatchEvent(new MouseEvent("mouseout", { bubbles: true }));
+          }
+        });
+      });
+    }
+  });
 }
 
 // Chart 4 — Enrollment by Month (area)
@@ -308,8 +503,21 @@ function _renderEnrollmentByMonth(beneficiaries) {
       categories: monthLabels,
       labels: { style: { fontSize: "9px", fontWeight: 700 } }
     },
-    yaxis: { show: false },
-    grid: { show: false },
+    yaxis: { 
+      show: true,
+      labels: { 
+        style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" },
+        formatter: (v) => Math.round(v)
+      },
+      tickAmount: Math.max(...monthly) > 0 ? Math.min(4, Math.max(...monthly)) : 1
+    },
+    grid: { 
+      show: true, 
+      borderColor: "rgba(100, 116, 139, 0.1)", 
+      strokeDashArray: 4,
+      yaxis: { lines: { show: true } },
+      xaxis: { lines: { show: false } }
+    },
     dataLabels: { enabled: false },
     tooltip: {
       theme: "dark",

@@ -36,6 +36,7 @@ export function initThemeToggle() {
       root.classList.toggle("dark");
       localStorage.setItem("color-theme", root.classList.contains("dark") ? "dark" : "light");
       updateIcons();
+      window.dispatchEvent(new CustomEvent("theme-changed"));
     });
   });
 }
