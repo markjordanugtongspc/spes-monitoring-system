@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exports &amp; Reports | SPES Portal</title>
+  <link rel="icon" type="image/png" href="../../assets/img/logos/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <style>
+    /* ── Print Rules ─────────────────────────────────────── */
+    @media screen {
+      #print-area { display: none !important; }
+    }
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { background: #fff !important; height: auto !important; width: 100% !important; }
+      /* Kill sidebar margin — sm:ml-64 / 2xl:ml-80 still applies during print and clips right edge */
+      aside, #sidebar-toggle-btn { display: none !important; }
+      body > main {
+        margin: 0 !important; padding: 0 !important;
+        min-height: 0 !important; height: auto !important;
+        width: 100% !important; max-width: 100% !important;
+      }
+      body > main > *:not(#print-area) { display: none !important; }
+      #print-area {
+        display: flex !important;
+        flex-direction: column;
+        min-height: 100vh;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: static !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-family: Inter, sans-serif;
+        overflow: visible !important;
+      }
+    }
+  </style>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- SPES:SIDEBAR -->
+
+  <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- TOP ENTERPRISE BANNER                               -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+      <div class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30"></div>
+      <div class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95"></div>
+
+      <div class="relative z-10 mx-auto max-w-7xl 2xl:max-w-[2200px]">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="font-montserrat text-3xl font-black text-spes-white">Exports &amp; Reports</h1>
+            <p class="mt-1 text-sm text-spes-white/70">Generate, configure and export SPES monitoring reports.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-1.5 rounded px-3 py-2 text-[9px] sm:text-[10px] font-bold text-white ring-1 ring-white/30">
+              <svg class="h-3.5 w-3.5 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span id="real-time-clock" class="tracking-wider">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- MAIN CONTENT CARD                                   -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="mx-auto -mt-16 max-w-7xl 2xl:max-w-[2200px] px-6 pb-12 relative z-20">
+
+      <!-- ── Action Buttons Bar ──────────────────────────── -->
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3 border border-white/20 bg-white px-5 py-4 shadow-xl dark:bg-spes-dark-primary">
+        <div class="flex items-center gap-2">
+          <!-- Record count badge -->
+          <span class="flex items-center gap-1.5 rounded-full bg-spes-blue/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">
+            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+            </svg>
+            <span id="preview-count">Loading...</span>
+          </span>
+          <span class="text-[10px] font-semibold text-spes-black/40 dark:text-spes-white/40 hidden sm:inline">Live Preview</span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Configure Reports -->
+          <button id="btn-configure-reports" data-tilt-btn
+            class="cursor-pointer inline-flex items-center gap-2 border border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm transition-all hover:bg-slate-100 hover:border-slate-300 active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/70 dark:hover:bg-white/10">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+            Configure Reports
+          </button>
+
+          <!-- Export to Excel -->
+          <button id="btn-export-excel" data-tilt-btn
+            class="cursor-pointer inline-flex items-center gap-2 bg-emerald-500 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-emerald-600 active:scale-95">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125H8.25m3.75-1.5c0 .621.504 1.125 1.125 1.125h1.5" />
+            </svg>
+            Export to Excel
+          </button>
+
+          <!-- Print to Paper -->
+          <button id="btn-print-paper" data-tilt-btn
+            class="cursor-pointer inline-flex items-center gap-2 bg-spes-blue px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#002878] active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
+            </svg>
+            Print to Paper
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Live Preview Card ───────────────────────────── -->
+      <div class="overflow-hidden border border-spes-blue/10 bg-white shadow-sm dark:border-spes-white/10 dark:bg-spes-dark-primary">
+
+        <!-- Preview Paper Header (mirrors the print layout) -->
+        <div class="border-b-2 border-[#0038A8] bg-white px-6 py-4 dark:bg-spes-dark-primary dark:border-spes-yellow/40">
+          <div class="flex items-start justify-between gap-4">
+            <!-- Left: Logo + Title -->
+            <div class="flex items-center gap-4">
+              <img src="../../assets/img/logos/c_spes.png"
+                class="h-14 w-14 rounded-full object-cover ring-2 ring-[#0038A8]/20 dark:ring-spes-yellow/20 shrink-0"
+                alt="SPES Logo" />
+              <div>
+                <h2 class="font-montserrat text-base font-black uppercase tracking-tight text-[#0038A8] dark:text-spes-yellow leading-tight">Department of Labor and Employment</h2>
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-white/50 mt-0.5">Lanao del Norte Provincial Field Office</p>
+                <p class="text-[9.5px] text-gray-400 dark:text-white/35 font-medium mt-0.5">OREDC Building, Badelles St. Extension, Barangay Ubaldo Laya, Iligan City</p>
+              </div>
+            </div>
+            <!-- Right: Report title + date -->
+            <div class="text-right shrink-0">
+              <h3 class="font-montserrat text-sm font-black uppercase tracking-tight text-red-600 dark:text-red-400">SPES Monitoring Report</h3>
+              <div class="mt-1 inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/10 px-3 py-1 text-[9px] font-semibold text-gray-500 dark:text-white/50">
+                <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <span id="preview-generated-date">—</span>
+              </div>
+              <p id="preview-filter-summary" class="mt-1.5 text-[8.5px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-white/30"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm" id="preview-table">
+            <thead id="preview-thead">
+              <!-- Rendered by exports.js -->
+              <tr class="bg-[#0038A8]">
+                <th class="px-4 py-3 text-center text-[11px] font-black uppercase tracking-widest text-white whitespace-nowrap" colspan="6">
+                  <div class="flex items-center justify-center gap-2 animate-pulse">
+                    <span class="h-1.5 w-1.5 rounded-full bg-white/70"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-white/70"></span>
+                    <span class="h-1.5 w-1.5 rounded-full bg-white/70"></span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="preview-tbody">
+              <!-- Skeleton rows while loading -->
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+              </tr>
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-6 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+              </tr>
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-40"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-14 mx-auto"></div></td>
+                <td class="px-4 py-3"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Preview Footer -->
+        <div class="border-t border-gray-100 dark:border-white/5 bg-gray-50 dark:bg-white/[0.02] px-6 py-3 text-center">
+          <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-400 dark:text-white/25">
+            &copy; <span data-auto-year></span> System V<span id="preview-version">0.2.0</span>
+            <span class="opacity-60">Developed by</span>
+            <span class="text-[#0038A8]/60 dark:text-spes-yellow/50 font-black">Mark Jordan Ugtong</span>
+            <span class="mx-2 text-gray-300 dark:text-white/10">|</span>
+            Exclusive Property of DOLE Iligan City
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- CONFIGURE REPORTS DRAWER (Right Side Panel)            -->
+  <!-- ════════════════════════════════════════════════════════ -->
+
+  <!-- Backdrop overlay -->
+  <div id="configure-drawer-overlay"
+    class="hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300"></div>
+
+  <!-- Drawer panel -->
+  <div id="configure-drawer"
+    class="fixed top-0 right-0 z-50 h-screen w-full max-w-sm translate-x-full transform overflow-hidden border-l border-spes-blue/10 bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:max-w-md rounded-none"
+    aria-label="Configure Reports">
+
+    <!-- Drawer Header -->
+    <div class="flex items-center justify-between border-b border-spes-blue/10 bg-gradient-to-r from-spes-blue to-[#002878] px-5 py-4 dark:border-spes-white/10 dark:from-spes-dark-primary dark:to-[#0A0A0A]">
+      <div class="flex items-center gap-3">
+        <svg class="h-5 w-5 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+        </svg>
+        <div>
+          <h2 class="text-sm font-black uppercase tracking-widest text-white">Configure Reports</h2>
+          <p class="text-[10px] text-white/50 font-medium">Customize your export settings</p>
+        </div>
+      </div>
+      <button id="btn-close-config-drawer" type="button"
+        class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition-all">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Drawer Body (scrollable) -->
+    <div class="h-[calc(100vh-132px)] overflow-y-auto px-5 py-4 space-y-5">
+
+      <!-- Report Type Tabs -->
+      <div>
+        <p class="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Report Type</p>
+        <div class="flex gap-2 rounded-lg bg-gray-100 dark:bg-white/5 p-1">
+          <button id="cfg-tab-beneficiaries" type="button"
+            class="cursor-pointer flex-1 rounded-md py-2 text-[10px] font-black uppercase tracking-wider transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-sm">
+            Beneficiaries
+          </button>
+          <button id="cfg-tab-implementors" type="button"
+            class="cursor-pointer flex-1 rounded-md py-2 text-[10px] font-black uppercase tracking-wider transition-all text-spes-black/60 dark:text-white/60 hover:text-spes-blue dark:hover:text-spes-yellow">
+            Implementors
+          </button>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div>
+        <p class="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Search</p>
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input type="text" id="cfg-search"
+            class="w-full rounded-lg border border-spes-blue/20 bg-white py-2.5 pl-9 pr-4 text-xs text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-white/30 transition rounded-none"
+            placeholder="Search by name or ID…" />
+        </div>
+      </div>
+
+      <!-- Separator -->
+      <hr class="border-gray-100 dark:border-white/5" />
+
+      <!-- Columns to Include -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Columns to Include</p>
+          <button id="btn-select-all-cols" type="button" class="cursor-pointer text-[9px] font-black uppercase tracking-wider text-spes-blue/70 hover:text-spes-blue dark:text-spes-yellow/70 dark:hover:text-spes-yellow transition-colors">All</button>
+        </div>
+        <div id="cfg-columns-list" class="space-y-0.5 rounded-lg border border-gray-100 dark:border-white/5 p-1 max-h-52 overflow-y-auto">
+          <!-- Rendered by exports.js -->
+        </div>
+      </div>
+
+      <!-- Separator -->
+      <hr class="border-gray-100 dark:border-white/5" />
+
+      <!-- Office Filter -->
+      <div id="cfg-office-section">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Filter by Office</p>
+          <button id="btn-select-all-offices" type="button"
+            class="cursor-pointer text-[9px] font-black uppercase tracking-wider text-spes-blue/70 hover:text-spes-blue dark:text-spes-yellow/70 dark:hover:text-spes-yellow transition-colors">
+            Select All
+          </button>
+        </div>
+        <div class="relative mb-2">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input type="text" id="cfg-office-search"
+            class="w-full rounded-lg border border-spes-blue/20 bg-white py-2 pl-8 pr-4 text-[11px] text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-white/30 transition rounded-none"
+            placeholder="Search office…" />
+        </div>
+        <div id="cfg-office-list" class="space-y-0.5 rounded-lg border border-gray-100 dark:border-white/5 p-1 max-h-40 overflow-y-auto">
+          <p class="px-3 py-3 text-center text-[10px] text-gray-400 dark:text-white/30 italic animate-pulse">Loading offices…</p>
+        </div>
+        <p class="mt-1.5 text-[9px] text-gray-400 dark:text-white/30">Leave unchecked to include all offices.</p>
+      </div>
+
+      <!-- Separator -->
+      <hr class="border-gray-100 dark:border-white/5" />
+
+      <!-- Filters Row -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Gender (beneficiaries only) -->
+        <div id="cfg-gender-wrapper">
+          <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-spes-blue dark:text-spes-yellow">Gender</label>
+          <select id="cfg-gender"
+            class="cursor-pointer w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2 text-[11px] text-spes-black focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white transition">
+            <option value="all">All Genders</option>
+            <option value="male">Male Only</option>
+            <option value="female">Female Only</option>
+          </select>
+        </div>
+
+        <!-- Status (implementors only — beneficiary table has no archive column) -->
+        <div id="cfg-status-wrapper">
+          <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-spes-blue dark:text-spes-yellow">Status</label>
+          <select id="cfg-status"
+            class="cursor-pointer w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2 text-[11px] text-spes-black focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white transition">
+            <option value="active">Active Only</option>
+            <option value="all">All Records</option>
+            <option value="archived">Archived Only</option>
+          </select>
+        </div>
+
+        <!-- Year (beneficiaries only) -->
+        <div id="cfg-year-wrapper">
+          <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-spes-blue dark:text-spes-yellow">Year Period</label>
+          <select id="cfg-year"
+            class="cursor-pointer w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2 text-[11px] text-spes-black focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white transition">
+            <option value="all">All Years</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+          </select>
+        </div>
+
+        <!-- Age Range -->
+        <div>
+          <label class="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-spes-blue dark:text-spes-yellow">Age Range</label>
+          <div class="flex items-center gap-1.5">
+            <input type="number" id="cfg-age-min" min="0" max="99"
+              class="w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2 text-[11px] text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white transition"
+              placeholder="Min" />
+            <span class="text-gray-400 text-xs shrink-0">—</span>
+            <input type="number" id="cfg-age-max" min="0" max="99"
+              class="w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2 text-[11px] text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white transition"
+              placeholder="Max" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Separator -->
+      <hr class="border-gray-100 dark:border-white/5" />
+
+      <!-- Print Orientation -->
+      <div>
+        <p class="mb-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Print Orientation</p>
+        <div class="flex gap-3">
+          <label class="cursor-pointer flex items-center gap-2.5 rounded-lg border border-spes-blue/20 px-4 py-3 flex-1 hover:border-spes-blue transition-colors dark:border-white/20 dark:hover:border-spes-yellow has-[:checked]:border-spes-blue has-[:checked]:bg-spes-blue/5 dark:has-[:checked]:border-spes-yellow dark:has-[:checked]:bg-spes-yellow/5">
+            <input type="radio" name="cfg-orientation" id="cfg-orientation-landscape" value="landscape" checked
+              class="h-3.5 w-3.5 border-gray-300 text-spes-blue focus:ring-spes-blue/20 dark:border-white/20 dark:text-spes-yellow cursor-pointer" />
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black uppercase tracking-wider text-spes-black dark:text-spes-white">Landscape</span>
+              <span class="text-[9px] text-gray-400 dark:text-white/40">Recommended</span>
+            </div>
+          </label>
+          <label class="cursor-pointer flex items-center gap-2.5 rounded-lg border border-spes-blue/20 px-4 py-3 flex-1 hover:border-spes-blue transition-colors dark:border-white/20 dark:hover:border-spes-yellow has-[:checked]:border-spes-blue has-[:checked]:bg-spes-blue/5 dark:has-[:checked]:border-spes-yellow dark:has-[:checked]:bg-spes-yellow/5">
+            <input type="radio" name="cfg-orientation" id="cfg-orientation-portrait" value="portrait"
+              class="h-3.5 w-3.5 border-gray-300 text-spes-blue focus:ring-spes-blue/20 dark:border-white/20 dark:text-spes-yellow cursor-pointer" />
+            <div class="flex flex-col">
+              <span class="text-[10px] font-black uppercase tracking-wider text-spes-black dark:text-spes-white">Portrait</span>
+              <span class="text-[9px] text-gray-400 dark:text-white/40">Compact</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Separator -->
+      <hr class="border-gray-100 dark:border-white/5" />
+
+      <!-- Signature Lines -->
+      <div>
+        <p class="mb-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-spes-blue dark:text-spes-yellow">Signature Lines</p>
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-spes-black/60 dark:text-white/50">Prepared By</label>
+            <input type="text" id="cfg-prepared-by"
+              class="w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2.5 text-xs text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-white/30 transition rounded-none"
+              placeholder="e.g. Juan Dela Cruz" />
+          </div>
+          <div>
+            <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.1em] text-spes-black/60 dark:text-white/50">Approved By</label>
+            <input type="text" id="cfg-approved-by"
+              class="w-full rounded-lg border border-spes-blue/20 bg-white px-3 py-2.5 text-xs text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-white/30 transition rounded-none"
+              placeholder="e.g. Maria Santos" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="flex items-center justify-between gap-3 border-t border-spes-blue/10 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-primary/50 px-5 py-4">
+      <button id="btn-reset-config" type="button" data-tilt-btn
+        class="cursor-pointer inline-flex items-center gap-1.5 border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-white/50 hover:text-spes-red dark:hover:text-red-400 hover:border-spes-red/30 transition-all">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        Reset
+      </button>
+      <button id="btn-apply-config" type="button" data-tilt-btn
+        class="cursor-pointer inline-flex items-center gap-1.5 bg-spes-blue px-6 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-md hover:bg-[#002878] transition-all dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+        Apply &amp; Preview
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- PRINT AREA — Populated at runtime by exports.js         -->
+  <!-- Only visible during window.print()                     -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div id="print-area"></div>
+
+  <script type="module" src="../../assets/js/exports.js"></script>
+</body>
+
+</html>

@@ -585,6 +585,40 @@ export function initLoginSignupSlider() {
 }
 // --- FUNCTION: INITIALIZE LOGIN SLIDER (END) ---
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 7 — EXPORT BUTTON TILT EFFECT
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// --- FUNCTION: INIT EXPORT BUTTON TILT (START) ---
+/**
+ * Applies a skew-tilt hover effect to any element with [data-tilt-btn].
+ * On mouseenter: skews left (parallelogram lean) + lifts slightly.
+ * On mouseleave: resets to flat.
+ */
+export function initExportButtonTilt() {
+  const TILT_STYLE  = "skewX(-6deg) translateY(-2px)";
+  const RESET_STYLE = "skewX(0deg) translateY(0)";
+  const TRANSITION  = "transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+  document.querySelectorAll("[data-tilt-btn]").forEach(btn => {
+    btn.style.transition = TRANSITION;
+
+    btn.addEventListener("mouseenter", () => {
+      btn.style.transform = TILT_STYLE;
+    });
+    btn.addEventListener("mouseleave", () => {
+      btn.style.transform = RESET_STYLE;
+    });
+    btn.addEventListener("mousedown", () => {
+      btn.style.transform = "skewX(-3deg) translateY(1px) scale(0.97)";
+    });
+    btn.addEventListener("mouseup", () => {
+      btn.style.transform = TILT_STYLE;
+    });
+  });
+}
+// --- FUNCTION: INIT EXPORT BUTTON TILT (END) ---
+
 // --- FUNCTION: DYNAMIC PASSWORD REVEAL (START) ---
 export function initPasswordConfirmReveal() {
   const regPassword = document.getElementById('reg-password');

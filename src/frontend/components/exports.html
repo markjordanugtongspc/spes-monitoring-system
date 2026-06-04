@@ -1,0 +1,47 @@
+<!--
+  SPES Monitoring Report — Print Template Component
+  ===================================================
+  Reference template for the Exports & Reports page.
+  Rendered dynamically at runtime by:
+    src/frontend/assets/js/exports.js → _printReport()
+
+  The JS injects built content into #print-area before calling window.print().
+  @page orientation is set dynamically based on the user's Configure Reports setting.
+-->
+
+<!-- ══════════════════════════════════════════════════════════
+     PRINT AREA — Hidden in browser, visible only when printing
+     ══════════════════════════════════════════════════════════ -->
+<div id="print-area" aria-hidden="true">
+  <!-- Dynamically injected by exports.js _printReport() -->
+  <!--
+    Injected structure:
+    ┌──────────────────────────────────────────────────────┐
+    │  [Watermark: c_spes.png at 4% opacity, fixed]        │
+    │                                                      │
+    │  ┌── HEADER ──────────────────────────────────────┐  │
+    │  │  [Logo]  Dept of Labor and Employment          │  │
+    │  │          Lanao del Norte Provincial Field Off. │  │
+    │  │          OREDC Building, Badelles St. Ext...   │  │
+    │  │                        SPES Monitoring Report  │  │
+    │  │                        Generated: [date/time]  │  │
+    │  │                        [filter summary]        │  │
+    │  └────────────────────────────────────────────────┘  │
+    │                                                      │
+    │  ┌── TABLE ───────────────────────────────────────┐  │
+    │  │  [OFFICE: ...] header row                      │  │
+    │  │  ID NO. | NAME | AGE | OFFICE | STATUS | ...   │  │
+    │  │  data rows grouped by office                   │  │
+    │  └────────────────────────────────────────────────┘  │
+    │                                                      │
+    │  ┌── SIGNATURES ──────────────────────────────────┐  │
+    │  │  Prepared by: _________   Approved by: _______ │  │
+    │  └────────────────────────────────────────────────┘  │
+    │                                                      │
+    │  ┌── FOOTER ──────────────────────────────────────┐  │
+    │  │  © 2026 System V0.2.0 Developed by Mark Jordan │  │
+    │  │  Ugtong | Exclusive Property of DOLE Iligan    │  │
+    │  └────────────────────────────────────────────────┘  │
+    └──────────────────────────────────────────────────────┘
+  -->
+</div>

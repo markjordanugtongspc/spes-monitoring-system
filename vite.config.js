@@ -126,6 +126,7 @@ export default defineConfig({
         implementors:   resolve(__dirname, "src/frontend/pages/implementors/index.html"),
         beneficiaries:  resolve(__dirname, "src/frontend/pages/beneficiaries/index.html"),
         roles:          resolve(__dirname, "src/frontend/pages/roles/index.html"),
+        exports:        resolve(__dirname, "src/frontend/pages/exports/index.html"),
       }
     }
   },
