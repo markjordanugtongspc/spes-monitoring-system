@@ -16,6 +16,28 @@
       document.documentElement.classList.remove('dark');
     }
   </script>
+  <style>
+    /* ── Dashboard Statistics Print Rules ────────────────────── */
+    @media screen { #dashboard-print-area { display: none !important; } }
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { background: #fff !important; height: auto !important; width: 100% !important; }
+      aside, #sidebar-toggle-btn { display: none !important; }
+      body > main {
+        margin: 0 !important; padding: 0 !important;
+        min-height: 0 !important; height: auto !important;
+        width: 100% !important; max-width: 100% !important;
+      }
+      body > main > *:not(#dashboard-print-area) { display: none !important; }
+      #dashboard-print-area {
+        display: block !important;
+        width: 100% !important; max-width: 100% !important;
+        position: static !important;
+        margin: 0 !important; padding: 0 !important;
+        overflow: visible !important;
+      }
+    }
+  </style>
 </head>
 
 <body
@@ -106,7 +128,7 @@
             </div>
             <span id="badge-staff-metric" class="mt-1 flex items-center justify-center rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
           </div>
-          <div id="distribution-chart" class="h-[220px] pr-4">
+          <div id="distribution-chart" class="h-[220px] pr-2">
             <!-- Flowbite Widget Skeleton (Horizontal Bars) -->
             <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent space-y-4">
                 <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2.5"></div>
@@ -128,6 +150,8 @@
                 <span class="sr-only">Loading...</span>
             </div>
           </div>
+          <!-- Roster summary — populated by _renderImplementorsByOffice() -->
+          <div id="distribution-summary"></div>
         </div>
 
         <!-- Card 2: Total SPES (Male/Female) -->
@@ -462,7 +486,7 @@
             <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">System Audit</span>
           </div>
 
-          <!-- Export Reports -->
+          <!-- Export Stats -->
           <div class="flex flex-col items-center gap-3">
             <button id="quick-export" data-tooltip-target="tooltip-export" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
@@ -471,7 +495,7 @@
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export Reports</span>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export Stats</span>
           </div>
 
           <!-- Roles Setup -->
@@ -610,7 +634,7 @@
               <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Roles Setup</span>
             </div>
 
-            <!-- Export Reports (Giant) -->
+            <!-- Export Stats (Giant) -->
             <div class="flex flex-col items-center gap-4">
               <button id="quick-export-expanded" data-tooltip-target="tooltip-export-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
@@ -620,7 +644,7 @@
                   <span class="text-[11px] font-black uppercase tracking-widest">Export</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export Reports</span>
+              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export Stats</span>
             </div>
           </div>
         </div>
@@ -714,7 +738,7 @@
               <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Roles</span>
             </div>
 
-            <!-- Export Reports (Centered alone at the bottom) -->
+            <!-- Export Stats (Centered alone at the bottom) -->
             <div class="flex flex-col items-center gap-2">
               <button id="quick-export-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
@@ -787,7 +811,7 @@
             <span id="quick-toggle-stats-mob-text" class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Hide Stats</span>
           </div>
 
-          <!-- Quick Action 5: Export Reports -->
+          <!-- Quick Action 5: Export Stats -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
             <button id="quick-export-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
@@ -845,7 +869,7 @@
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-export" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
-        Generate and export dashboard reports
+        Export rendered dashboard charts and statistics as a print report
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-roles" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
@@ -875,7 +899,7 @@
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-export-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
-        Generate and export dashboard reports
+        Export rendered dashboard charts and statistics as a print report
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-roles-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
@@ -901,6 +925,9 @@
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
     </div>
+
+    <!-- Dashboard Stats print area — hidden in browser, populated by exportDashboardStats() -->
+    <div id="dashboard-print-area"></div>
   </main>
 
   <script type="module" src="../../assets/js/dashboard.js"></script>

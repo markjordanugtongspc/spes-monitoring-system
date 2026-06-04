@@ -13,7 +13,7 @@ import { fetchAllRolePermissions, upsertRolePermissions } from "../../../backend
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initFlowbite } from "flowbite";
-import { initDashboardCharts } from "./components/charts.js";
+import { initDashboardCharts, exportDashboardStats } from "./components/charts.js";
 import { modals } from "./components/modals.js";
 import { initBeneficiaries } from "./components/beneficiaries.js";
 import { setupSortFiltration } from "./components/sort-filtration.js";
@@ -162,6 +162,7 @@ async function init(user) {
       viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
     }
     initDashboardCharts();
+    _wireExportStatsButtons();
     _loadTimelineMetrics();
     initQuickAccessCarousel();
     initQuickAccessPremiumInteractions();
@@ -1353,4 +1354,11 @@ function initQuickAccessStatsToggle() {
   document.getElementById("quick-toggle-stats-expanded")?.addEventListener("click", toggle);
   document.getElementById("quick-toggle-stats-mob")?.addEventListener("click", toggle);
   document.getElementById("quick-toggle-stats-expanded-mob")?.addEventListener("click", toggle);
+}
+
+function _wireExportStatsButtons() {
+  ["quick-export", "quick-export-expanded", "quick-export-expanded-mob", "quick-export-mob"]
+    .forEach(id => {
+      document.getElementById(id)?.addEventListener("click", () => exportDashboardStats());
+    });
 }
