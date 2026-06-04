@@ -500,6 +500,7 @@ export function initBeneficiaries() {
   let allImplementors = [];
   let activeImplementors = [];
   let currentOfficeLocation = "";
+  let allOffices = [];
 
   const loadOfficerOffice = async () => {
     if (isAdmin) {
@@ -570,7 +571,32 @@ export function initBeneficiaries() {
     let rowsHtml = "";
     for (let r = 0; r < 5; r++) {
       let tds = "";
-      if (cols === 6) {
+      if (cols === 7) {
+        tds = `
+          <td class="p-4 text-center">
+            <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-36 mb-2"></div>
+            <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-56"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div>
+          </td>
+        `;
+      } else if (cols === 6) {
         tds = `
           <td class="p-4 text-center">
             <div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-full mx-auto"></div>
@@ -651,18 +677,19 @@ export function initBeneficiaries() {
     sortFilterInstance?.resetFilters();
 
     // Set loading skeleton in table body
-    showTableSkeleton(6);
+    const showOfficeCol = officeLocation === "ALL";
+    showTableSkeleton(showOfficeCol ? 7 : 6);
 
     // Fetch and filter beneficiaries for this office location
     const { data, error } = await fetchBeneficiaries({ forceRefresh: false });
     if (error) {
       modals.error("Load Error", error);
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-sm text-spes-black/40 dark:text-white/40">Failed to load data.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${showOfficeCol ? 7 : 6}" class="text-center py-8 text-sm text-spes-black/40 dark:text-white/40">Failed to load data.</td></tr>`;
       return;
     }
 
     const locLower = officeLocation.trim().toLowerCase();
-    const filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
+    const filteredData = locLower === "all" ? data : data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
 
     allBeneficiaries = filteredData;
     currentPage = 1;
@@ -893,6 +920,7 @@ export function initBeneficiaries() {
         `;
         if (controlsContainer) controlsContainer.classList.add("hidden");
       } else {
+        const showOfficeCol = currentOfficeLocation === "ALL";
         headerRow.innerHTML = `
           <th scope="col" class="p-4 text-center w-4">
             <div class="flex items-center justify-center">
@@ -901,6 +929,7 @@ export function initBeneficiaries() {
             </div>
           </th>
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
+          ${showOfficeCol ? `<th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Office</th>` : ""}
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Period of Employment</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Contact No.</th>
@@ -923,7 +952,7 @@ export function initBeneficiaries() {
           : `<span class="text-spes-black/30 dark:text-spes-white/30 italic text-xs">None</span>`;
 
         const isRowAdmin = String(s.role).toLowerCase().includes("admin") || String(s.full_name).toLowerCase().includes("system administrator");
-        const clickableClass = isRowAdmin ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow";
+        const clickableClass = "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow";
 
         return `
           <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 ${clickableClass}"
@@ -944,8 +973,11 @@ export function initBeneficiaries() {
           const impl = activeImplementors[idx];
           if (impl) {
             const isRowAdmin = String(impl.role).toLowerCase().includes("admin") || String(impl.full_name).toLowerCase().includes("system administrator");
-            if (isRowAdmin) return; // ignore clicks for admins
-            switchToBeneficiariesView(impl.office, impl.office_location, impl.office_id ?? impl.id);
+            if (isRowAdmin) {
+              switchToBeneficiariesView("ALL SPES", "ALL", "ALL");
+            } else {
+              switchToBeneficiariesView(impl.office, impl.office_location, impl.office_id ?? impl.id);
+            }
           }
         });
       });
@@ -968,6 +1000,7 @@ export function initBeneficiaries() {
       };
 
       const page = activeBeneficiaries.slice(start, end);
+      const showOfficeCol = currentOfficeLocation === "ALL";
       tbody.innerHTML = page.map((b, idx) => {
         const absIdx   = start + idx;
         const period   = formatPeriod(b);
@@ -978,6 +1011,10 @@ export function initBeneficiaries() {
         const batchChip = batchNum !== null
           ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${chipCls}">B${batchNum}</span>`
           : "";
+
+        const matchedOffice = allOffices.find(o => o.location && o.location.trim().toLowerCase() === b.address?.trim().toLowerCase());
+        const officeName = matchedOffice ? matchedOffice.name : "N/A";
+        const officeTd = showOfficeCol ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(officeName)}</td>` : '';
 
         return `
           <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer"
@@ -990,6 +1027,7 @@ export function initBeneficiaries() {
             <td class="px-6 py-4 text-left whitespace-nowrap">
               <span class="font-extrabold text-spes-black dark:text-spes-white">${escHtml(b.full_name?.toUpperCase() || "—")}</span>${batchChip}
             </td>
+            ${officeTd}
             <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
             <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(period)}</td>
             <td class="px-6 py-4 text-center font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap">${escHtml(b.contact_number || "—")}</td>
@@ -1094,11 +1132,12 @@ export function initBeneficiaries() {
       return;
     }
 
-    showTableSkeleton(6);
+    const showOfficeCol = currentOfficeLocation === "ALL";
+    showTableSkeleton(showOfficeCol ? 7 : 6);
     const { data, error } = await fetchBeneficiaries({ forceRefresh });
     if (error) {
       modals.error("Load Error", error);
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-sm text-spes-black/40 dark:text-white/40">Failed to load data.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${showOfficeCol ? 7 : 6}" class="text-center py-8 text-sm text-spes-black/40 dark:text-white/40">Failed to load data.</td></tr>`;
       return;
     }
 
@@ -1107,8 +1146,10 @@ export function initBeneficiaries() {
       const locLower = officerOffice.location.trim().toLowerCase();
       filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
     } else if (isAdmin && currentOfficeLocation) {
-      const locLower = currentOfficeLocation.trim().toLowerCase();
-      filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
+      if (currentOfficeLocation !== "ALL") {
+        const locLower = currentOfficeLocation.trim().toLowerCase();
+        filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
+      }
     }
 
     allBeneficiaries = filteredData;
@@ -1555,6 +1596,13 @@ export function initBeneficiaries() {
 
   // ── Bootstrap ────────────────────────────────────────────────
   (async () => {
+    try {
+      const { data: officesData } = await supabase.from("offices").select("id, name, location");
+      if (officesData) allOffices = officesData;
+    } catch (err) {
+      console.warn("[SPES] Load offices error:", err);
+    }
+
     await loadOfficerOffice();
 
     // ── Restore URL state ────────────────────────────────────────
@@ -1562,18 +1610,22 @@ export function initBeneficiaries() {
     const urlBene   = _getUrlParam("b");
 
     if (isAdmin && urlOffice) {
-      // Fetch implementors fresh to get correct office name + location
-      const staffs = await fetchImplementorList({ forceRefresh: true });
-      // Only match on office_id (never fall back to staff row id)
-      const match = staffs
-        .filter(s => !s.archive_at && s.office_id != null)
-        .find(s => String(s.office_id) === String(urlOffice));
-      if (match) {
-        await switchToBeneficiariesView(match.office, match.office_location, urlOffice);
+      if (urlOffice === "ALL") {
+        await switchToBeneficiariesView("ALL SPES", "ALL", "ALL");
       } else {
-        _clearUrlParam("office");
-        _clearUrlParam("b");
-        await loadData();
+        // Fetch implementors fresh to get correct office name + location
+        const staffs = await fetchImplementorList({ forceRefresh: true });
+        // Only match on office_id (never fall back to staff row id)
+        const match = staffs
+          .filter(s => !s.archive_at && s.office_id != null)
+          .find(s => String(s.office_id) === String(urlOffice));
+        if (match) {
+          await switchToBeneficiariesView(match.office, match.office_location, urlOffice);
+        } else {
+          _clearUrlParam("office");
+          _clearUrlParam("b");
+          await loadData();
+        }
       }
     } else {
       await loadData();
