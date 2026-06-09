@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account Settings | SPES Portal</title>
+  <link rel="icon" type="image/png" href="../../assets/img/logos/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- SPES:SIDEBAR -->
+
+  <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- TOP ENTERPRISE BANNER                               -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+      <div
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+      </div>
+      <div
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
+      </div>
+
+      <div class="relative z-10 mx-auto max-w-5xl 2xl:max-w-6xl">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 class="font-montserrat text-3xl font-black text-spes-white">Account Settings</h1>
+            <p class="mt-1 text-sm text-spes-white/70">Manage your personal profile and security.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-1.5 px-3 py-2 text-[9px] sm:text-[10px] font-bold text-white ring-1 ring-white/30">
+              <svg class="h-3.5 w-3.5 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span id="real-time-clock" class="tracking-wider">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- MAIN CONTENT                                         -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="mx-auto -mt-16 max-w-5xl 2xl:max-w-6xl px-4 sm:px-6 pb-16 relative z-20">
+
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        <!-- ── Identity Card (left rail on desktop) ───────── -->
+        <aside class="lg:col-span-1">
+          <div class="sticky top-6 overflow-hidden border border-spes-blue/10 bg-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+            <div class="bg-gradient-to-br from-spes-blue to-[#002878] p-6 text-center dark:from-spes-dark-primary dark:to-spes-dark-secondary">
+              <div id="set-avatar"
+                class="mx-auto flex h-20 w-20 items-center justify-center bg-white/15 text-2xl font-black text-white ring-4 ring-white/20 backdrop-blur">
+                U
+              </div>
+              <h2 id="set-identity-name" class="mt-4 font-montserrat text-lg font-black text-white truncate px-2">—</h2>
+              <p id="set-identity-username" class="text-xs font-semibold text-white/60"></p>
+              <span id="set-identity-role"
+                class="mt-3 inline-flex bg-spes-yellow/90 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-spes-blue"></span>
+            </div>
+
+            <!-- Read-only context fields -->
+            <div class="space-y-4 p-5">
+              <div>
+                <label class="mb-1 block text-[10px] font-black uppercase tracking-wider text-spes-black/45 dark:text-spes-white/40">Username</label>
+                <input id="set-username" type="text" readonly
+                  class="block w-full cursor-not-allowed border border-spes-blue/10 bg-gray-50 px-3 py-2 text-sm font-semibold text-spes-black/70 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/60" />
+              </div>
+              <div>
+                <label class="mb-1 block text-[10px] font-black uppercase tracking-wider text-spes-black/45 dark:text-spes-white/40">Email</label>
+                <input id="set-email" type="text" readonly
+                  class="block w-full cursor-not-allowed border border-spes-blue/10 bg-gray-50 px-3 py-2 text-sm font-semibold text-spes-black/70 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/60" />
+              </div>
+              <div>
+                <label class="mb-1 block text-[10px] font-black uppercase tracking-wider text-spes-black/45 dark:text-spes-white/40">Office</label>
+                <input id="set-office" type="text" readonly value="—"
+                  class="block w-full cursor-not-allowed border border-spes-blue/10 bg-gray-50 px-3 py-2 text-sm font-semibold text-spes-black/70 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/60" />
+              </div>
+              <p class="flex items-start gap-1.5 text-[10px] leading-relaxed text-spes-black/40 dark:text-spes-white/35">
+                <svg class="mt-0.5 h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Username, email and office are managed by an administrator.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ── Editable Form (main column) ────────────────── -->
+        <section class="lg:col-span-2">
+          <form id="settings-form" autocomplete="off" novalidate
+            class="overflow-hidden border border-spes-blue/10 bg-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+
+            <!-- Inline error -->
+            <div id="settings-error"
+              class="hidden m-5 mb-0 border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400">
+            </div>
+
+            <!-- Personal Information -->
+            <div class="p-5 sm:p-6">
+              <div class="mb-5 flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </span>
+                <h3 class="font-montserrat text-sm font-black uppercase tracking-widest text-spes-black dark:text-spes-white">Personal Information</h3>
+              </div>
+
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <!-- Full Name -->
+                <div class="sm:col-span-2">
+                  <label for="set-full-name" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Full Name <span class="text-red-500">*</span>
+                  </label>
+                  <input id="set-full-name" type="text" required
+                    class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                    placeholder="Your full name" />
+                </div>
+
+                <!-- Address -->
+                <div class="sm:col-span-2">
+                  <label for="set-address" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Address
+                  </label>
+                  <input id="set-address" type="text"
+                    class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                    placeholder="City / Municipality" />
+                </div>
+
+                <!-- Religion -->
+                <div>
+                  <label for="set-religion" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Religion
+                  </label>
+                  <input id="set-religion" type="text"
+                    class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                    placeholder="e.g. Roman Catholic" />
+                </div>
+
+                <!-- Language -->
+                <div>
+                  <label for="set-language" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Language
+                  </label>
+                  <input id="set-language" type="text"
+                    class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                    placeholder="e.g. English, Cebuano" />
+                </div>
+
+                <!-- Blood Type -->
+                <div>
+                  <label for="set-blood-type" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Blood Type
+                  </label>
+                  <input id="set-blood-type" type="text" maxlength="3"
+                    class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm uppercase text-spes-black placeholder:text-spes-black/30 placeholder:normal-case focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                    placeholder="e.g. O+" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-dashed border-spes-blue/10 dark:border-white/10"></div>
+
+            <!-- Security -->
+            <div class="p-5 sm:p-6">
+              <div class="mb-5 flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 class="font-montserrat text-sm font-black uppercase tracking-widest text-spes-black dark:text-spes-white">Security</h3>
+                  <p class="text-[11px] text-spes-black/45 dark:text-spes-white/40">Leave blank to keep your current password.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <!-- New Password -->
+                <div>
+                  <label for="set-password" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    New Password
+                  </label>
+                  <div class="relative">
+                    <input id="set-password" type="password" autocomplete="new-password"
+                      class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 pr-10 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                      placeholder="Min. 8 characters" />
+                    <button type="button" id="set-pw-toggle" tabindex="-1"
+                      class="absolute inset-y-0 right-0 flex items-center px-3 text-spes-black/40 hover:text-spes-blue dark:text-spes-white/40 dark:hover:text-spes-yellow">
+                      <svg data-eye-open class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      <svg data-eye-closed class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    </button>
+                  </div>
+                  <!-- Strength meter -->
+                  <div class="mt-2 flex items-center gap-2">
+                    <div class="h-1.5 flex-1 overflow-hidden bg-gray-200 dark:bg-white/10">
+                      <div id="set-pw-strength-bar" class="h-full w-0 transition-all duration-300"></div>
+                    </div>
+                    <span id="set-pw-strength-label" class="w-12 text-right text-[10px] font-black uppercase tracking-wider"></span>
+                  </div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div>
+                  <label for="set-password-confirm" class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+                    Confirm Password
+                  </label>
+                  <div class="relative">
+                    <input id="set-password-confirm" type="password" autocomplete="new-password"
+                      class="block w-full border border-spes-blue/20 bg-transparent px-3.5 py-2.5 pr-10 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                      placeholder="Re-enter new password" />
+                    <button type="button" id="set-pw-confirm-toggle" tabindex="-1"
+                      class="absolute inset-y-0 right-0 flex items-center px-3 text-spes-black/40 hover:text-spes-blue dark:text-spes-white/40 dark:hover:text-spes-yellow">
+                      <svg data-eye-open class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      <svg data-eye-closed class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-dashed border-spes-blue/10 dark:border-white/10"></div>
+
+            <!-- Preferences (Appearance) — local to this device -->
+            <div class="p-5 sm:p-6">
+              <div class="mb-5 flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                </span>
+                <div>
+                  <h3 class="font-montserrat text-sm font-black uppercase tracking-widest text-spes-black dark:text-spes-white">Preferences</h3>
+                  <p class="text-[11px] text-spes-black/45 dark:text-spes-white/40">Saved on this device only.</p>
+                </div>
+              </div>
+
+              <div class="space-y-5">
+                <!-- Theme toggle -->
+                <div class="flex items-center justify-between gap-4 border border-spes-blue/10 bg-gray-50/60 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-spes-black dark:text-spes-white">Dark Mode</p>
+                    <p class="text-[11px] text-spes-black/45 dark:text-spes-white/40">Switch between light and dark appearance.</p>
+                  </div>
+                  <!-- Pill segmented theme switch (drives #theme-toggle handler) -->
+                  <button id="theme-toggle" type="button" title="Toggle theme"
+                    class="cursor-pointer inline-flex shrink-0 items-center gap-2 border border-spes-blue/20 bg-white px-3 py-2 text-xs font-black uppercase tracking-wider text-spes-blue transition-all hover:bg-spes-blue/5 dark:border-white/15 dark:bg-spes-dark-secondary dark:text-spes-yellow dark:hover:bg-white/5">
+                    <svg id="theme-toggle-dark-icon" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <svg id="theme-toggle-light-icon" class="hidden h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+                    </svg>
+                    <span id="theme-toggle-text">Dark Mode</span>
+                  </button>
+                </div>
+
+                <!-- Text size slider: Normal / Large / Extra Large -->
+                <div class="border border-spes-blue/10 bg-gray-50/60 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                  <div class="mb-3 flex items-center justify-between">
+                    <div>
+                      <p class="text-sm font-bold text-spes-black dark:text-spes-white">Text Size</p>
+                      <p class="text-[11px] text-spes-black/45 dark:text-spes-white/40">Adjust readability across the portal.</p>
+                    </div>
+                    <span id="text-size-label" class="inline-flex shrink-0 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">Normal</span>
+                  </div>
+                  <input id="text-size-slider" type="range" min="0" max="2" step="1" value="0"
+                    class="h-2 w-full cursor-pointer appearance-none bg-spes-blue/15 accent-spes-blue dark:bg-white/10 dark:accent-spes-yellow" />
+                  <div class="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:text-spes-white/35">
+                    <span>Normal</span>
+                    <span>Large</span>
+                    <span>Extra Large</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sticky footer actions -->
+            <div class="flex flex-col-reverse items-stretch gap-3 border-t border-spes-blue/10 bg-gray-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6 dark:border-spes-white/10 dark:bg-white/5">
+              <button type="button" id="btn-settings-reset" data-tilt-btn
+                class="cursor-pointer inline-flex items-center justify-center gap-2 border border-spes-blue/20 px-5 py-2.5 text-sm font-bold text-spes-black/70 transition-all hover:border-spes-blue/40 hover:bg-spes-blue/5 hover:text-spes-blue dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:bg-white/5 dark:hover:text-spes-white">
+                Reset
+              </button>
+              <button type="submit" id="btn-settings-save" data-tilt-btn
+                class="cursor-pointer inline-flex items-center justify-center gap-2 bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:bg-emerald-600 active:scale-95 disabled:opacity-60 disabled:pointer-events-none">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Save Changes
+              </button>
+            </div>
+          </form>
+
+          <p class="mt-4 text-center text-[10px] font-semibold uppercase tracking-widest text-spes-black/30 dark:text-spes-white/25">
+            SPES Portal System V<span id="preview-version">0.2.0</span>
+          </p>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="../../assets/js/settings.js"></script>
+</body>
+
+</html>

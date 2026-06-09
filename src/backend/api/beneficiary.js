@@ -115,6 +115,25 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
       .order("created_at", { ascending: false });
   }
 
+  // Derive return_status client-side as a fallback if the DB column is missing/null.
+  // SPES BABY = same full_name appears in an earlier year_period (returnee); else NEW.
+  if (!result.error && Array.isArray(result.data)) {
+    const firstYearByName = {};
+    result.data.forEach(b => {
+      const key = String(b.full_name ?? "").trim().toLowerCase();
+      const yr  = b.year_period != null ? Number(b.year_period) : null;
+      if (!key || yr == null) return;
+      if (firstYearByName[key] == null || yr < firstYearByName[key]) firstYearByName[key] = yr;
+    });
+    result.data.forEach(b => {
+      if (b.return_status) { b.return_status = String(b.return_status).toUpperCase(); return; }
+      const key = String(b.full_name ?? "").trim().toLowerCase();
+      const yr  = b.year_period != null ? Number(b.year_period) : null;
+      b.return_status = (key && yr != null && firstYearByName[key] != null && yr > firstYearByName[key])
+        ? "SPES BABY" : "NEW";
+    });
+  }
+
   if (result.error) {
     if (import.meta.env.DEV) console.error("[SPES Beneficiary] fetch error:", result.error.code, result.error.hint);
     return { data: [], error: "Unable to load beneficiaries. Please try again." };

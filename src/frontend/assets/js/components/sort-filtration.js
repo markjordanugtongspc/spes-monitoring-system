@@ -8,6 +8,9 @@ export function setupSortFiltration({
   dropdownSortId,
   btnFilterId,
   dropdownFilterId,
+  panelId,            // shared panel wrapping both sort + filter sections
+  tabSortId,          // segmented "Sort" tab button
+  tabFilterId,        // segmented "Filter" tab button
   originalData,
   defaultFilters = {},
   onRender
@@ -21,6 +24,9 @@ export function setupSortFiltration({
   const dropdownSort   = document.getElementById(dropdownSortId);
   const btnFilter      = document.getElementById(btnFilterId);
   const dropdownFilter = document.getElementById(dropdownFilterId);
+  const panel          = panelId ? document.getElementById(panelId) : null;
+  const tabSort        = tabSortId ? document.getElementById(tabSortId) : null;
+  const tabFilter      = tabFilterId ? document.getElementById(tabFilterId) : null;
 
   if (!btnSort || !dropdownSort || !btnFilter || !dropdownFilter) return;
 
@@ -31,27 +37,61 @@ export function setupSortFiltration({
     if (match) match.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
   });
 
-  // Toggle dropdowns on click
-  btnSort.addEventListener("click", (e) => {
-    e.stopPropagation();
-    dropdownSort.classList.toggle("hidden");
-    dropdownFilter.classList.add("hidden");
-  });
+  // ── Tab switching (shared-panel mode) ───────────────────────
+  const _tabActive   = ["bg-white", "text-spes-blue", "shadow-sm", "dark:bg-white/10", "dark:text-spes-yellow"];
+  const _tabInactive = ["text-gray-500", "hover:text-spes-blue", "dark:text-gray-400", "dark:hover:text-spes-yellow"];
+  function showSection(which) {
+    if (!panel) return;
+    const sort = which === "sort";
+    dropdownSort.classList.toggle("hidden", !sort);
+    dropdownSort.classList.toggle("flex", sort);
+    dropdownFilter.classList.toggle("hidden", sort);
+    dropdownFilter.classList.toggle("flex", !sort);
+    if (tabSort && tabFilter) {
+      (sort ? tabSort : tabFilter).classList.add(..._tabActive);
+      (sort ? tabSort : tabFilter).classList.remove(..._tabInactive);
+      (sort ? tabFilter : tabSort).classList.add(..._tabInactive);
+      (sort ? tabFilter : tabSort).classList.remove(..._tabActive);
+    }
+  }
+  tabSort?.addEventListener("click",   (e) => { e.stopPropagation(); showSection("sort"); });
+  tabFilter?.addEventListener("click", (e) => { e.stopPropagation(); showSection("filter"); });
 
-  btnFilter.addEventListener("click", (e) => {
-    e.stopPropagation();
-    dropdownFilter.classList.toggle("hidden");
-    dropdownSort.classList.add("hidden");
-  });
-
-  // Close dropdowns on outside click
-  document.addEventListener("click", () => {
-    dropdownSort.classList.add("hidden");
-    dropdownFilter.classList.add("hidden");
-  });
-
-  dropdownSort.addEventListener("click", (e) => e.stopPropagation());
-  dropdownFilter.addEventListener("click", (e) => e.stopPropagation());
+  if (panel) {
+    // Shared-panel mode: both triggers open the same panel, pre-selecting a tab.
+    btnSort.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willOpen = panel.classList.contains("hidden");
+      panel.classList.remove("hidden");
+      showSection("sort");
+      if (!willOpen) showSection("sort");
+    });
+    btnFilter.addEventListener("click", (e) => {
+      e.stopPropagation();
+      panel.classList.remove("hidden");
+      showSection("filter");
+    });
+    document.addEventListener("click", () => panel.classList.add("hidden"));
+    panel.addEventListener("click", (e) => e.stopPropagation());
+  } else {
+    // Legacy two-dropdown mode
+    btnSort.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdownSort.classList.toggle("hidden");
+      dropdownFilter.classList.add("hidden");
+    });
+    btnFilter.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdownFilter.classList.toggle("hidden");
+      dropdownSort.classList.add("hidden");
+    });
+    document.addEventListener("click", () => {
+      dropdownSort.classList.add("hidden");
+      dropdownFilter.classList.add("hidden");
+    });
+    dropdownSort.addEventListener("click", (e) => e.stopPropagation());
+    dropdownFilter.addEventListener("click", (e) => e.stopPropagation());
+  }
 
   // Setup Sort Logic
   const sortOptions = dropdownSort.querySelectorAll("[data-sort-val]");
@@ -63,7 +103,8 @@ export function setupSortFiltration({
       sortOptions.forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
       opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
 
-      dropdownSort.classList.add("hidden");
+      if (panel) panel.classList.add("hidden");
+      else dropdownSort.classList.add("hidden");
       applySortAndFilter();
     });
   });
@@ -143,6 +184,10 @@ export function setupSortFiltration({
           const num = item.batch?.batch_number;
           return num != null && String(num) === activeValue;
         });
+      } else if (key === "return_status") {
+        processed = processed.filter(item =>
+          String(item.return_status || "NEW").toLowerCase() === activeValue
+        );
       } else {
         processed = processed.filter(item => {
           const itemVal = (item[key] || "").toString().toLowerCase();

@@ -48,7 +48,11 @@
 }
 /* ── DASHBOARD: STICKY NOTE EFFECT (END) ── */
 
-/* ApexCharts Tooltip Title Border Removal */
+/* ApexCharts Tooltip — ensure it always surfaces above every stacking context */
+.apexcharts-tooltip {
+  z-index: 9999 !important;
+  overflow: visible !important;
+}
 .apexcharts-tooltip-title {
   border-bottom: none !important;
 }

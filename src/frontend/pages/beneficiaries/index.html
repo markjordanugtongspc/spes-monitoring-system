@@ -36,9 +36,19 @@
 
       <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
         <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 class="font-montserrat text-3xl font-black text-spes-white">Beneficiary Directory</h1>
-            <p class="mt-1 text-sm text-spes-white/70">Insurance monitoring roster for SPES program beneficiaries.</p>
+          <div class="flex items-center gap-4">
+            <div>
+              <h1 class="font-montserrat text-3xl font-black text-spes-white">Beneficiary Directory</h1>
+              <p class="mt-1 text-sm text-spes-white/70">Insurance monitoring roster for SPES program beneficiaries.</p>
+            </div>
+            <!-- NEW / SPES BABY status switch — hidden by default, shown only when
+                 an admin drills into a specific implementor's roster. Filters by return_status. -->
+            <label for="toggle-status-mode" id="status-mode-switch"
+              class="hidden select-none items-center rounded-md cursor-pointer text-[10px] font-black uppercase tracking-widest shadow-lg overflow-hidden border border-white/20">
+              <input id="toggle-status-mode" type="checkbox" class="hidden peer" />
+              <span class="px-4 py-2 bg-emerald-500 text-white peer-checked:bg-white/10 peer-checked:text-white/70 transition-colors">New</span>
+              <span class="px-4 py-2 bg-white/10 text-white/70 peer-checked:bg-red-400 peer-checked:text-white transition-colors">SPES Baby</span>
+            </label>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <button id="btn-add-beneficiary"
@@ -140,77 +150,86 @@
                   </button>
                 </div>
 
-                <!-- Sort Dropdown Trigger -->
-                <div id="sort-btn-wrap" class="relative shrink-0">
-                  <button id="btn-sort-beneficiary"
-                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
-                    title="Sort">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                    </svg>
-                  </button>
-                  <div id="dropdown-sort-beneficiary"
-                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-1.5 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
-                    <button data-sort-val="none"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Default</button>
-                    <button data-sort-val="name-asc"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name
-                      (A-Z)</button>
-                    <button data-sort-val="name-desc"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name
-                      (Z-A)</button>
+                <!-- Sort + Filter — two triggers, ONE shared panel with a segmented switcher -->
+                <div id="sortfilter-wrap" class="relative shrink-0">
+                  <div class="flex items-center gap-2">
+                    <!-- Sort trigger (icon removed) -->
+                    <button id="btn-sort-beneficiary"
+                      class="cursor-pointer inline-flex h-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/20 transition-all"
+                      title="Sort">
+                      Sort
+                    </button>
+                    <!-- Filter trigger -->
+                    <button id="btn-filter-beneficiary"
+                      class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
+                      title="Filter">
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                      </svg>
+                    </button>
                   </div>
-                </div>
 
-                <!-- Filter Dropdown Trigger -->
-                <div id="filter-btn-wrap" class="relative shrink-0">
-                  <button id="btn-filter-beneficiary"
-                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
-                    title="Filter">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </button>
-                  <div id="dropdown-filter-beneficiary"
-                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
-                    <span
-                      class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Period</span>
-                    <button data-filter-key="period" data-filter-val="all"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All
-                      Periods</button>
-                    <button data-filter-key="period" data-filter-val="MAY 2026"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">May
-                      2026</button>
-                    <button data-filter-key="period" data-filter-val="JUNE 2026"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">June
-                      2026</button>
-                    <button data-filter-key="period" data-filter-val="APRIL 2026"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">April
-                      2026</button>
+                  <!-- Shared panel -->
+                  <div id="dropdown-sortfilter-beneficiary"
+                    class="absolute right-0 top-full z-[100] mt-2 w-56 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
 
-                    <span
-                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Relationship</span>
-                    <button data-filter-key="relationship" data-filter-val="all"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All
-                      Relationships</button>
-                    <button data-filter-key="relationship" data-filter-val="MOTHER"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Mother</button>
-                    <button data-filter-key="relationship" data-filter-val="FATHER"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Father</button>
-                    <button data-filter-key="relationship" data-filter-val="SPOUSE"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Spouse</button>
+                    <!-- Segmented Sort | Filter switcher -->
+                    <div class="mb-2 flex items-center rounded-lg bg-gray-100 p-0.5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                      <button type="button" id="sf-tab-sort"
+                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-all duration-200 bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow">Sort</button>
+                      <button type="button" id="sf-tab-filter"
+                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">Filter</button>
+                    </div>
 
-                    <span
-                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive
-                      Status</span>
-                    <button data-filter-key="status" data-filter-val="active"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Active
-                      Only</button>
-                    <button data-filter-key="status" data-filter-val="archived"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Archived
-                      Only</button>
+                    <!-- Sort panel -->
+                    <div id="dropdown-sort-beneficiary" class="flex flex-col">
+                      <button data-sort-val="none"
+                        class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Default</button>
+                      <button data-sort-val="name-asc"
+                        class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name (A-Z)</button>
+                      <button data-sort-val="name-desc"
+                        class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name (Z-A)</button>
+                    </div>
+
+                    <!-- Filter panel -->
+                    <div id="dropdown-filter-beneficiary" class="hidden flex-col">
+                      <span class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Period</span>
+                      <button data-filter-key="period" data-filter-val="all"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Periods</button>
+                      <button data-filter-key="period" data-filter-val="MAY 2026"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">May 2026</button>
+                      <button data-filter-key="period" data-filter-val="JUNE 2026"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">June 2026</button>
+                      <button data-filter-key="period" data-filter-val="APRIL 2026"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">April 2026</button>
+
+                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Relationship</span>
+                      <button data-filter-key="relationship" data-filter-val="all"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Relationships</button>
+                      <button data-filter-key="relationship" data-filter-val="MOTHER"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Mother</button>
+                      <button data-filter-key="relationship" data-filter-val="FATHER"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Father</button>
+                      <button data-filter-key="relationship" data-filter-val="SPOUSE"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Spouse</button>
+
+                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Status</span>
+                      <button data-filter-key="return_status" data-filter-val="all"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Students</button>
+                      <button data-filter-key="return_status" data-filter-val="NEW"
+                        class="cursor-pointer flex w-full items-center gap-1.5 rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">
+                        <span class="inline-block h-2 w-2 rounded-sm bg-emerald-500"></span>New</button>
+                      <button data-filter-key="return_status" data-filter-val="SPES BABY"
+                        class="cursor-pointer flex w-full items-center gap-1.5 rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">
+                        <span class="inline-block h-2 w-2 rounded-sm bg-red-400"></span>SPES Baby</button>
+
+                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive Status</span>
+                      <button data-filter-key="status" data-filter-val="active"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Active Only</button>
+                      <button data-filter-key="status" data-filter-val="archived"
+                        class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Archived Only</button>
+                    </div>
                   </div>
                 </div>
 

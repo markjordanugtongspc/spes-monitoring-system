@@ -352,7 +352,7 @@ function initBatchSortPanel(onFilter) {
     { bg: "bg-orange-500/20",  text: "text-orange-200",  border: "border-orange-500/30"  },
   ];
 
-  const COLLAPSE_IDS = ["sort-btn-wrap", "filter-btn-wrap", "staff-search-wrap"];
+  const COLLAPSE_IDS = ["sortfilter-wrap", "staff-search-wrap"];
 
   // Session role check — only admins can add batches
   const session = getSession();
@@ -565,6 +565,28 @@ export function initBeneficiaries() {
     }
   );
 
+  // ── NEW / SPES BABY status switch (shown only on a specific implementor's roster) ─
+  const statusSwitch    = document.getElementById("status-mode-switch");
+  const statusSwitchCb  = document.getElementById("toggle-status-mode");
+  // Unchecked = NEW, checked = SPES BABY. Filters the roster by return_status.
+  statusSwitchCb?.addEventListener("change", (e) => {
+    const mode = e.target.checked ? "SPES BABY" : "NEW";
+    sortFilterInstance?.setFilter("return_status", mode);
+  });
+  function _showStatusSwitch(show) {
+    if (!statusSwitch) return;
+    statusSwitch.classList.toggle("hidden", !show);
+    statusSwitch.classList.toggle("inline-flex", show);
+    if (show) {
+      // Reset to default NEW each time it's revealed
+      if (statusSwitchCb) statusSwitchCb.checked = false;
+      sortFilterInstance?.setFilter("return_status", "NEW");
+    } else {
+      if (statusSwitchCb) statusSwitchCb.checked = false;
+      sortFilterInstance?.setFilter("return_status", "all");
+    }
+  }
+
 
   // ── View Switching helpers ───────────────────────────────────
   function showTableSkeleton(cols = 6) {
@@ -669,7 +691,7 @@ export function initBeneficiaries() {
     // Beneficiary view: show controls container with Sort Batch visible inside it
     document.getElementById("table-controls-container")?.classList.remove("hidden");
     // Restore inner controls in case Sort Batch was open before
-    ["sort-btn-wrap", "filter-btn-wrap", "staff-search-wrap"].forEach(id =>
+    ["sortfilter-wrap", "staff-search-wrap"].forEach(id =>
       document.getElementById(id)?.classList.remove("hidden")
     );
 
@@ -697,6 +719,9 @@ export function initBeneficiaries() {
     batchSortPanel.show();
     batchSortPanel.rebuild();
     setupSortFilter(filteredData);
+
+    // Status switch only for a specific implementor's roster (not the ALL aggregate)
+    _showStatusSwitch(officeLocation !== "ALL");
   }
 
   async function switchToImplementorsView() {
@@ -727,9 +752,10 @@ export function initBeneficiaries() {
     // Hide the whole table-controls-container (no search/filter needed for implementors list)
     document.getElementById("table-controls-container")?.classList.add("hidden");
 
-    // Show Sort Offices panel; hide Sort Batch panel
+    // Show Sort Offices panel; hide Sort Batch panel + status switch
     officeSortPanel.show();
     batchSortPanel.hide();
+    _showStatusSwitch(false);
 
     // Clear batch buttons
 
@@ -831,6 +857,13 @@ export function initBeneficiaries() {
           ${b.batch?.batch_number != null
             ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">BATCH ${escHtml(String(b.batch.batch_number))}</span>`
             : `<span class="italic text-[10px] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
+          }
+        </div>
+        <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
+          <span class="font-bold text-spes-black/55 dark:text-white/50">Status</span>
+          ${String(b.return_status || "NEW").toUpperCase() === "SPES BABY"
+            ? `<span class="inline-flex items-center gap-1 bg-red-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
+            : `<span class="inline-flex items-center gap-1 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`
           }
         </div>
         <div class="flex justify-between items-center py-1">
@@ -1012,6 +1045,11 @@ export function initBeneficiaries() {
           ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${chipCls}">B${batchNum}</span>`
           : "";
 
+        const isBaby = String(b.return_status || "NEW").toUpperCase() === "SPES BABY";
+        const statusChip = isBaby
+          ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-red-400/15 text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
+          : `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
+
         const matchedOffice = allOffices.find(o => o.location && o.location.trim().toLowerCase() === b.address?.trim().toLowerCase());
         const officeName = matchedOffice ? matchedOffice.name : "N/A";
         const officeTd = showOfficeCol ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(officeName)}</td>` : '';
@@ -1025,7 +1063,7 @@ export function initBeneficiaries() {
               </div>
             </td>
             <td class="px-6 py-4 text-left whitespace-nowrap">
-              <span class="font-extrabold text-spes-black dark:text-spes-white">${escHtml(b.full_name?.toUpperCase() || "—")}</span>${batchChip}
+              <span class="font-extrabold text-spes-black dark:text-spes-white">${escHtml(b.full_name?.toUpperCase() || "—")}</span>${batchChip}${statusChip}
             </td>
             ${officeTd}
             <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
@@ -1111,6 +1149,9 @@ export function initBeneficiaries() {
         dropdownSortId: "dropdown-sort-beneficiary",
         btnFilterId: "btn-filter-beneficiary",
         dropdownFilterId: "dropdown-filter-beneficiary",
+        panelId: "dropdown-sortfilter-beneficiary",
+        tabSortId: "sf-tab-sort",
+        tabFilterId: "sf-tab-filter",
         originalData: data,
         onRender: (filtered) => {
           if (viewMode === "implementors") {
@@ -1159,6 +1200,10 @@ export function initBeneficiaries() {
     batchSortPanel.show();
     batchSortPanel.rebuild();
     setupSortFilter(filteredData);
+
+    // Officers see their own office roster directly — show the status switch for them.
+    // Admin lands on the implementors list first (handled in the view switchers).
+    if (!isAdmin) _showStatusSwitch(true);
   }
 
   // ── Add / Edit drawer ────────────────────────────────────────

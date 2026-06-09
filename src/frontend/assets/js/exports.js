@@ -544,7 +544,7 @@ function _wireButtons() {
   document.getElementById("cfg-approved-by")?.addEventListener("input", e => { _cfg.approvedBy = e.target.value; });
 
   // Export buttons
-  document.getElementById("btn-export-excel")?.addEventListener("click", _exportCSV);
+  document.getElementById("btn-export-excel")?.addEventListener("click", (e) => _exportExcel(e.currentTarget));
   document.getElementById("btn-print-paper")?.addEventListener("click", _print);
 }
 
@@ -593,21 +593,227 @@ function _updateTabUI() {
   }
 }
 
-// ── Excel / CSV export ────────────────────────────────────────
-function _exportCSV() {
+// ── Excel export (styled .xlsx via ExcelJS) ───────────────────
+// Brand palette (ARGB — ExcelJS uses 8-digit hex with leading alpha)
+const _XL = {
+  blue:       "FF0038A8", // SPES blue — header band
+  blueDark:   "FF002878",
+  red:        "FFCE1126", // SPES red — report title accent
+  groupBg:    "FFEFF6FF", // light-blue group separator
+  groupText:  "FF1D4ED8",
+  zebra:      "FFF6F8FB", // alternating row tint
+  white:      "FFFFFFFF",
+  ink:        "FF111827",
+  muted:      "FF6B7280",
+  faint:      "FFE5E7EB",
+  male:       "FF0284C7",
+  female:     "FFDB2777",
+  archived:   "FFB45309",
+  active:     "FF059669",
+};
+
+async function _exportExcel(btn) {
   const colDefs = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
   const cols    = colDefs.filter(c => _cfg.columns.includes(c.key));
-  const q       = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const header  = cols.map(c => q(c.label)).join(",");
-  const rows    = _filteredData.map(r => cols.map(c => q(r[c.key] ?? "—")).join(","));
-  const csv     = [header, ...rows].join("\r\n");
-  const blob    = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url     = URL.createObjectURL(blob);
-  const a       = Object.assign(document.createElement("a"), { href: url });
+  if (cols.length === 0) return;
+
+  const isBenef = _cfg.reportType === "beneficiaries";
   const now     = new Date();
-  a.download    = `SPES_${_cfg.reportType === "beneficiaries" ? "Beneficiaries" : "Implementors"}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+
+  // Tiny loading state on the button so large exports feel responsive
+  const _origHtml = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+    btn.style.pointerEvents = "none";
+  }
+
+  try {
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    wb.creator      = "SPES Portal";
+    wb.lastModifiedBy = "SPES Portal";
+    wb.created      = now;
+    wb.modified     = now;
+
+    const ws = wb.addWorksheet(isBenef ? "Beneficiaries" : "Implementors", {
+      views: [{ state: "frozen", ySplit: 5 }], // freeze everything above the data rows
+      pageSetup: {
+        orientation: _cfg.orientation,
+        fitToPage: true,
+        fitToWidth: 1,
+        fitToHeight: 0,
+        margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+      },
+    });
+
+    const lastCol = cols.length;
+    const colLetter = (n) => {
+      let s = "";
+      while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+      return s;
+    };
+    const span = `A1:${colLetter(lastCol)}1`;
+
+    // ── Filter summary line ──────────────────────────────────────
+    const parts = [];
+    if (!isBenef) {
+      parts.push(_cfg.officeFilter.length > 0 ? _cfg.officeFilter.join(", ") : "ALL OFFICES");
+      if (_cfg.statusFilter !== "all") parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
+    }
+    if (_cfg.genderFilter !== "all") parts.push(`GENDER: ${_cfg.genderFilter.toUpperCase()}`);
+    if (_cfg.yearFilter   !== "all") parts.push(`YEAR: ${_cfg.yearFilter}`);
+    if (parts.length === 0) parts.push(isBenef ? "ALL SPES BENEFICIARIES" : "ALL OFFICES");
+
+    const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+    // ── Row 1: Org title band ────────────────────────────────────
+    ws.mergeCells(span);
+    const r1 = ws.getCell("A1");
+    r1.value = "DEPARTMENT OF LABOR AND EMPLOYMENT";
+    r1.font  = { name: "Calibri", size: 15, bold: true, color: { argb: _XL.white } };
+    r1.alignment = { vertical: "middle", horizontal: "center" };
+    r1.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.blue } };
+    ws.getRow(1).height = 26;
+
+    // ── Row 2: Report subtitle ───────────────────────────────────
+    ws.mergeCells(`A2:${colLetter(lastCol)}2`);
+    const r2 = ws.getCell("A2");
+    r2.value = isBenef ? "SPES Beneficiaries Monitoring Report" : "SPES Implementors Roster Report";
+    r2.font  = { name: "Calibri", size: 11, bold: true, color: { argb: _XL.red } };
+    r2.alignment = { vertical: "middle", horizontal: "center" };
+    r2.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.white } };
+    ws.getRow(2).height = 18;
+
+    // ── Row 3: Generated date + record count ─────────────────────
+    ws.mergeCells(`A3:${colLetter(lastCol)}3`);
+    const r3 = ws.getCell("A3");
+    r3.value = `Generated: ${dateStr} ${timeStr}    •    ${_filteredData.length.toLocaleString()} Record${_filteredData.length !== 1 ? "s" : ""}`;
+    r3.font  = { name: "Calibri", size: 9, italic: true, color: { argb: _XL.muted } };
+    r3.alignment = { vertical: "middle", horizontal: "center" };
+
+    // ── Row 4: Filter summary ────────────────────────────────────
+    ws.mergeCells(`A4:${colLetter(lastCol)}4`);
+    const r4 = ws.getCell("A4");
+    r4.value = parts.join("   •   ");
+    r4.font  = { name: "Calibri", size: 9, bold: true, color: { argb: _XL.blueDark } };
+    r4.alignment = { vertical: "middle", horizontal: "center" };
+    ws.getRow(4).height = 16;
+
+    // ── Row 5: Column header band ────────────────────────────────
+    const headerRow = ws.getRow(5);
+    cols.forEach((c, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = c.label.toUpperCase();
+      cell.font  = { name: "Calibri", size: 10, bold: true, color: { argb: _XL.white } };
+      cell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.blue } };
+      cell.alignment = { vertical: "middle", horizontal: c.key === "full_name" ? "left" : "center" };
+      cell.border = {
+        top:    { style: "thin", color: { argb: _XL.blueDark } },
+        bottom: { style: "thin", color: { argb: _XL.blueDark } },
+        left:   { style: "thin", color: { argb: _XL.blueDark } },
+        right:  { style: "thin", color: { argb: _XL.blueDark } },
+      };
+    });
+    headerRow.height = 22;
+
+    // ── Auto filter on the header row ────────────────────────────
+    ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: lastCol } };
+
+    // ── Data rows — grouped by period (benef) / office (impl) ────
+    const groups = {};
+    _filteredData.forEach(r => {
+      const k = r._group || "Unknown";
+      (groups[k] ||= []).push(r);
+    });
+
+    let rowIdx = 6;
+    let zebra  = 0;
+    const groupLabel = (key) => isBenef ? `PERIOD: ${key}` : `OFFICE: ${key}`;
+
+    Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .forEach(([key, rows]) => {
+        // Group separator row
+        ws.mergeCells(`A${rowIdx}:${colLetter(lastCol)}${rowIdx}`);
+        const gcell = ws.getCell(`A${rowIdx}`);
+        gcell.value = groupLabel(key);
+        gcell.font  = { name: "Calibri", size: 9, bold: true, color: { argb: _XL.groupText } };
+        gcell.fill  = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.groupBg } };
+        gcell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+        ws.getRow(rowIdx).height = 18;
+        rowIdx++;
+
+        rows.forEach(r => {
+          const row = ws.getRow(rowIdx);
+          const tint = (zebra++ % 2 === 1);
+          cols.forEach((c, i) => {
+            const cell = row.getCell(i + 1);
+            const raw  = r[c.key];
+            const val  = (raw === null || raw === undefined || raw === "") ? "—" : String(raw);
+            cell.value = (c.key === "full_name") ? val.toUpperCase() : val;
+
+            // Per-column color coding
+            let color = _XL.ink, bold = false;
+            if (c.key === "full_name")  { bold = true; }
+            if (c.key === "id_display") { color = _XL.blue; bold = true; }
+            if (c.key === "gender")     { color = val.toLowerCase() === "male" ? _XL.male : (val === "—" ? _XL.muted : _XL.female); bold = true; }
+            if (c.key === "status")     { color = val.toLowerCase() === "archived" ? _XL.archived : _XL.active; bold = true; }
+
+            cell.font = { name: "Calibri", size: 10, bold, color: { argb: color } };
+            cell.alignment = { vertical: "middle", horizontal: c.key === "full_name" ? "left" : "center", indent: c.key === "full_name" ? 1 : 0 };
+            if (tint) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.zebra } };
+            cell.border = {
+              bottom: { style: "hair", color: { argb: _XL.faint } },
+              right:  { style: "hair", color: { argb: _XL.faint } },
+            };
+          });
+          row.height = 17;
+          rowIdx++;
+        });
+      });
+
+    // ── Footer credit row ────────────────────────────────────────
+    rowIdx += 1;
+    ws.mergeCells(`A${rowIdx}:${colLetter(lastCol)}${rowIdx}`);
+    const fcell = ws.getCell(`A${rowIdx}`);
+    fcell.value = `© ${now.getFullYear()} SPES Portal System V${_appVersion}  •  Developed by Mark Jordan Ugtong  •  Exclusive Property of DOLE Iligan City`;
+    fcell.font  = { name: "Calibri", size: 8, color: { argb: _XL.muted } };
+    fcell.alignment = { vertical: "middle", horizontal: "center" };
+
+    // ── Auto column widths (clamped) ─────────────────────────────
+    cols.forEach((c, i) => {
+      let max = c.label.length + 2;
+      _filteredData.forEach(r => {
+        const v = r[c.key]; if (v != null) max = Math.max(max, String(v).length);
+      });
+      ws.getColumn(i + 1).width = Math.min(Math.max(max + 2, 10), 42);
+    });
+
+    // ── Print title rows so header repeats on every printed page ──
+    ws.pageSetup.printTitlesRow = "5:5";
+
+    // ── Write + download ─────────────────────────────────────────
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement("a"), { href: url });
+    a.download = `SPES_${isBenef ? "Beneficiaries" : "Implementors"}_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    if (import.meta.env.DEV) console.error("[SPES Exports] Excel export failed:", e);
+    const { modals } = await import("./components/modals.js");
+    modals.error("Export Failed", "Unable to generate the Excel file. Please try again.");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "";
+      btn.style.pointerEvents = "";
+      if (_origHtml != null) btn.innerHTML = _origHtml;
+    }
+  }
 }
 
 // ── Print ─────────────────────────────────────────────────────
