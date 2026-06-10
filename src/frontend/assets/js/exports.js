@@ -70,31 +70,32 @@ async function _boot(user) {
     if (user.role === "officer") user.role_id = 2;
   }
 
-  // Refresh permissions from DB
-  if (user?.role_id) {
-    try {
-      const { fetchRolePermissions } = await import("../../../backend/api/permissions.js");
-      const { data: perms } = await fetchRolePermissions(user.role_id, { forceRefresh: true });
-      if (perms) { user.permissions = perms; localStorage.setItem("spes_session", JSON.stringify(user)); }
-    } catch {}
-  }
+  // Refresh permissions + approved status/office info in parallel (independent queries)
+  const [permsRes, staffRes] = await Promise.all([
+    user?.role_id
+      ? import("../../../backend/api/permissions.js")
+          .then(({ fetchRolePermissions }) => fetchRolePermissions(user.role_id, { forceRefresh: true }))
+          .catch(() => null)
+      : null,
+    user?.id
+      ? supabase
+          .from("staffs")
+          .select("approved, office_id, offices(name, location)")
+          .eq("id", user.id)
+          .single()
+          .then(r => r, () => null)
+      : null,
+  ]);
 
-  // Refresh approved status + office info (needed for RBAC office scoping in drawer)
-  if (user?.id) {
-    try {
-      const { data } = await supabase
-        .from("staffs")
-        .select("approved, office_id, offices(name)")
-        .eq("id", user.id)
-        .single();
-      if (data) {
-        user.approved    = data.approved;
-        user.office_id   = data.office_id   ?? user.office_id;
-        user.office_name = data.offices?.name ?? user.office_name ?? null;
-        localStorage.setItem("spes_session", JSON.stringify(user));
-      }
-    } catch {}
+  if (permsRes?.data) user.permissions = permsRes.data;
+  if (staffRes?.data) {
+    const d = staffRes.data;
+    user.approved        = d.approved;
+    user.office_id       = d.office_id ?? user.office_id;
+    user.office_name     = d.offices?.name ?? user.office_name ?? null;
+    user.office_location = d.offices?.location ?? user.office_location ?? null;
   }
+  if (permsRes?.data || staffRes?.data) localStorage.setItem("spes_session", JSON.stringify(user));
 
   _populateSidebar(user);
   initThemeToggle();
@@ -118,9 +119,9 @@ async function _boot(user) {
   await applyPermissions(user.role);
   initExportButtonTilt();
 
-  // RBAC: officers without export_reports are redirected
+  // RBAC: non-admins must be approved AND hold the export_reports permission
   const isAdmin = user.role === "admin";
-  const canExport = isAdmin || Boolean(user.permissions?.export_reports);
+  const canExport = isAdmin || (user.approved !== false && Boolean(user.permissions?.export_reports));
   if (!canExport) {
     const { modals } = await import("./components/modals.js");
     modals.error("Access Denied", "You do not have permission to access Exports & Reports.").then(() => {
@@ -140,20 +141,43 @@ async function _boot(user) {
 // ── Data loading ──────────────────────────────────────────────
 async function _loadData(user) {
   const isAdmin = user.role === "admin";
+  // Officers with `users:view` may export across offices; everyone else is
+  // scoped to their own office — same rule as the Beneficiaries page.
+  const scopeToOwnOffice = !isAdmin && !Boolean(user.permissions?.view_users);
 
-  const [officesRes] = await Promise.all([fetchOffices()]);
+  // All three datasets are independent — fetch them in parallel
+  const [officesRes, benefRes, staffsRes] = await Promise.all([
+    fetchOffices(),
+    supabase
+      .from("beneficiary")
+      .select("id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, education_id, education(name)")
+      .order("id", { ascending: true })
+      .then(r => r, e => ({ data: null, error: e })),
+    supabase
+      .from("staffs")
+      .select("id, full_name, email, phone, address, status, role_id, office_id, approved, archive_at, offices(name), roles(name)")
+      .order("id", { ascending: true })
+      .then(r => r, e => ({ data: null, error: e })),
+  ]);
+
   _allOffices = officesRes.data ?? [];
 
   // ── Beneficiaries ──
   // Schema: NO office_id, NO archive_at. FK to education(name) via education_id.
   // Grouped by year_period in the preview since there is no office field.
-  try {
-    const { data, error } = await supabase
-      .from("beneficiary")
-      .select("id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, education_id, education(name)")
-      .order("id", { ascending: true });
-    if (import.meta.env.DEV && error) console.warn("[SPES Exports] beneficiary fetch:", error.message);
-    _allBeneficiaries = (data ?? []).map(b => ({
+  {
+    const { data, error } = benefRes;
+    if (import.meta.env.DEV && error) console.warn("[SPES Exports] beneficiary fetch:", error.message ?? error);
+
+    // RBAC scoping: officers see only beneficiaries whose address matches
+    // their office location (mirrors the Beneficiaries page logic)
+    let rows = data ?? [];
+    if (scopeToOwnOffice) {
+      const loc = (user.office_location ?? "").trim().toLowerCase();
+      rows = loc ? rows.filter(b => b.address && b.address.trim().toLowerCase() === loc) : [];
+    }
+
+    _allBeneficiaries = rows.map(b => ({
       ...b,
       id_display: `ROX-RD-ESIG-${String(b.year_period ?? new Date().getFullYear()).slice(-4)}-${String(b.id).padStart(4, "0")}`,
       gender:     b.gender_id === 1 ? "Male" : b.gender_id === 2 ? "Female" : "N/A",
@@ -165,18 +189,20 @@ async function _loadData(user) {
       // group_key used internally for preview/print grouping
       _group:     b.year_period ? `Year ${b.year_period}` : "Period N/A",
     }));
-  } catch (e) {
-    if (import.meta.env.DEV) console.error("[SPES Exports] beneficiary error:", e);
   }
 
-  // ── Implementors — always fetch ALL, same RBAC scoping in drawer UI ──
-  try {
-    const { data, error } = await supabase
-      .from("staffs")
-      .select("id, full_name, email, phone, address, status, role_id, office_id, approved, archive_at, offices(name), roles(name)")
-      .order("id", { ascending: true });
-    if (import.meta.env.DEV && error) console.warn("[SPES Exports] staffs fetch:", error.message);
-    _allImplementors = (data ?? []).map(s => ({
+  // ── Implementors ──
+  {
+    const { data, error } = staffsRes;
+    if (import.meta.env.DEV && error) console.warn("[SPES Exports] staffs fetch:", error.message ?? error);
+
+    // RBAC scoping: officers without users:view export only their own office's staff
+    let rows = data ?? [];
+    if (scopeToOwnOffice) {
+      rows = user.office_id != null ? rows.filter(s => s.office_id === user.office_id) : [];
+    }
+
+    _allImplementors = rows.map(s => ({
       ...s,
       id_display: `ROX-RD-IMPL-${String(s.id).padStart(4, "0")}`,
       office:     s.offices?.name ?? "N/A",
@@ -184,8 +210,6 @@ async function _loadData(user) {
       status:     s.archive_at ? "Archived" : (s.status ?? "Offline"),
       _group:     s.offices?.name ?? "Unknown",
     }));
-  } catch (e) {
-    if (import.meta.env.DEV) console.error("[SPES Exports] staffs error:", e);
   }
 }
 
@@ -331,12 +355,16 @@ function _initDrawer(user) {
     document.getElementById("cfg-tab-implementors")?.classList.add("hidden");
   }
 
-  // Populate office checkboxes (always render all offices)
+  // Populate office checkboxes — restricted officers only ever see their own office
   const officeList    = document.getElementById("cfg-office-list");
   const officeSection = document.getElementById("cfg-office-section");
 
-  if (officeList && _allOffices.length > 0) {
-    officeList.innerHTML = _allOffices.map(o => `
+  const visibleOffices = canViewOtherOffices
+    ? _allOffices
+    : _allOffices.filter(o => o.id === user.office_id || o.name === user.office_name);
+
+  if (officeList && visibleOffices.length > 0) {
+    officeList.innerHTML = visibleOffices.map(o => `
       <label class="cursor-pointer flex items-center gap-2.5 px-3 py-2 hover:bg-spes-blue/5 dark:hover:bg-white/5 transition-colors">
         <input type="checkbox" class="cfg-office-check h-3.5 w-3.5 rounded border-gray-300 text-spes-blue cursor-pointer focus:ring-spes-blue/20 dark:border-white/20 dark:text-spes-yellow"
           value="${_esc(o.name)}" data-office-id="${o.id}" />
@@ -463,12 +491,12 @@ function _wireButtons() {
     _renderPreviewTable();
   });
 
-  // Live: search
-  document.getElementById("cfg-search")?.addEventListener("input", e => {
+  // Live: search (debounced — avoids re-rendering the full table per keystroke)
+  document.getElementById("cfg-search")?.addEventListener("input", _debounce(e => {
     _cfg.searchQuery = e.target.value.trim();
     _applyFilters();
     _renderPreviewTable();
-  });
+  }, 150));
 
   // Live: office search filter input
   document.getElementById("cfg-office-search")?.addEventListener("input", e => {
@@ -534,8 +562,8 @@ function _wireButtons() {
     });
   });
 
-  document.getElementById("cfg-age-min")?.addEventListener("input", e => { _cfg.ageMin = e.target.value; _applyFilters(); _renderPreviewTable(); });
-  document.getElementById("cfg-age-max")?.addEventListener("input", e => { _cfg.ageMax = e.target.value; _applyFilters(); _renderPreviewTable(); });
+  document.getElementById("cfg-age-min")?.addEventListener("input", _debounce(e => { _cfg.ageMin = e.target.value; _applyFilters(); _renderPreviewTable(); }, 150));
+  document.getElementById("cfg-age-max")?.addEventListener("input", _debounce(e => { _cfg.ageMax = e.target.value; _applyFilters(); _renderPreviewTable(); }, 150));
 
   document.getElementById("cfg-orientation-landscape")?.addEventListener("change", () => { _cfg.orientation = "landscape"; });
   document.getElementById("cfg-orientation-portrait")?.addEventListener("change",  () => { _cfg.orientation = "portrait"; });
@@ -546,6 +574,17 @@ function _wireButtons() {
   // Export buttons
   document.getElementById("btn-export-excel")?.addEventListener("click", (e) => _exportExcel(e.currentTarget));
   document.getElementById("btn-print-paper")?.addEventListener("click", _print);
+
+  // Warm up the ExcelJS chunk while the browser is idle so the first
+  // Excel export doesn't pay the dynamic-import cost
+  const warm = () => { import("exceljs").catch(() => {}); };
+  if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 4000 });
+  else setTimeout(warm, 2500);
+}
+
+function _debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
 function _syncFromDrawer() {
