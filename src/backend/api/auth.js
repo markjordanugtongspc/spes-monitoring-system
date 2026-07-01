@@ -172,17 +172,28 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     if (cached && cached.length > 0) return cached;
   }
 
+  const sessionStr = localStorage.getItem("spes_session");
+  const session = sessionStr ? JSON.parse(sessionStr) : {};
+  const isAdmin = session.role === "admin";
+  const officeId = session.office_id;
+
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("staffs")
       .select(`
         id, full_name, username, email, address, phone,
         religion, language, blood_type, status, approved,
-        archive_at, role_id, office_id,
+        archive_at, role_id, office_id, beneficiary_id,
         roles   ( id, name ),
-        offices ( id, name, location )
+        offices ( id, name, location ),
+        beneficiary!beneficiary_id(full_name, return_status)
       `)
       .order("id", { ascending: true });
+
+    if (!isAdmin && officeId) {
+      query = query.eq("office_id", officeId);
+    }
+    const { data, error } = await query;
 
     if (error) {
       if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code);

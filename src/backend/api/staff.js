@@ -113,7 +113,7 @@ export async function addStaff(payload) {
   const { data, error } = await supabase
     .from("staffs")
     .insert([clean])
-    .select("id, full_name, username, email, status, role_id, office_id")
+    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id")
     .single();
 
   if (error) {
@@ -144,7 +144,7 @@ export async function updateStaff(id, payload) {
     .update({ ...clean, updated_at: new Date().toISOString() })
     .eq("id", id)
     .is("archive_at", null)
-    .select("id, full_name, username, email, status, role_id, office_id")
+    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id")
     .single();
 
   if (error) {
@@ -224,7 +224,30 @@ function _sanitize(p) {
     blood_type: str(p.blood_type),
     role_id:    p.role_id ? parseInt(p.role_id, 10) : null,
     office_id:  p.office_id ? parseInt(p.office_id, 10) : null,
+    beneficiary_id: p.beneficiary_id ? parseInt(p.beneficiary_id, 10) : null,
     status:     str(p.status) ?? "OFFLINE",
     approved:   Boolean(p.approved),
   };
+}
+// ── Fetch ──────────────────────────────────────────────────────
+export async function fetchStaffs(options = {}) {
+  let query = supabase
+    .from("staffs")
+    .select("id, role_id, office_id, offices!office_id(id, name, location), full_name, username, email, phone, status, approved, created_at, archive_at, beneficiary_id, roles!role_id(id, name)")
+    .is("archive_at", null)
+    .neq("role_id", 1)
+    .order("id", { ascending: true });
+
+  if (options.officeId) {
+    query = query.eq("office_id", options.officeId);
+  }
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error("[SPES Staff] fetchStaffs error:", error.code, error.message, error.hint, error.details);
+    return { data: [], error: "Could not load implementors." };
+  }
+
+  return { data: data ?? [] };
 }

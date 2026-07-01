@@ -181,9 +181,16 @@
             toggleBtn.classList.remove('hidden');
           }
         }
+        if (mutation.attributeName === 'aria-hidden') {
+          if (sidebar.getAttribute('aria-hidden') === 'true') {
+            if (sidebar.contains(document.activeElement)) {
+              document.activeElement.blur();
+            }
+          }
+        }
       });
     });
 
-    observer.observe(sidebar, { attributes: true });
+    observer.observe(sidebar, { attributes: true, attributeFilter: ['class', 'aria-hidden'] });
   })();
 </script>

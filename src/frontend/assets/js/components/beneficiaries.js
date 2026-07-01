@@ -90,8 +90,9 @@ function _bdfCollect() {
     gender_id: g("bdf-gender") !== "" && g("bdf-gender") != null ? parseInt(g("bdf-gender"), 10) : null,
     birthday: g("bdf-birthday") || null,
     age: g("bdf-age") || null,
-    education_id: g("bdf-education") !== "" && g("bdf-education") != null ? parseInt(g("bdf-education"), 10) : null,
+    educ_id: g("bdf-education") !== "" && g("bdf-education") != null ? parseInt(g("bdf-education"), 10) : null,
     batch_id: g("bdf-batch-id") || null,
+    staff_id: g("bdf-assign-staff") !== "" && g("bdf-assign-staff") != null ? parseInt(g("bdf-assign-staff"), 10) : null,
   };
 }
 
@@ -107,7 +108,7 @@ function _bdfFill(defaults = {}) {
   set("bdf-gender", defaults.gender_id);
   set("bdf-birthday", defaults.birthday);
   set("bdf-age", defaults.age);
-  set("bdf-education", defaults.education_id);
+  set("bdf-education", defaults.educ_id);
   set("bdf-batch-id", defaults.batch_id);
 
   // Sync custom education dropdown visually
@@ -500,6 +501,8 @@ export function initBeneficiaries() {
   let allImplementors = [];
   let activeImplementors = [];
   let currentOfficeLocation = "";
+  let currentOfficeId = null;
+  let currentStaffIdView = null;
   let allOffices = [];
 
   const loadOfficerOffice = async () => {
@@ -589,6 +592,18 @@ export function initBeneficiaries() {
 
 
   // ── View Switching helpers ───────────────────────────────────
+  function formatOfficeShort(name) {
+    if (!name) return "N/A";
+    let s = String(name).toUpperCase();
+    if (s.includes("CITY GOVERNMENT OF") && s.includes("(LGU)")) {
+      return "LGU - " + s.replace("CITY GOVERNMENT OF ", "").replace(" (LGU)", "").trim();
+    }
+    if (s.includes("MUNICIPALITY OF") && s.includes("(LGU)")) {
+      return "LGU - " + s.replace("MUNICIPALITY OF ", "").replace(" (LGU)", "").trim();
+    }
+    return name;
+  }
+
   function showTableSkeleton(cols = 6) {
     let rowsHtml = "";
     for (let r = 0; r < 5; r++) {
@@ -659,10 +674,12 @@ export function initBeneficiaries() {
     tbody.innerHTML = rowsHtml;
   }
 
-  async function switchToBeneficiariesView(officeName, officeLocation, officeId) {
+  async function switchToBeneficiariesView(officeName, officeLocation, officeId, staffId) {
     if (!isAdmin) return;
     viewMode = "beneficiaries";
     currentOfficeLocation = officeLocation;
+    currentOfficeId = officeId;
+    currentStaffIdView = staffId;
 
     // Persist to URL — just the office id; location/name resolved from cache on restore
     _setUrlParam("office", officeId ?? officeLocation);
@@ -673,7 +690,7 @@ export function initBeneficiaries() {
     // Update Title and show back button
     const tableTitle = document.getElementById("table-title");
     if (tableTitle) {
-      tableTitle.textContent = `Insured Students Roster - ${officeName.toUpperCase()}`;
+      tableTitle.textContent = `Total SPES List at - ${officeName.toUpperCase()}`;
     }
 
     const backBtn = document.getElementById("btn-back-to-implementors");
@@ -710,11 +727,20 @@ export function initBeneficiaries() {
       return;
     }
 
-    const locLower = officeLocation.trim().toLowerCase();
-    const filteredData = locLower === "all" ? data : data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
+    const filteredData = (currentOfficeId && currentOfficeId !== "ALL") 
+      ? data.filter(b => b.staffs?.office_id == currentOfficeId)
+      : data;
 
     allBeneficiaries = filteredData;
     currentPage = 1;
+
+    const targetB = _getUrlParam("b");
+    if (targetB) {
+      const idx = filteredData.findIndex(item => String(item.id) === String(targetB));
+      if (idx !== -1) {
+        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+      }
+    }
 
     batchSortPanel.show();
     batchSortPanel.rebuild();
@@ -728,6 +754,8 @@ export function initBeneficiaries() {
     if (!isAdmin) return;
     viewMode = "implementors";
     currentOfficeLocation = "";
+    currentOfficeId = null;
+    currentStaffIdView = null;
 
     // Clear URL state — back to implementors list
     _clearUrlParam("office");
@@ -772,6 +800,14 @@ export function initBeneficiaries() {
 
     allImplementors = activeStaffs;
     currentPage = 1;
+
+    const targetId = _getUrlParam("id");
+    if (targetId) {
+      const idx = activeStaffs.findIndex(item => String(item.id) === String(targetId));
+      if (idx !== -1) {
+        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+      }
+    }
     setupSortFilter(activeStaffs);
   }
 
@@ -832,6 +868,14 @@ export function initBeneficiaries() {
           <span class="font-bold text-spes-black/55 dark:text-white/50">Contact No.</span>
           <span class="font-black ${b.contact_number ? "text-indigo-600 dark:text-indigo-400" : "italic text-spes-black/30 dark:text-white/30"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
         </div>
+        ${isAdmin ? `
+        <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
+          <span class="font-bold text-spes-black/55 dark:text-white/50">Office</span>
+          <span class="font-extrabold text-right text-spes-black dark:text-white max-w-[200px] text-wrap uppercase">
+            ${escHtml(b.staffs && b.staffs.office_id ? (allOffices.find(o => o.id === b.staffs.office_id)?.name || "N/A") : (b.staffs?.full_name || "N/A"))}
+          </span>
+        </div>
+        ` : ''}
         <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Address</span>
           <span class="font-extrabold text-right text-spes-black dark:text-white max-w-[200px] uppercase">${escHtml(b.address || "N/A")}</span>
@@ -981,11 +1025,14 @@ export function initBeneficiaries() {
       tbody.innerHTML = page.map((s, idx) => {
         const absIdx = start + idx;
         const officeBadge = s.office && s.office !== "N/A"
-          ? `<span class="inline-flex items-center gap-1 rounded bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(s.office)}</span>`
+          ? `<span class="inline-flex items-center gap-1 rounded bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow" title="${escHtml(s.office)}">${escHtml(formatOfficeShort(s.office))}</span>`
           : `<span class="text-spes-black/30 dark:text-spes-white/30 italic text-xs">None</span>`;
 
         const isRowAdmin = String(s.role).toLowerCase().includes("admin") || String(s.full_name).toLowerCase().includes("system administrator");
-        const clickableClass = "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow";
+        const isTarget = new URLSearchParams(window.location.search).get("id") === String(s.id);
+        const clickableClass = isTarget 
+          ? "cursor-pointer bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse" 
+          : "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow";
 
         return `
           <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 ${clickableClass}"
@@ -1007,9 +1054,9 @@ export function initBeneficiaries() {
           if (impl) {
             const isRowAdmin = String(impl.role).toLowerCase().includes("admin") || String(impl.full_name).toLowerCase().includes("system administrator");
             if (isRowAdmin) {
-              switchToBeneficiariesView("ALL SPES", "ALL", "ALL");
+              switchToBeneficiariesView("ALL SPES", "ALL", "ALL", null);
             } else {
-              switchToBeneficiariesView(impl.office, impl.office_location, impl.office_id ?? impl.id);
+              switchToBeneficiariesView(impl.office, impl.office_location, impl.office_id ?? impl.id, impl.id);
             }
           }
         });
@@ -1050,12 +1097,28 @@ export function initBeneficiaries() {
           ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-red-400/15 text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
           : `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
 
-        const matchedOffice = allOffices.find(o => o.location && o.location.trim().toLowerCase() === b.address?.trim().toLowerCase());
-        const officeName = matchedOffice ? matchedOffice.name : "N/A";
-        const officeTd = showOfficeCol ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(officeName)}</td>` : '';
+        let officeName = "N/A";
+        if (b.staffs && b.staffs.office_id) {
+          const matchedOffice = allOffices.find(o => o.id === b.staffs.office_id);
+          if (matchedOffice) {
+            officeName = matchedOffice.name;
+          }
+        }
+        // Fallback in case staff is missing office_id but has a name
+        if (officeName === "N/A" && b.staffs && b.staffs.full_name) {
+          officeName = b.staffs.full_name;
+        }
+        
+        const officeNameShort = formatOfficeShort(officeName);
+        const officeTd = showOfficeCol ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap" title="${escHtml(officeName)}">${escHtml(officeNameShort)}</td>` : '';
+
+        const isTarget = new URLSearchParams(window.location.search).get("b") === String(b.id);
+        const rowClass = isTarget 
+          ? "border-b border-gray-100 dark:border-white/5 bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse cursor-pointer" 
+          : "border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer";
 
         return `
-          <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer"
+          <tr class="${rowClass}"
               data-bene-idx="${absIdx}">
             <td class="p-4 text-center">
               <div class="flex items-center justify-center">
@@ -1184,13 +1247,10 @@ export function initBeneficiaries() {
 
     let filteredData = data;
     if (session && session.role !== "admin" && officerOffice && officerOffice.location) {
-      const locLower = officerOffice.location.trim().toLowerCase();
-      filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
-    } else if (isAdmin && currentOfficeLocation) {
-      if (currentOfficeLocation !== "ALL") {
-        const locLower = currentOfficeLocation.trim().toLowerCase();
-        filteredData = data.filter(b => b.address && b.address.trim().toLowerCase() === locLower);
-      }
+      // Officer's data is already filtered by API
+      filteredData = data;
+    } else if (isAdmin && currentOfficeId && currentOfficeId !== "ALL") {
+      filteredData = data.filter(b => b.staffs?.office_id == currentOfficeId);
     }
 
     allBeneficiaries = filteredData;
@@ -1288,6 +1348,33 @@ export function initBeneficiaries() {
       }
     }
 
+    // Populate and show Admin staff assignment dropdown if admin
+    const assignContainer = document.getElementById("admin-assign-staff-container");
+    const assignSelect = document.getElementById("bdf-assign-staff");
+    if (isAdmin && assignContainer && assignSelect) {
+      assignContainer.classList.remove("hidden");
+      
+      // Ensure we have implementors list
+      let staffList = allImplementors;
+      if (!staffList || staffList.length === 0) {
+        staffList = await fetchImplementorList({ forceRefresh: false });
+        staffList = staffList.filter(s => !s.archive_at);
+      }
+      
+      assignSelect.innerHTML = `<option value="">— Unassigned (All SPES) —</option>` + 
+        staffList.map(s => `<option value="${s.id}">${s.full_name} (${s.office || 'No Office'})</option>`).join("");
+        
+      if (defaults && defaults.staff_id) {
+        assignSelect.value = defaults.staff_id;
+      } else if (!_bdfEditId && currentStaffIdView) {
+        assignSelect.value = currentStaffIdView;
+      } else {
+        assignSelect.value = "";
+      }
+    } else if (assignContainer) {
+      assignContainer.classList.add("hidden");
+    }
+
     if (bdfTitle) bdfTitle.textContent = _bdfEditId ? "Edit Beneficiary" : "Add Beneficiary";
     if (bdfSubtitle) bdfSubtitle.textContent = _bdfEditId ? "Update the beneficiary record below." : "Fill in the details to register a new beneficiary.";
 
@@ -1340,6 +1427,12 @@ export function initBeneficiaries() {
 
     const values = _bdfCollect();
     if (!values.full_name) return _bdfShowError("Name of Assured is required.");
+
+    // If Admin is in a specific implementor's view, assign that staff_id when adding
+    // Now handled by the dropdown! But we leave this as fallback if the dropdown wasn't rendered
+    if (!_bdfEditId && isAdmin && currentStaffIdView && values.staff_id == null) {
+      values.staff_id = currentStaffIdView;
+    }
 
     _bdfSetLoading(true);
 

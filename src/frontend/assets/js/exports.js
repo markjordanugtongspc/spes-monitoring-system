@@ -150,7 +150,7 @@ async function _loadData(user) {
     fetchOffices(),
     supabase
       .from("beneficiary")
-      .select("id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, education_id, education(name)")
+      .select("id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name)")
       .order("id", { ascending: true })
       .then(r => r, e => ({ data: null, error: e })),
     supabase
@@ -181,7 +181,7 @@ async function _loadData(user) {
       ...b,
       id_display: `ROX-RD-ESIG-${String(b.year_period ?? new Date().getFullYear()).slice(-4)}-${String(b.id).padStart(4, "0")}`,
       gender:     b.gender_id === 1 ? "Male" : b.gender_id === 2 ? "Female" : "N/A",
-      education:  b.education?.name ?? _eduLabel(b.education_id),
+      education:  b.education?.name ?? _eduLabel(b.educ_id),
       period:     [b.month_period, b.year_period].filter(Boolean).join(" ") || "N/A",
       birthday:   b.birthday
                     ? new Date(b.birthday).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })

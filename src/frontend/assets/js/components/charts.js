@@ -1,5 +1,6 @@
 import ApexCharts from "apexcharts";
 import { supabase } from "../../../../backend/api/supabase.js";
+import { fetchStaffs } from "../../../../backend/api/staff.js";
 
 const BRAND_BLUE   = "#0038A8";
 const BRAND_YELLOW = "#FCD116";
@@ -48,23 +49,31 @@ function _deriveReturnStatus(beneficiaries) {
 }
 
 export async function initDashboardCharts() {
-  const [staffResult, beneficiaryResult] = await Promise.all([
-    supabase
-      .from("staffs")
-      .select("id, status, office_id, offices(name), archive_at")
-      .is("archive_at", null),
-    supabase
+  const sessionStr = localStorage.getItem("spes_session");
+  const session = sessionStr ? JSON.parse(sessionStr) : {};
+  const isAdmin = session.role === "admin";
+  const officeId = session.office_id;
+
+  let staffQuery = fetchStaffs({ officeId: !isAdmin ? officeId : null });
+      
+  let benefQuery = supabase
       .from("beneficiary")
-      .select("id, full_name, relationship, year_period, created_at, education_id, gender_id, return_status"),
-  ]);
+      .select("id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status" + (isAdmin ? "" : ", staffs!staff_id!inner(office_id)"));
+
+  if (!isAdmin && officeId) {
+    benefQuery = benefQuery.eq("staffs.office_id", officeId);
+  }
+
+  const [staffResult, beneficiaryResult] = await Promise.all([staffQuery, benefQuery]);
 
   const staffs = staffResult.data ?? [];
   const beneficiaries = beneficiaryResult.data ?? [];
+  
   _deriveReturnStatus(beneficiaries);
   _cachedBeneficiaries = beneficiaries;
 
   _renderImplementorsByOffice(staffs);
-  _renderImplementorStatus(beneficiaries);
+  _renderImplementorStatus(beneficiaries, staffs);
   _renderBeneficiariesByYear(beneficiaries);
   _renderEnrollmentByMonth(beneficiaries);
   _setupTrendsSwitcher();
@@ -112,7 +121,10 @@ function _renderImplementorsByOffice(staffs) {
 
   const counts = {};
   staffs.forEach(s => {
-    const name = s.offices?.name ?? "Unknown";
+    let name = s.offices?.name ?? "Unknown";
+    if (name.includes("CITY GOVERNMENT OF ILIGAN (LGU)")) {
+      name = "LGU - ILIGAN";
+    }
     counts[name] = (counts[name] ?? 0) + 1;
   });
 
@@ -202,7 +214,7 @@ function _renderImplementorsByOffice(staffs) {
 }
 
 // Chart 2 — SPES Beneficiaries Gender Distribution (Male / Female)
-function _renderImplementorStatus(beneficiaries) {
+function _renderImplementorStatus(beneficiaries, staffs = []) {
   const el = document.getElementById("spes-gender-chart");
   if (!el) return;
   el.innerHTML = "";
@@ -215,25 +227,10 @@ function _renderImplementorStatus(beneficiaries) {
       male++;
     } else if (b.gender_id === 2) {
       female++;
-    } else {
-      const rel = (b.relationship || "").toLowerCase();
-      if (rel.includes("son") || rel.includes("brother") || rel.includes("father") || rel.includes("husband")) {
-        male++;
-      } else if (rel.includes("daughter") || rel.includes("sister") || rel.includes("mother") || rel.includes("wife")) {
-        female++;
-      } else {
-        // Distribute evenly to keep it binary
-        if (Math.random() > 0.5) male++;
-        else female++;
-      }
     }
   });
 
-  // Default values to let user see how it displays:
-  if (male === 0 && female === 0) {
-    male   = 2;
-    female = 1;
-  }
+  // Fallback removed, handled centrally in initDashboardCharts
 
   const labels = ["MALE", "FEMALE"];
   const series = [male, female];
@@ -305,6 +302,47 @@ function _renderImplementorStatus(beneficiaries) {
       }, 150);
     });
   }
+
+  const summaryEl = document.getElementById("gender-roster-summary");
+  if (summaryEl) {
+    const officeStats = {};
+    beneficiaries.forEach(b => {
+      if (b.staff_id) {
+        const staff = staffs.find(s => s.id === b.staff_id);
+        const officeName = staff?.offices?.name || "Unknown Office";
+        if (!officeStats[officeName]) officeStats[officeName] = { male: 0, female: 0, total: 0 };
+        officeStats[officeName].total++;
+        if (b.gender_id === 1) officeStats[officeName].male++;
+        else if (b.gender_id === 2) officeStats[officeName].female++;
+      }
+    });
+
+    const sortedOffices = Object.entries(officeStats)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 3); // top 3
+
+    if (sortedOffices.length > 0) {
+      summaryEl.innerHTML = `
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-spes-black/50 dark:text-white/40 mb-2">Top Offices (Beneficiaries)</h4>
+        <div class="flex flex-col gap-2">
+          ${sortedOffices.map(([name, stats]) => `
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-spes-black/70 dark:text-white/60 truncate max-w-[150px]" title="${name}">${name}</span>
+              <div class="flex items-center gap-2 text-[10px] font-black">
+                <span class="text-[#4F91FF]">${stats.male} M</span>
+                <span class="text-gray-300 dark:text-white/10">|</span>
+                <span class="text-[#FF5B9B]">${stats.female} F</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+      summaryEl.classList.remove("hidden");
+    } else {
+      summaryEl.innerHTML = "";
+      summaryEl.classList.add("hidden");
+    }
+  }
 }
 
 function _drawGenderConnectorLines(el, series, total) {
@@ -342,12 +380,20 @@ function _drawGenderConnectorLines(el, series, total) {
     const startX = centerX + cos * radius;
     const startY = centerY + sin * radius;
 
-    const endX = centerX + cos * (radius + 35);
-    const endY = centerY + sin * (radius + 35);
+    let endX = centerX + cos * (radius + 35);
+    let endY = centerY + sin * (radius + 35);
 
     const isRightSide = cos > 0 || (Math.abs(cos) < 1e-5 && sin < 0);
-    const elbowX = endX + (isRightSide ? 25 : -25);
-    const elbowY = endY;
+    let elbowX = endX + (isRightSide ? 25 : -25);
+    let elbowY = endY;
+
+    // Shift MALE indicator down and left to prevent collision
+    if (idx === 0) {
+      endX -= 10;
+      endY += 20;
+      elbowX -= 15;
+      elbowY += 20;
+    }
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", `M ${startX} ${startY} L ${endX} ${endY} L ${elbowX} ${elbowY}`);
@@ -555,9 +601,17 @@ function _renderEnrollmentByMonth(beneficiaries) {
   const monthLabels = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
   const monthly     = new Array(12).fill(0);
 
+  const monthMap = {
+    "JANUARY": 0, "FEBRUARY": 1, "MARCH": 2, "APRIL": 3,
+    "MAY": 4, "JUNE": 5, "JULY": 6, "AUGUST": 7,
+    "SEPTEMBER": 8, "OCTOBER": 9, "NOVEMBER": 10, "DECEMBER": 11
+  };
+
   beneficiaries.forEach(b => {
-    const d = b.created_at ? new Date(b.created_at) : null;
-    if (d && !isNaN(d)) monthly[d.getMonth()]++;
+    const mStr = String(b.month_period || "").toUpperCase();
+    if (monthMap[mStr] !== undefined) {
+      monthly[monthMap[mStr]]++;
+    }
   });
 
   const hasData = monthly.some(v => v > 0);
@@ -622,7 +676,7 @@ function _renderEducationLevels(beneficiaries) {
   let grad = 0;
 
   beneficiaries.forEach(b => {
-    const eduId = b.education_id;
+    const eduId = b.educ_id;
     if (eduId === 1) {
       senior++;
     } else if (eduId === 2) {

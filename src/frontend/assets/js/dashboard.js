@@ -5,6 +5,7 @@
  */
 import "../styles/tailwind.css";
 import "flowbite";
+import ApexCharts from "apexcharts";
 import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { fetchImplementorList, invalidateImplementorCache } from "../../../backend/api/auth.js";
@@ -93,7 +94,7 @@ async function init(user) {
   if (user && user.id) {
     try {
       const { supabase } = await import("../../../backend/api/supabase.js");
-      const { data: staffData } = await supabase.from("staffs").select("approved").eq("id", user.id).single();
+      const { data: staffData } = await supabase.from("staffs").select("approved").eq("id", user.id).maybeSingle();
       if (staffData) {
         user.approved = staffData.approved;
         localStorage.setItem("spes_session", JSON.stringify(user));
@@ -136,6 +137,7 @@ async function init(user) {
   if (nameEl) nameEl.textContent = user.full_name || "Admin";
 
   await loadImplementorTable(user.role);
+  initGlobalSearch(user);
 
   if (path.includes("/implementors/")) {
     initImplementorsDrawer();
@@ -328,6 +330,16 @@ async function loadImplementorTable(userRole) {
     onRender: (filtered) => {
       allImplementors = filtered;
       currentPage = 1;
+
+      // Jump to page if ?id= matches an implementor
+      const urlId = new URLSearchParams(window.location.search).get("id");
+      if (urlId) {
+        const targetIdx = allImplementors.findIndex(s => String(s.id) === String(urlId));
+        if (targetIdx !== -1) {
+          currentPage = Math.floor(targetIdx / rowsPerPage) + 1;
+        }
+      }
+
       renderPaginatedTable(userRole);
     }
   });
@@ -445,8 +457,13 @@ function renderTableRows(implementors, userRole) {
 
       const displayRole = s.role.charAt(0).toUpperCase() + s.role.slice(1).toLowerCase();
 
+      const isTarget = new URLSearchParams(window.location.search).get("id") === String(s.id);
+      const rowClass = isTarget 
+        ? "border-b border-gray-100 dark:border-white/5 bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse" 
+        : "border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow";
+
       return `
-        <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+        <tr class="${rowClass}">
           <td class="p-4 text-center"><div class="flex items-center justify-center">
             <input type="checkbox" data-row-user-id="${s.id}" class="staff-row-checkbox h-4 w-4 cursor-pointer rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow">
           </div></td>
@@ -507,9 +524,12 @@ function renderTableRows(implementors, userRole) {
   tbody.innerHTML = implementors.map(s => {
     const dataStr   = encodeURIComponent(JSON.stringify(s));
     const isArchived = Boolean(s.archive_at);
-    const rowBg     = isArchived
-      ? "bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400 dark:border-amber-500"
-      : "bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer";
+    const isTarget = new URLSearchParams(window.location.search).get("id") === String(s.id);
+    const rowBg     = isTarget
+      ? "bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse cursor-pointer"
+      : isArchived
+        ? "bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400 dark:border-amber-500"
+        : "bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer";
     return `
       <tr data-impl-info="${dataStr}" class="impl-row border-b border-gray-100 dark:border-white/5 transition-all duration-200 ${rowBg}">
       ${!isDashboardPage ? `<td class="p-4 text-center"><div class="flex items-center justify-center">
@@ -1246,10 +1266,10 @@ function initQuickAccessStatsToggle() {
       detailsRow?.classList.add("hidden");
 
       normalDesktopGrid?.classList.add("hidden");
-      normalDesktopGrid?.classList.remove("md:grid");
+      normalDesktopGrid?.classList.remove("lg:grid");
 
-      expandedDesktopGrid?.classList.add("hidden");
-      expandedDesktopGrid?.classList.add("md:flex");
+      expandedDesktopGrid?.classList.remove("hidden");
+      expandedDesktopGrid?.classList.add("lg:flex");
 
       normalMobileList?.classList.add("hidden");
       normalMobileList?.classList.remove("flex");
@@ -1293,11 +1313,11 @@ function initQuickAccessStatsToggle() {
       metricsRow?.classList.remove("hidden");
       detailsRow?.classList.remove("hidden");
 
-      normalDesktopGrid?.classList.add("hidden");
-      normalDesktopGrid?.classList.add("md:grid");
+      normalDesktopGrid?.classList.remove("hidden");
+      normalDesktopGrid?.classList.add("lg:grid");
 
       expandedDesktopGrid?.classList.add("hidden");
-      expandedDesktopGrid?.classList.remove("md:flex");
+      expandedDesktopGrid?.classList.remove("lg:flex");
 
       normalMobileList?.classList.remove("hidden");
       normalMobileList?.classList.add("flex");
@@ -1340,13 +1360,13 @@ function initQuickAccessStatsToggle() {
     }
   };
 
-  const isHidden = localStorage.getItem("spes-dashboard-hide-cards") === "true";
+  let isHidden = localStorage.getItem("spes-dashboard-stats-hidden") === "true";
   applyState(isHidden);
 
   const toggle = () => {
-    const nextHidden = !(localStorage.getItem("spes-dashboard-hide-cards") === "true");
-    localStorage.setItem("spes-dashboard-hide-cards", nextHidden ? "true" : "false");
-    applyState(nextHidden);
+    isHidden = !isHidden;
+    localStorage.setItem("spes-dashboard-stats-hidden", isHidden);
+    applyState(isHidden);
   };
 
   btnHeader?.addEventListener("click", toggle);
@@ -1361,4 +1381,533 @@ function _wireExportStatsButtons() {
     .forEach(id => {
       document.getElementById(id)?.addEventListener("click", () => exportDashboardStats());
     });
+}
+
+function initGlobalSearch(user) {
+  const overlay = document.getElementById("global-search-overlay");
+  const form = document.getElementById("global-search-form");
+  const input = document.getElementById("global-search-input");
+  const closeBtn = document.getElementById("btn-close-search");
+  const voiceBtn = document.getElementById("btn-voice-search");
+  const resultsContainer = document.getElementById("global-search-results");
+  const searchContainer = document.getElementById("global-search-container");
+
+  const searchButtons = [
+    document.getElementById("quick-search"),
+    document.getElementById("quick-search-expanded"),
+    document.getElementById("quick-search-expanded-mob"),
+    document.getElementById("quick-search-mob")
+  ];
+
+  let currentApexChart = null;
+
+  // Voice Search (Speech Recognition)
+  if (voiceBtn) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        voiceBtn.classList.add("text-red-500", "animate-pulse");
+        input.placeholder = "Listening...";
+      };
+
+      recognition.onend = () => {
+        voiceBtn.classList.remove("text-red-500", "animate-pulse");
+        input.placeholder = "Search Spes, Total...";
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        performSearch(transcript, user.role_id, user.id);
+      };
+
+      voiceBtn.addEventListener("click", () => {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.warn("[Voice Search] Already active or failed to start:", e);
+        }
+      });
+    } else {
+      voiceBtn.addEventListener("click", () => {
+        Swal.fire({
+          icon: 'info',
+          title: 'Voice Search Not Supported',
+          text: 'Speech recognition is not supported in this browser. Please type your search.',
+          confirmButtonColor: '#0038A8',
+          customClass: {
+            confirmButton: 'cursor-pointer'
+          }
+        });
+      });
+    }
+  }
+
+  const openSearch = () => {
+    overlay.classList.remove("hidden");
+    setTimeout(() => {
+      overlay.classList.remove("opacity-0");
+      searchContainer.classList.remove("scale-95");
+      input.focus();
+    }, 10);
+  };
+
+  const closeSearch = () => {
+    overlay.classList.add("opacity-0");
+    searchContainer.classList.add("scale-95");
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+      input.value = "";
+      resultsContainer.classList.add("hidden");
+      resultsContainer.innerHTML = "";
+      // Reset container size
+      searchContainer.classList.remove("max-w-5xl");
+      searchContainer.classList.add("max-w-lg");
+      if (currentApexChart) {
+        currentApexChart.destroy();
+        currentApexChart = null;
+      }
+    }, 300);
+  };
+
+  searchButtons.forEach(btn => {
+    if (btn) btn.addEventListener("click", openSearch);
+  });
+
+  closeBtn?.addEventListener("click", closeSearch);
+  
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeSearch();
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !overlay.classList.contains("hidden")) {
+      closeSearch();
+    }
+  });
+
+  input?.addEventListener("input", (e) => {
+    const query = e.target.value.trim();
+
+    if (query.length < 2) {
+      resultsContainer.classList.add("hidden");
+      resultsContainer.innerHTML = "";
+      searchContainer.classList.remove("max-w-5xl");
+      searchContainer.classList.add("max-w-lg");
+      if (currentApexChart) {
+        currentApexChart.destroy();
+        currentApexChart = null;
+      }
+    }
+  });
+
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (query.length >= 2) {
+      performSearch(query, user.role_id, user.id);
+    }
+  });
+
+  async function performSearch(query, roleId, staffId) {
+    try {
+      resultsContainer.innerHTML = `
+        <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          <svg class="animate-spin h-8 w-8 mx-auto mb-3 text-spes-blue dark:text-spes-yellow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="font-bold tracking-wider uppercase text-xs">Querying database...</span>
+        </div>`;
+      resultsContainer.classList.remove("hidden");
+      searchContainer.classList.remove("max-w-lg");
+      searchContainer.classList.add("max-w-5xl");
+
+      // 1. Search offices matching query
+      const { data: matchedOffices } = await supabase
+        .from("offices")
+        .select("id")
+        .ilike("name", `%${query}%`);
+      const officeIds = (matchedOffices || []).map(o => o.id);
+
+      // 2. Setup Base Queries
+      let benQuery = supabase
+        .from("beneficiary")
+        .select(`
+          id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id,
+          staffs!beneficiary_staff_id_fkey(office_id, full_name, offices(name))
+        `);
+      let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
+
+      // 3. Intercept Keywords
+      const qUpper = query.toUpperCase();
+      let isKeyword = false;
+
+      if (qUpper === "TOTAL" || qUpper === "ALL") {
+        isKeyword = true;
+      } else if (qUpper === "MALE") {
+        isKeyword = true;
+        benQuery = benQuery.eq("gender_id", 1);
+        staffSearchQuery = null;
+      } else if (qUpper === "FEMALE") {
+        isKeyword = true;
+        benQuery = benQuery.eq("gender_id", 2);
+        staffSearchQuery = null;
+      } else if (qUpper === "SPES" || qUpper === "BENEFICIARIES") {
+        isKeyword = true;
+        staffSearchQuery = null;
+      } else if (qUpper === "IMPLEMENTORS" || qUpper === "STAFF" || qUpper === "STAFFS") {
+        isKeyword = true;
+        benQuery = null;
+      } else if (qUpper === "ONGOING") {
+        isKeyword = true;
+        benQuery = benQuery.neq("return_status", "SPES BABY");
+        staffSearchQuery = null;
+      } else if (qUpper === "RETURNING" || qUpper === "SPES BABY") {
+        isKeyword = true;
+        benQuery = benQuery.eq("return_status", "SPES BABY");
+        staffSearchQuery = null;
+      } else if (qUpper === "APPROVED") {
+        isKeyword = true;
+        benQuery = null;
+        if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", true);
+      } else if (qUpper === "PENDING") {
+        isKeyword = true;
+        benQuery = null;
+        if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", false);
+      }
+
+      let beneficiaries = [];
+      let staffResults = [];
+
+      // 4. Execute Search
+      if (isKeyword) {
+        if (benQuery) {
+          if (roleId === 2) benQuery = benQuery.eq("staff_id", staffId);
+          const { data, error } = await benQuery.limit(1000);
+          if (error) throw error;
+          beneficiaries = data || [];
+        }
+        if (staffSearchQuery) {
+          const { data, error } = await staffSearchQuery.limit(1000);
+          if (error) throw error;
+          staffResults = data || [];
+        }
+      } else {
+        if (roleId === 2) {
+          benQuery = benQuery.eq("staff_id", staffId).ilike("full_name", `%${query}%`);
+        } else {
+          if (officeIds.length > 0) {
+            const { data: staffsInOffice } = await supabase.from("staffs").select("id").in("office_id", officeIds);
+            const sIds = (staffsInOffice || []).map(s => s.id);
+            if (sIds.length > 0) {
+              benQuery = benQuery.or(`full_name.ilike.%${query}%,staff_id.in.(${sIds.join(",")})`);
+            } else {
+              benQuery = benQuery.ilike("full_name", `%${query}%`);
+            }
+          } else {
+            benQuery = benQuery.ilike("full_name", `%${query}%`);
+          }
+        }
+
+        const { data: benData, error: benError } = await benQuery.limit(500);
+        if (benError) throw benError;
+        beneficiaries = benData || [];
+
+        if (staffSearchQuery) {
+          if (officeIds.length > 0) {
+            staffSearchQuery = staffSearchQuery.or(`full_name.ilike.%${query}%,office_id.in.(${officeIds.join(",")})`).limit(10);
+          } else {
+            staffSearchQuery = staffSearchQuery.ilike("full_name", `%${query}%`).limit(10);
+          }
+          const { data: staffs } = await staffSearchQuery;
+          if (staffs) staffResults = staffs;
+        }
+      }
+
+      renderSearchDashboard(query, beneficiaries || [], staffResults);
+    } catch (err) {
+      console.error("[Search Error]", err);
+      resultsContainer.innerHTML = `<div class="p-4 text-center text-sm text-red-500 font-bold">Failed to perform search.</div>`;
+    }
+  }
+
+  function renderSearchDashboard(query, beneficiaries, staffs) {
+    if (beneficiaries.length === 0 && staffs.length === 0) {
+      resultsContainer.innerHTML = `
+        <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-none shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center">
+          <svg class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <div class="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">No results found for "<span class="text-spes-blue dark:text-spes-yellow">${query}</span>"</div>
+          <p class="text-[10px] text-gray-400 dark:text-white/40 mt-2 font-semibold uppercase tracking-wider">Try adjusting your search keywords</p>
+        </div>
+      `;
+      return;
+    }
+
+    const timestamp = new Date().toLocaleString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    });
+
+    resultsContainer.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
+         <!-- Left Card: Chart (Output Visual) -->
+         <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-none border border-gray-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/40 flex flex-col justify-between">
+            <div>
+               <div class="flex items-center justify-between mb-6">
+                  <h4 id="search-chart-title" class="text-xs font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Gender Distribution</h4>
+                  <div class="flex items-center gap-2 bg-white dark:bg-spes-dark-secondary rounded-lg p-1 border border-gray-100 dark:border-white/5 shadow-xs">
+                     <button id="btn-search-chart-gender" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
+                        </svg>
+                        <span>Gender</span>
+                     </button>
+                     <button id="btn-search-chart-total" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                           <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/>
+                        </svg>
+                        <span>Status</span>
+                     </button>
+                  </div>
+               </div>
+               
+               <div class="relative flex items-center justify-center min-h-[250px] py-2">
+                  <div id="search-donut-chart" class="w-full"></div>
+               </div>
+            </div>
+            
+            <p class="text-[9px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-widest text-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5 leading-relaxed">
+               • Showing aggregated analytics based on your search criteria. Data is dynamically cached for optimized performance.
+            </p>
+         </div>
+         
+         <!-- Right Card: List Details (Modernized Box Cards) -->
+         <div class="bg-spes-blue dark:bg-spes-dark-primary rounded-none shadow-2xl shadow-spes-blue/20 dark:shadow-black/40 border border-transparent overflow-hidden flex flex-col justify-between min-h-[420px]">
+            <!-- Header -->
+            <div class="p-6 text-white flex flex-col gap-1 border-b border-white/10 bg-linear-to-r from-spes-blue to-[#002878] dark:from-spes-dark-primary dark:to-[#0A0A0A]">
+               <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                     <img src="/c_spes.png" class="h-10 w-10 rounded-full bg-white/10 p-1 object-cover" alt="Logo" />
+                     <div>
+                        <h4 class="text-base font-black uppercase tracking-wider font-montserrat">Extra Stats</h4>
+                        <p class="text-[10px] text-white/70 font-semibold tracking-wide">Keyword: "<span id="search-keyword-display" class="font-bold text-spes-yellow">${query}</span>"</p>
+                     </div>
+                  </div>
+                  <div class="text-[9px] bg-white/10 px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider text-right" id="search-timestamp">
+                     ${timestamp}
+                  </div>
+               </div>
+            </div>
+            
+            <!-- List Body -->
+            <div id="search-results-list" class="flex-1 p-6 overflow-y-auto max-h-[320px] space-y-3 bg-white dark:bg-spes-dark-secondary">
+               <!-- Injected items -->
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 text-center flex flex-col gap-1">
+               <span class="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-white/30">End of Report</span>
+               <span class="text-[8px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20">Generated by 2026 GIP Monitor</span>
+            </div>
+         </div>
+      </div>`;
+
+    // Populate List
+    const listContainer = document.getElementById("search-results-list");
+    let listHtml = "";
+    
+    // Highlight helper
+    const highlight = (text, q) => {
+      if (!text) return "N/A";
+      const regex = new RegExp(`(${q})`, "gi");
+      return text.toString().replace(regex, `<mark class="search-highlight-match bg-spes-yellow text-spes-dark-primary px-1 rounded font-bold transition-all duration-500">$1</mark>`);
+    };
+
+    if (beneficiaries.length > 0) {
+      listHtml += `<h5 class="text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
+      beneficiaries.forEach(b => {
+        let officeName = "N/A";
+        if (b.staffs && b.staffs.offices) {
+          let longName = b.staffs.offices.name || "N/A";
+          officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
+        }
+
+        const isSpesBaby = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
+        const statusClass = isSpesBaby
+          ? "bg-[#FF5B9B]/10 text-[#FF5B9B]"
+          : "bg-emerald-500/10 text-emerald-500";
+        const statusLabel = isSpesBaby ? "RETURNING" : "ONGOING";
+
+        listHtml += `
+          <a href="../beneficiaries/?b=${b.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
+             <div>
+                <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(b.full_name, query)}</div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
+             </div>
+             <span class="text-[9px] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
+                SPES - ${statusLabel}
+             </span>
+          </a>
+        `;
+      });
+    }
+
+    if (staffs.length > 0) {
+      listHtml += `<h5 class="text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">Implementors (${staffs.length})</h5>`;
+      staffs.forEach(s => {
+        let officeName = "N/A";
+        if (s.offices) {
+          let longName = s.offices.name || "N/A";
+          officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
+        }
+
+        // Fix boolean TRUE showing instead of APPROVED
+        const isApproved = s.approved === true || s.approved === "Approved" || s.approved === "TRUE";
+        const statusClass = isApproved
+          ? "bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow"
+          : "bg-amber-500/10 text-amber-500";
+        const statusText = isApproved ? "APPROVED" : "PENDING";
+
+        listHtml += `
+          <a href="../implementors/?id=${s.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-yellow/40 hover:scale-[1.01] transition-all duration-200">
+             <div>
+                <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(s.full_name, query)}</div>
+                <div class="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
+             </div>
+             <span class="text-[9px] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
+                STAFF - ${statusText}
+             </span>
+          </a>
+        `;
+      });
+    }
+
+    listContainer.innerHTML = listHtml;
+    
+    setTimeout(() => {
+      document.querySelectorAll('.search-highlight-match').forEach(el => {
+        el.className = "underline decoration-emerald-500 decoration-2 font-bold text-emerald-600 dark:text-emerald-400 bg-transparent transition-all duration-500";
+      });
+    }, 2000);
+
+    // Chart Configuration Helper
+    let chartMode = "GENDER"; // or "TOTAL"
+
+    const getChartOptions = (mode) => {
+      let series = [];
+      let labels = [];
+      let colors = [];
+      let totalLabel = "TOTAL SPES";
+
+      if (mode === "GENDER") {
+        let male = 0;
+        let female = 0;
+        beneficiaries.forEach(b => {
+          if (b.gender_id === 1) male++;
+          else if (b.gender_id === 2) female++;
+        });
+        series = [male, female];
+        labels = ["MALE", "FEMALE"];
+        colors = ["#4F91FF", "#FF5B9B"];
+        totalLabel = "TOTAL SPES";
+      } else {
+        // Status breakdown
+        let news = 0;
+        let returning = 0;
+        beneficiaries.forEach(b => {
+          if (b.return_status && b.return_status.toUpperCase() === "SPES BABY") returning++;
+          else news++;
+        });
+        series = [news, returning];
+        labels = ["NEW", "RETURNING"];
+        colors = ["#10B981", "#EF4444"];
+        totalLabel = "AGGREGATE";
+      }
+
+      return {
+        series,
+        chart: { type: "donut", height: 240, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
+        labels,
+        colors,
+        legend: { position: "bottom", fontWeight: 800, fontSize: "10px" },
+        stroke: { show: false },
+        dataLabels: { enabled: false },
+        tooltip: { enabled: false },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: "72%",
+              labels: {
+                show: true,
+                name:  { show: true, fontSize: "9px", fontWeight: 700, offsetY: -5, color: "#64748b" },
+                value: { show: true, fontSize: "16px", fontWeight: 900, offsetY: 5, formatter: (v) => Number(v).toLocaleString() },
+                total: {
+                  show: true,
+                  label: totalLabel,
+                  fontSize: "8px",
+                  fontWeight: 900,
+                  color: "#0038A8",
+                  formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString()
+                }
+              }
+            }
+          }
+        }
+      };
+    };
+
+    const renderChartInstance = (mode) => {
+      if (currentApexChart) {
+        currentApexChart.destroy();
+      }
+      const el = document.getElementById("search-donut-chart");
+      if (el) {
+        currentApexChart = new ApexCharts(el, getChartOptions(mode));
+        currentApexChart.render();
+      }
+    };
+
+    // Render Initial Chart
+    renderChartInstance(chartMode);
+
+    // Switcher Logic
+    const btnGender = document.getElementById("btn-search-chart-gender");
+    const btnTotal = document.getElementById("btn-search-chart-total");
+    const titleEl = document.getElementById("search-chart-title");
+
+    const activeClass = "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs font-black";
+    const inactiveClass = "text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow";
+
+    btnGender?.addEventListener("click", () => {
+      if (chartMode === "GENDER") return;
+      chartMode = "GENDER";
+      if (titleEl) titleEl.textContent = "Gender Distribution";
+      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      renderChartInstance(chartMode);
+    });
+
+    btnTotal?.addEventListener("click", () => {
+      if (chartMode === "TOTAL") return;
+      chartMode = "TOTAL";
+      if (titleEl) titleEl.textContent = "Status Breakdown";
+      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      renderChartInstance(chartMode);
+    });
+  }
 }

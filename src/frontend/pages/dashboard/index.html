@@ -42,6 +42,41 @@
 
 <body
   class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white">
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- GLOBAL SEARCH OVERLAY                                -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="global-search-overlay" class="fixed inset-0 z-[999] flex items-start justify-center pt-24 bg-spes-black/50 dark:bg-spes-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+    <div id="global-search-container" class="w-full max-w-lg px-4 scale-95 transition-transform duration-300">
+      <form id="global-search-form" class="flex items-center w-full space-x-2 relative">   
+          <label for="global-search-input" class="sr-only">Search</label>
+          <div class="relative w-full shadow-2xl rounded-lg">
+              <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
+              </div>
+              <input type="text" id="global-search-input" class="block w-full ps-10 pe-16 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold" placeholder="Search Spes, Total..." required autocomplete="off" />
+              <button type="button" id="btn-voice-search" class="absolute inset-y-0 end-9 flex items-center cursor-pointer group">
+                  <svg class="w-5 h-5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-colors" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 0 1-14 0v-2m7 9v3m-4 0h8"/>
+                  </svg>
+              </button>
+              <button type="button" id="btn-close-search" class="absolute inset-y-0 end-3 flex items-center cursor-pointer group">
+                  <svg class="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+          </div>
+          <button type="submit" class="inline-flex items-center text-white bg-spes-blue hover:bg-spes-blue/90 box-border border border-transparent shadow-lg font-black tracking-widest uppercase rounded-lg text-xs px-5 py-3.5 focus:outline-none transition-transform active:scale-95 cursor-pointer">
+              <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2.5" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
+              Search
+          </button>
+      </form>
+      
+      <!-- Dropdown/Grid for search results -->
+      <div id="global-search-results" class="mt-8 hidden z-50 transition-all duration-300">
+         <!-- Results will be injected here via JS -->
+      </div>
+    </div>
+  </div>
+
   <!-- SPES:SIDEBAR -->
 
   <!-- Main Content -->
@@ -176,6 +211,7 @@
                 <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full"></div>
             </div>
           </div>
+          <div id="gender-roster-summary" class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 empty:hidden"></div>
         </div>
 
         <!-- Card 3: Added SPES per Year -->
@@ -455,7 +491,7 @@
         <h3 class="mb-6 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Quick Access Hub</h3>
         
         <!-- 1. Normal View (Shown when stats are visible) -->
-        <div id="quick-access-normal-desktop" class="hidden md:grid grid-cols-7 gap-6 justify-items-center">
+        <div id="quick-access-normal-desktop" class="hidden lg:grid grid-cols-8 gap-6 justify-items-center">
           <!-- Add Implementor -->
           <div class="flex flex-col items-center gap-3" data-permission="users:view">
             <a href="../implementors/#add" id="quick-add-implementor" data-tooltip-target="tooltip-add-implementor" class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
@@ -516,6 +552,18 @@
             <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Roles Setup</span>
           </div>
 
+                    <!-- Search Up -->
+          <div class="flex flex-col items-center gap-3 quick-search-btn-container">
+            <button id="quick-search" data-tooltip-target="tooltip-search" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[15deg]">
+                <svg class="h-6 w-6 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                </svg>
+              </div>
+            </button>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Search Up</span>
+          </div>
+
           <!-- Theme Toggle -->
           <div class="flex flex-col items-center gap-3">
             <button id="quick-settings" data-tooltip-target="tooltip-settings" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
@@ -550,9 +598,25 @@
 
         <!-- 2. Expanded View (Shown when stats are hidden) -->
         <!-- Desktop Expanded View (Hidden by default, shown when user clicks Hide Stats) -->
-        <div id="quick-access-expanded-desktop" class="hidden flex-col items-center gap-10 w-full py-8">
+        <div id="quick-access-expanded-desktop" class="hidden lg:hidden flex-col items-center gap-10 w-full">
           <!-- Top Row Buttons (Flex container for auto-centering and reflow) -->
-          <div class="flex flex-wrap justify-center gap-16 max-w-3xl w-full mb-6">
+          <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
+            <!-- Giant Centered Show Stats Button -->
+            <div class="flex flex-col items-center gap-4">
+              <button id="quick-toggle-stats-expanded" data-tooltip-target="tooltip-toggle-stats-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+                <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
+                  <svg id="hide-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  </svg>
+                  <svg id="show-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span id="quick-toggle-stats-expanded-inner-text" class="text-[11px] font-black uppercase tracking-widest">Stats</span>
+                </div>
+              </button>
+              <span id="quick-toggle-stats-expanded-text" class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Show Stats</span>
+            </div>
             <!-- Add Implementor (Giant) -->
             <div class="flex flex-col items-center gap-4" data-permission="users:view">
               <a href="../implementors/#add" id="quick-add-implementor-expanded" data-tooltip-target="tooltip-add-implementor-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
@@ -594,26 +658,23 @@
               </a>
               <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add Beneficiary</span>
             </div>
-            <!-- Giant Centered Show Stats Button -->
-            <div class="flex flex-col items-center gap-4">
-              <button id="quick-toggle-stats-expanded" data-tooltip-target="tooltip-toggle-stats-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+
+          
+            <!-- Search Up (Giant) -->
+            <div class="flex flex-col items-center gap-4 hidden lg:flex">
+              <button id="quick-search-expanded" data-tooltip-target="tooltip-search-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg id="hide-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
                   </svg>
-                  <svg id="show-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  <span id="quick-toggle-stats-expanded-inner-text" class="text-[11px] font-black uppercase tracking-widest">Stats</span>
+                  <span class="text-[11px] font-black uppercase tracking-widest">Search</span>
                 </div>
               </button>
-              <span id="quick-toggle-stats-expanded-text" class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Show Stats</span>
+              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Search Up</span>
             </div>
           </div>
-
-          <!-- Giant Skewed Buttons Grid (Row 3 - Audit, Roles, Export - Same Giant Size in the Bottom) -->
-          <div class="flex flex-wrap justify-center gap-16 max-w-3xl w-full mb-6">
+<!-- Giant Skewed Buttons Grid (Row 3 - Audit, Roles, Export - Same Giant Size in the Bottom) -->
+          <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
             <!-- System Audit (Giant) -->
             <div class="flex flex-col items-center gap-4">
               <button id="quick-audit-expanded" data-tooltip-target="tooltip-audit-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
@@ -718,6 +779,19 @@
               <span id="quick-toggle-stats-expanded-mob-text" class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Show Stats</span>
             </div>
 
+                        <!-- Search Up (Mobile) -->
+            <div class="flex flex-col items-center gap-2 quick-search-btn-container">
+              <button id="quick-search-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+                <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
+                  <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                  </svg>
+                  <span class="text-[9px] font-black uppercase tracking-wider">Search</span>
+                </div>
+              </button>
+              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Search Up</span>
+            </div>
+
             <!-- System Audit -->
             <div class="flex flex-col items-center gap-2">
               <button id="quick-audit-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
@@ -787,6 +861,18 @@
               </div>
             </a>
             <span class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add Benef</span>
+          </div>
+
+                    <!-- Quick Action: Search Up -->
+          <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20 quick-search-btn-container">
+            <button id="quick-search-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <div class="transform skew-x-[12deg]">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                </svg>
+              </div>
+            </button>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Search Up</span>
           </div>
 
           <!-- Quick Action 3: System Audit -->
@@ -886,6 +972,10 @@
         Switch portal user interface dark mode
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
+      <div id="tooltip-search" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+        Search globally for beneficiaries or staff
+        <div class="tooltip-arrow" data-popper-arrow></div>
+      </div>
       <div id="tooltip-toggle-stats" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Hide or show statistics cards
         <div class="tooltip-arrow" data-popper-arrow></div>
@@ -914,6 +1004,10 @@
       </div>
       <div id="tooltip-settings-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Switch portal user interface dark mode
+        <div class="tooltip-arrow" data-popper-arrow></div>
+      </div>
+      <div id="tooltip-search-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+        Search globally for beneficiaries or staff
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-toggle-stats-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
