@@ -1792,11 +1792,17 @@ export function initBeneficiaries() {
 export async function calculateTotalBeneficiariesByImplementor(officeId) {
   if (!officeId) return 0;
   try {
+    const skipArchive = sessionStorage.getItem("spes_bene_no_archive_col") === "1";
+    
     let query = supabase
       .from("beneficiary")
-      .select("*, staffs!inner(office_id)", { count: "exact", head: true })
+      .select("*, staffs!staff_id!inner(office_id)", { count: "exact", head: false })
       .eq("staffs.office_id", officeId)
-      .is("archived_at", null);
+      .limit(0);
+
+    if (!skipArchive) {
+      query = query.is("archived_at", null);
+    }
 
     let { count, error } = await query;
 
@@ -1805,8 +1811,9 @@ export async function calculateTotalBeneficiariesByImplementor(officeId) {
         // Fallback if archived_at doesn't exist
         const fallback = await supabase
           .from("beneficiary")
-          .select("*, staffs!inner(office_id)", { count: "exact", head: true })
-          .eq("staffs.office_id", officeId);
+          .select("*, staffs!staff_id!inner(office_id)", { count: "exact", head: false })
+          .eq("staffs.office_id", officeId)
+          .limit(0);
         count = fallback.count;
         error = fallback.error;
       }

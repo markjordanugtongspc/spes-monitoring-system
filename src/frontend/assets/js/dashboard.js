@@ -1598,7 +1598,7 @@ function initGlobalSearch(user) {
         .from("beneficiary")
         .select(`
           id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id,
-          staffs!beneficiary_staff_id_fkey${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
+          staffs!staff_id${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
 
