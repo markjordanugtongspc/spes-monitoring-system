@@ -1474,7 +1474,7 @@ function initGlobalSearch(user) {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         input.value = transcript;
-        performSearch(transcript, user.role_id, user.id);
+        performSearch(transcript, user);
       };
 
       voiceBtn.addEventListener("click", () => {
@@ -1565,11 +1565,14 @@ function initGlobalSearch(user) {
     e.preventDefault();
     const query = input.value.trim();
     if (query.length >= 2) {
-      performSearch(query, user.role_id, user.id);
+      performSearch(query, user);
     }
   });
 
-  async function performSearch(query, roleId, staffId) {
+  async function performSearch(query, user) {
+    const roleId = user.role_id;
+    const staffId = user.id;
+    const officeId = user.office_id;
     try {
       resultsContainer.innerHTML = `
         <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -1595,7 +1598,7 @@ function initGlobalSearch(user) {
         .from("beneficiary")
         .select(`
           id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id,
-          staffs!beneficiary_staff_id_fkey(office_id, full_name, offices(name))
+          staffs!beneficiary_staff_id_fkey${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
 
@@ -1643,7 +1646,7 @@ function initGlobalSearch(user) {
       // 4. Execute Search
       if (isKeyword) {
         if (benQuery) {
-          if (roleId === 2) benQuery = benQuery.eq("staff_id", staffId);
+          if (roleId === 2) benQuery = benQuery.eq("staffs.office_id", officeId);
           const { data, error } = await benQuery.limit(1000);
           if (error) throw error;
           beneficiaries = data || [];
@@ -1655,18 +1658,18 @@ function initGlobalSearch(user) {
         }
       } else {
         if (roleId === 2) {
-          benQuery = benQuery.eq("staff_id", staffId).ilike("full_name", `%${query}%`);
+          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
         } else {
           if (officeIds.length > 0) {
             const { data: staffsInOffice } = await supabase.from("staffs").select("id").in("office_id", officeIds);
             const sIds = (staffsInOffice || []).map(s => s.id);
             if (sIds.length > 0) {
-              benQuery = benQuery.or(`full_name.ilike.%${query}%,staff_id.in.(${sIds.join(",")})`);
+              benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%,staff_id.in.(${sIds.join(",")})`);
             } else {
-              benQuery = benQuery.ilike("full_name", `%${query}%`);
+              benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
             }
           } else {
-            benQuery = benQuery.ilike("full_name", `%${query}%`);
+            benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
           }
         }
 
