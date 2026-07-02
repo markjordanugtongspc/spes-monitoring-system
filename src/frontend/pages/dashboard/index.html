@@ -71,7 +71,7 @@
       </form>
       
       <!-- Dropdown/Grid for search results -->
-      <div id="global-search-results" class="mt-8 hidden z-50 transition-all duration-300">
+      <div id="global-search-results" class="mt-8 hidden z-50 transition-all duration-300 overflow-y-auto max-h-[70vh] pb-4" style="scrollbar-width: thin;">
          <!-- Results will be injected here via JS -->
       </div>
     </div>
@@ -598,7 +598,7 @@
 
         <!-- 2. Expanded View (Shown when stats are hidden) -->
         <!-- Desktop Expanded View (Hidden by default, shown when user clicks Hide Stats) -->
-        <div id="quick-access-expanded-desktop" class="hidden lg:hidden flex-col items-center gap-10 w-full">
+        <div id="quick-access-expanded-desktop" class="hidden flex-col items-center gap-10 w-full">
           <!-- Top Row Buttons (Flex container for auto-centering and reflow) -->
           <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
             <!-- Giant Centered Show Stats Button -->
@@ -717,7 +717,7 @@
         </div>
 
         <!-- Mobile Expanded View (Flexible Wrap Container, optimized heights to prevent overflow) -->
-        <div id="quick-access-expanded-mobile" class="hidden md:hidden flex-col items-center gap-4 w-full py-6 px-2">
+        <div id="quick-access-expanded-mobile" class="hidden lg:hidden flex-col items-center gap-4 w-full py-6 px-2">
           <!-- Responsive Flex Container -->
           <div class="flex flex-wrap justify-center gap-6 w-full max-w-sm">
             <!-- Add Implementor -->
@@ -834,7 +834,7 @@
         </div>
 
         <!-- 3. Mobile Swipeable list (Hide/Show Stats Toggle moved to item 4 in the middle!) -->
-        <div id="quick-access-normal-mobile" class="flex md:hidden overflow-x-auto snap-x snap-mandatory gap-5 pb-4 pt-2 -mx-2 px-2 scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+        <div id="quick-access-normal-mobile" class="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-5 pb-4 pt-2 -mx-2 px-2 scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
           <style>
             .flex::-webkit-scrollbar { display: none; }
           </style>

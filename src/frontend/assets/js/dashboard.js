@@ -1265,18 +1265,18 @@ function initQuickAccessStatsToggle() {
       metricsRow?.classList.add("hidden");
       detailsRow?.classList.add("hidden");
 
-      normalDesktopGrid?.classList.add("hidden");
+      // Hide Normal Desktop, Show Expanded Desktop on large screens
+      // We do NOT remove "hidden" so they remain hidden on mobile!
       normalDesktopGrid?.classList.remove("lg:grid");
-
-      expandedDesktopGrid?.classList.remove("hidden");
       expandedDesktopGrid?.classList.add("lg:flex");
 
+      // Hide Normal Mobile, Show Expanded Mobile on small screens
       normalMobileList?.classList.add("hidden");
       normalMobileList?.classList.remove("flex");
 
       expandedMobileGrid?.classList.remove("hidden");
       expandedMobileGrid?.classList.add("flex");
-
+      
       // Dynamic margin adjustment to prevent cards from getting hidden under the blue banner
       mainContainer?.classList.remove("lg:-mt-16");
       mainContainer?.classList.add("lg:mt-8");
@@ -1313,18 +1313,17 @@ function initQuickAccessStatsToggle() {
       metricsRow?.classList.remove("hidden");
       detailsRow?.classList.remove("hidden");
 
-      normalDesktopGrid?.classList.remove("hidden");
+      // Show Normal Desktop, Hide Expanded Desktop on large screens
       normalDesktopGrid?.classList.add("lg:grid");
-
-      expandedDesktopGrid?.classList.add("hidden");
       expandedDesktopGrid?.classList.remove("lg:flex");
 
+      // Show Normal Mobile, Hide Expanded Mobile on small screens
       normalMobileList?.classList.remove("hidden");
       normalMobileList?.classList.add("flex");
 
       expandedMobileGrid?.classList.add("hidden");
       expandedMobileGrid?.classList.remove("flex");
-
+      
       // Revert margin back to overlapping style
       mainContainer?.classList.add("lg:-mt-16");
       mainContainer?.classList.remove("lg:mt-8");
@@ -1450,6 +1449,7 @@ function initGlobalSearch(user) {
 
   const openSearch = () => {
     overlay.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden"); // Prevent background scrolling
     setTimeout(() => {
       overlay.classList.remove("opacity-0");
       searchContainer.classList.remove("scale-95");
@@ -1460,6 +1460,7 @@ function initGlobalSearch(user) {
   const closeSearch = () => {
     overlay.classList.add("opacity-0");
     searchContainer.classList.add("scale-95");
+    document.body.classList.remove("overflow-hidden"); // Restore background scrolling
     setTimeout(() => {
       overlay.classList.add("hidden");
       input.value = "";
