@@ -1784,30 +1784,40 @@ export function initBeneficiaries() {
 
 // --- START: Calculate Total Added Beneficiaries ---
 /**
- * Calculates the total number of active beneficiaries added for a specific office location.
- * Since beneficiaries are separated/grouped by the office's location matching the beneficiary's address,
- * this function queries Supabase to count beneficiaries associated with a given office location.
+ * Calculate Total Added Beneficiaries for a specific implementor (staff).
  *
- * @param {string} officeLocation - The location of the implementor's office
- * @returns {Promise<number>} The total count of beneficiaries for this office location
+ * @param {number|string} staffId - The ID of the implementor (staff)
+ * @returns {Promise<number>} The total count of beneficiaries added by this staff
  */
-export async function calculateTotalBeneficiariesByImplementor(officeLocation) {
-  if (!officeLocation || officeLocation === "N/A") return 0;
+export async function calculateTotalBeneficiariesByImplementor(officeId) {
+  if (!officeId) return 0;
   try {
-    const trimmedLoc = officeLocation.trim();
-    const { data, error } = await supabase
+    let query = supabase
       .from("beneficiary")
-      .select("address")
+      .select("*, staffs!inner(office_id)", { count: "exact", head: true })
+      .eq("staffs.office_id", officeId)
       .is("archived_at", null);
 
+    let { count, error } = await query;
+
     if (error) {
-      console.error("[SPES] Error fetching beneficiaries for count:", error);
-      return 0;
+      if (error.code === "42703") {
+        // Fallback if archived_at doesn't exist
+        const fallback = await supabase
+          .from("beneficiary")
+          .select("*, staffs!inner(office_id)", { count: "exact", head: true })
+          .eq("staffs.office_id", officeId);
+        count = fallback.count;
+        error = fallback.error;
+      }
+      
+      if (error) {
+        console.error("[SPES] Error fetching beneficiaries for count:", error);
+        return 0;
+      }
     }
 
-    const locLower = trimmedLoc.toLowerCase();
-    const matches = (data || []).filter(b => b.address && b.address.trim().toLowerCase() === locLower);
-    return matches.length;
+    return count || 0;
   } catch (err) {
     console.error("[SPES] Exception in calculateTotalBeneficiariesByImplementor:", err);
     return 0;

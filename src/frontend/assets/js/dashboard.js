@@ -473,10 +473,10 @@ function renderTableRows(implementors, userRole) {
               <!-- Approval Status Icon + Tooltip -->
               <div class="relative group cursor-pointer inline-flex shrink-0">
                 ${s.approved 
-                  ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                      </svg>`
-                  : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                      </svg>`
                 }
@@ -494,7 +494,7 @@ function renderTableRows(implementors, userRole) {
             </div>
           </td>
           <td class="px-6 py-4 text-center">
-            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
               ${escHtml(_formatOfficeName(s.office))}
             </span>
           </td>
@@ -505,7 +505,7 @@ function renderTableRows(implementors, userRole) {
           <td class="px-6 py-4 text-center whitespace-nowrap">
             <div class="relative group inline-block">
               <button data-clear-user-id="${s.id}" data-clear-role-id="${s.role_id}" ${isAdmin ? "disabled" : ""} class="btn-clear-perms cursor-pointer p-1.5 rounded-lg text-spes-red hover:bg-spes-red/10 transition-all flex items-center justify-center ${isAdmin ? "opacity-40 cursor-not-allowed" : ""}" aria-label="Clear Permissions">
-                <svg class="h-4.5 w-4.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <svg class="h-4.5 w-4.5 shrink-0 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
               <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
                 Clear Permissions
@@ -541,10 +541,10 @@ function renderTableRows(implementors, userRole) {
           <!-- Approval Status Icon + Tooltip -->
           <div class="relative group cursor-pointer inline-flex shrink-0">
             ${s.approved 
-              ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              ? `<svg class="h-4.5 w-4.5 text-emerald-500 hover:scale-110 transition-transform cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                  </svg>`
-              : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              : `<svg class="h-4.5 w-4.5 text-rose-500 dark:text-rose-400 hover:scale-110 transition-transform cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                  </svg>`
             }
@@ -562,7 +562,7 @@ function renderTableRows(implementors, userRole) {
         </div>
       </td>
       <td class="px-6 py-4 text-center">
-        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">
+        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
           ${escHtml(_formatOfficeName(s.office))}
         </span>
       </td>
@@ -576,11 +576,35 @@ function renderTableRows(implementors, userRole) {
         </div>
       </td>
       <td class="px-6 py-4 text-center whitespace-nowrap">
+        <div class="flex items-center justify-center gap-2">
         ${isArchived && canEdit
           ? `<button class="btn-restore-impl cursor-pointer text-[11px] font-black uppercase text-emerald-600 hover:underline dark:text-emerald-400 transition-all">Restore</button>`
           : (!isArchived && canEdit
-            ? `<button class="btn-edit-impl cursor-pointer text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">Edit</button>`
+            ? `<div class="relative group cursor-pointer inline-flex">
+                 <button class="btn-edit-impl p-1.5 rounded-lg text-spes-blue hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors cursor-pointer" aria-label="Edit">
+                   <svg class="w-4.5 h-4.5 cursor-pointer" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z"/>
+                   </svg>
+                 </button>
+                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                   Edit
+                   <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
+                 </div>
+               </div>
+               
+               <div class="relative group cursor-pointer inline-flex">
+                 <button data-impl-id="${s.id}" class="btn-approve-impl p-1.5 rounded-lg transition-colors cursor-pointer ${s.approved ? "text-emerald-500/40 cursor-not-allowed dark:text-emerald-400/40" : "text-emerald-500 hover:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-400/10"}" ${s.approved ? "disabled" : ""} aria-label="Approve">
+                   <svg class="w-4.5 h-4.5 cursor-pointer" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                   </svg>
+                 </button>
+                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                   ${s.approved ? "Already Approved" : "Approve"}
+                   <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
+                 </div>
+               </div>`
             : `<span class="text-[10px] text-gray-400 dark:text-white/25">—</span>`)}
+        </div>
       </td>
     </tr>`;
   }).join("");
@@ -595,6 +619,34 @@ function renderTableRows(implementors, userRole) {
           window.openAddEditImplementorDrawer(data);
         }
       } catch {}
+    });
+
+    row.querySelector(".btn-approve-impl")?.addEventListener("click", async e => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const id = btn.getAttribute("data-impl-id");
+      if (!id || btn.disabled) return;
+
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4.5 h-4.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>`;
+      btn.disabled = true;
+
+      try {
+        const { updateStaffApprovalBulk } = await import("../../../backend/api/staff.js");
+        const result = await updateStaffApprovalBulk([id], true);
+        if (result.success) {
+          await loadImplementorTable(window._spesDashboardRole || "officer");
+          import("./components/modals.js").then(m => m.modals.toast("Implementor successfully approved.", "success"));
+        } else {
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+          import("./components/modals.js").then(m => m.modals.error("Error", result.error || "Failed to approve implementor."));
+        }
+      } catch (err) {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        console.error(err);
+      }
     });
 
     row.querySelector(".btn-restore-impl")?.addEventListener("click", e => {

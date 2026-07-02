@@ -9,6 +9,27 @@ const getThemeOpts = () => {
 };
 
 export const modals = {
+  toast: (title, icon = "success") => {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "bottom-end",
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener("mouseenter", Swal.stopTimer);
+        toast.addEventListener("mouseleave", Swal.resumeTimer);
+      },
+      customClass: {
+        popup: "rounded-xl border border-gray-100 dark:border-white/10 shadow-lg"
+      },
+      ...getThemeOpts()
+    });
+    return Toast.fire({
+      icon: icon,
+      title: title
+    });
+  },
   success: (title, text) => {
     return Swal.fire({
       icon: "success",

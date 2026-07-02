@@ -232,7 +232,7 @@ export function initImplementorsDrawer() {
       totalBenefEl.className = "text-sm font-black";
 
       import("./beneficiaries.js").then(mod => {
-        mod.calculateTotalBeneficiariesByImplementor(implementorData.office_location)
+        mod.calculateTotalBeneficiariesByImplementor(implementorData.office_id)
           .then(count => {
             totalBenefEl.textContent = count;
             if (count >= 0 && count <= 13) {
@@ -500,6 +500,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
     roleSelect.innerHTML = `<option value="">— Select Role —</option>`;
     (rolesResult.data ?? []).forEach((r) => {
+      if (r.name.toLowerCase() === "admin") return;
       const opt = document.createElement("option");
       opt.value = r.id;
       opt.textContent = r.name;
@@ -523,10 +524,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     if (staffData) {
       currentEditId = staffData.id;
       titleEl.textContent = "Edit Implementor";
-      descEl.textContent = "Update the details for this staff account.";
+      descEl.textContent = "Update the implementor details below.";
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Update Implementor`;
-      pwdLabel.innerHTML = `New Password <span class="text-[10px] font-normal lowercase tracking-normal opacity-70">(leave blank to keep)</span>`;
-      confirmPwdLabel.innerHTML = `Confirm New Password <span class="text-[10px] font-normal lowercase tracking-normal opacity-70">(leave blank to keep)</span>`;
+      pwdLabel.innerHTML = `New Password <span class="text-gray-400 text-xs font-normal">(Leave blank to keep current)</span>`;
+      confirmPwdLabel.innerHTML = `Confirm New Password`;
 
       document.getElementById("aif-full-name").value = staffData.full_name || "";
       document.getElementById("aif-username").value = staffData.username || "";
@@ -549,7 +550,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-language").value = staffData.language || "";
       document.getElementById("aif-blood-type").value = staffData.blood_type || "";
       document.getElementById("aif-phone").value = staffData.phone || "";
-      document.getElementById("aif-approved").checked = Boolean(staffData.approved);
+      
+      const approvedToggle = document.getElementById("aif-approved");
+      approvedToggle.checked = Boolean(staffData.approved);
+      approvedToggle.disabled = false;
     } else {
       currentEditId = null;
       titleEl.textContent = "Add Implementor";
@@ -557,7 +561,11 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`;
       pwdLabel.innerHTML = `Password <span class="text-red-500">*</span>`;
       confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
-      document.getElementById("aif-approved").checked = false;
+      
+      const approvedToggle = document.getElementById("aif-approved");
+      approvedToggle.checked = false;
+      approvedToggle.disabled = false;
+      
       const officeSearch = document.getElementById("aif-office-search");
       if (officeSearch) officeSearch.value = "";
       setTabActive("public");

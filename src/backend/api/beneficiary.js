@@ -103,6 +103,12 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   const session = sessionStr ? JSON.parse(sessionStr) : {};
   const isAdmin = session.role === "admin";
   const officeId = session.office_id;
+  const isApproved = session.approved === true;
+
+  // Block unapproved staff
+  if (!isAdmin && !isApproved) {
+    return { data: [], error: "Account Not Approved. List is hidden." };
+  }
 
   let selectStr = "*, batch:batch_id(id, batch_number), education:educ_id(id, name), gender:gender_id(id, name)";
   if (!isAdmin && officeId) {
