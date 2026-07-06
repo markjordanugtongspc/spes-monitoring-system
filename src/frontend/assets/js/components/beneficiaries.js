@@ -1485,8 +1485,45 @@ export function initBeneficiaries() {
     } else if (assignContainer) {
       assignContainer.classList.add("hidden");
     }
+    // --- Auto-inject batch from selectedBatchId (Add mode) or from defaults (Edit mode) ---
+    const batchIdInput   = document.getElementById("bdf-batch-id");
+    const batchBadgeEl   = document.getElementById("bdf-batch-badge");
+    const batchNoneEl    = document.getElementById("bdf-batch-none");
+    if (batchIdInput) {
+      let resolvedBatchId   = null;
+      let resolvedBatchLabel = "";
+      if (_bdfEditId && defaults?.batch_id) {
+        // Edit mode — use the existing batch on the record
+        resolvedBatchId = String(defaults.batch_id);
+      } else if (!_bdfEditId && selectedBatchId && selectedBatchId !== "unassigned") {
+        // Add mode — inherit the currently selected batch from the Kanban view
+        resolvedBatchId = String(selectedBatchId);
+      }
 
-    if (bdfTitle) bdfTitle.textContent = _bdfEditId ? "Edit Beneficiary" : "Add Beneficiary";
+      batchIdInput.value = resolvedBatchId ?? "";
+
+      if (batchBadgeEl && batchNoneEl) {
+        if (resolvedBatchId) {
+          // Fetch batch label from cached list
+          const { fetchBatches: _fb } = await import("../../../../backend/api/beneficiary.js");
+          const { data: batches } = await _fb({ forceRefresh: false });
+          const match = (batches ?? []).find(b => String(b.id) === resolvedBatchId);
+          resolvedBatchLabel = match
+            ? (match.batch_name ? match.batch_name.toUpperCase() : `BATCH ${match.batch_number}`)
+            : `BATCH ID ${resolvedBatchId}`;
+          batchBadgeEl.textContent = resolvedBatchLabel;
+          batchBadgeEl.classList.remove("hidden");
+          batchNoneEl.classList.add("hidden");
+        } else {
+          batchBadgeEl.textContent = "";
+          batchBadgeEl.classList.add("hidden");
+          batchNoneEl.classList.remove("hidden");
+        }
+      }
+    }
+    // --- End batch auto-inject ---
+
+
     if (bdfSubtitle) bdfSubtitle.textContent = _bdfEditId ? "Update the beneficiary record below." : "Fill in the details to register a new beneficiary.";
 
     bdfDrawer.classList.remove("hidden");
@@ -1896,90 +1933,28 @@ export function initBeneficiaries() {
     }
   }
 
-  if (batchDropdownBtn && batchDropdownMenu) {
-    batchDropdownBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (batchDropdownMenu.classList.contains("hidden")) {
-        await _populateBatchDropdown();
-        _showBatchAddRow(_batchIsAddMode);
-        batchDropdownMenu.classList.remove("hidden");
-      } else {
-        batchDropdownMenu.classList.add("hidden");
-      }
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!batchDropdownBtn.contains(e.target) && !batchDropdownMenu.contains(e.target)) {
-        batchDropdownMenu.classList.add("hidden");
-      }
-    });
-
-    batchOptionsList?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".batch-option");
-      if (!btn) return;
-      _syncBatchDropdownDisplay(btn.dataset.batchId);
-      batchDropdownMenu.classList.add("hidden");
-    });
-
-    // Add Batch confirm
-    const _submitNewBatch = async () => {
-      const num = batchAddInput?.value?.trim();
-      if (!num) return;
-      if (batchAddConfirm) batchAddConfirm.disabled = true;
-      const res = await addBatch(num);
-      if (batchAddConfirm) batchAddConfirm.disabled = false;
-      if (!res.success) { modals.error("Add Batch Failed", res.error); return; }
-      invalidateBatchCache();
-      await _populateBatchDropdown();
-      // Auto-select the newly added batch
-      const newBtn = batchOptionsList?.querySelector(`[data-batch-id="${res.data.id}"]`);
-      if (newBtn) { _syncBatchDropdownDisplay(res.data.id); }
-      batchDropdownMenu.classList.add("hidden");
-    };
-
-    batchAddConfirm?.addEventListener("click", (e) => { e.stopPropagation(); _submitNewBatch(); });
-    batchAddCancel?.addEventListener("click",  (e) => { 
-      e.stopPropagation(); 
-      if (batchAddForm) {
-        batchAddForm.classList.remove("flex");
-        batchAddForm.classList.add("hidden");
-      }
-      if (btnRevealBatchAdd) btnRevealBatchAdd.classList.remove("hidden");
-    });
-    
-    if (btnRevealBatchAdd && batchAddForm) {
-      btnRevealBatchAdd.addEventListener("click", (e) => {
-        e.stopPropagation();
-        btnRevealBatchAdd.classList.add("hidden");
-        batchAddForm.classList.remove("hidden");
-        batchAddForm.classList.add("flex");
-        if (batchAddInput) { batchAddInput.value = ""; batchAddInput.focus(); }
-      });
+  // NOTE: Batch dropdown removed — batch is now auto-injected in openBdfDrawer from selectedBatchId.
+  // The following dead-ref guard prevents crashes if any old code still references these elements.
+  const _batchDropdownDeadGuard = (() => {
+    const batchDropdownBtn  = document.getElementById("btn-batch-dropdown");
+    // btn-batch-dropdown no longer exists in HTML — this is intentionally a no-op.
+    if (batchDropdownBtn) {
+      if (import.meta.env.DEV) console.warn("[SPES] btn-batch-dropdown found but should be removed from HTML.");
     }
+  })();
 
-    batchAddInput?.addEventListener("keydown", (e) => {
-      e.stopPropagation();
-      if (e.key === "Enter") _submitNewBatch();
-      if (e.key === "Escape") {
-        if (batchAddForm) {
-          batchAddForm.classList.remove("flex");
-          batchAddForm.classList.add("hidden");
-        }
-        if (btnRevealBatchAdd) btnRevealBatchAdd.classList.remove("hidden");
-      }
-    });
-    batchAddInput?.addEventListener("click", (e) => e.stopPropagation());
-  }
-
-  // Patch _bdfFill to also sync the batch dropdown visually
+  // Patch _bdfFill to also reset the batch badge on each open
   const _origBdfFill = _bdfFill;
-  const _patchedBdfFill = async (defaults = {}, isEdit = false) => {
+  const _patchedBdfFill = (defaults = {}, isEdit = false) => {
     _origBdfFill(defaults);
-    _batchIsAddMode = !isEdit;
-    await _populateBatchDropdown();
-    _syncBatchDropdownDisplay(defaults.batch_id ?? "");
+    // Batch badge is now set in openBdfDrawer (async, after fetchBatches)
+    // Reset it here so there's no stale label flicker while the async call runs
+    const batchBadgeEl = document.getElementById("bdf-batch-badge");
+    const batchNoneEl  = document.getElementById("bdf-batch-none");
+    if (batchBadgeEl) { batchBadgeEl.textContent = ""; batchBadgeEl.classList.add("hidden"); }
+    if (batchNoneEl)  batchNoneEl.classList.remove("hidden");
   };
-  // --- END: Batch Dropdown ---
+  // --- END: Batch Display ---
 
   // ── Bootstrap ────────────────────────────────────────────────
   (async () => {
