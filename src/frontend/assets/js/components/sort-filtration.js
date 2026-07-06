@@ -28,7 +28,7 @@ export function setupSortFiltration({
   const tabSort        = tabSortId ? document.getElementById(tabSortId) : null;
   const tabFilter      = tabFilterId ? document.getElementById(tabFilterId) : null;
 
-  if (!btnSort || !dropdownSort || !btnFilter || !dropdownFilter) return;
+  if (!btnFilter || !dropdownFilter) return;
 
   // ── Highlight default filter options on first load ──────────
   Object.keys(activeFilters).forEach(key => {
@@ -43,8 +43,10 @@ export function setupSortFiltration({
   function showSection(which) {
     if (!panel) return;
     const sort = which === "sort";
-    dropdownSort.classList.toggle("hidden", !sort);
-    dropdownSort.classList.toggle("flex", sort);
+    if (dropdownSort) {
+      dropdownSort.classList.toggle("hidden", !sort);
+      dropdownSort.classList.toggle("flex", sort);
+    }
     dropdownFilter.classList.toggle("hidden", sort);
     dropdownFilter.classList.toggle("flex", !sort);
     if (tabSort && tabFilter) {
@@ -59,13 +61,15 @@ export function setupSortFiltration({
 
   if (panel) {
     // Shared-panel mode: both triggers open the same panel, pre-selecting a tab.
-    btnSort.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const willOpen = panel.classList.contains("hidden");
-      panel.classList.remove("hidden");
-      showSection("sort");
-      if (!willOpen) showSection("sort");
-    });
+    if (btnSort) {
+      btnSort.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = panel.classList.contains("hidden");
+        panel.classList.remove("hidden");
+        showSection("sort");
+        if (!willOpen) showSection("sort");
+      });
+    }
     btnFilter.addEventListener("click", (e) => {
       e.stopPropagation();
       panel.classList.remove("hidden");
@@ -75,39 +79,42 @@ export function setupSortFiltration({
     panel.addEventListener("click", (e) => e.stopPropagation());
   } else {
     // Legacy two-dropdown mode
-    btnSort.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dropdownSort.classList.toggle("hidden");
-      dropdownFilter.classList.add("hidden");
-    });
+    if (btnSort && dropdownSort) {
+      btnSort.addEventListener("click", (e) => {
+        e.stopPropagation();
+        dropdownSort.classList.toggle("hidden");
+        dropdownFilter.classList.add("hidden");
+      });
+    }
     btnFilter.addEventListener("click", (e) => {
       e.stopPropagation();
       dropdownFilter.classList.toggle("hidden");
       dropdownSort.classList.add("hidden");
     });
     document.addEventListener("click", () => {
-      dropdownSort.classList.add("hidden");
+      if (dropdownSort) dropdownSort.classList.add("hidden");
       dropdownFilter.classList.add("hidden");
     });
-    dropdownSort.addEventListener("click", (e) => e.stopPropagation());
+    if (dropdownSort) dropdownSort.addEventListener("click", (e) => e.stopPropagation());
     dropdownFilter.addEventListener("click", (e) => e.stopPropagation());
   }
 
   // Setup Sort Logic
-  const sortOptions = dropdownSort.querySelectorAll("[data-sort-val]");
-  sortOptions.forEach(opt => {
-    opt.addEventListener("click", () => {
-      activeSort = opt.getAttribute("data-sort-val");
+  if (dropdownSort) {
+    const sortOptions = dropdownSort.querySelectorAll("[data-sort-val]");
+    sortOptions.forEach(opt => {
+      opt.addEventListener("click", () => {
+        activeSort = opt.getAttribute("data-sort-val");
 
-      // Update checkmarks/active classes
-      sortOptions.forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
-      opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+        // Update checkmarks/active classes
+        sortOptions.forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+        opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
 
-      if (panel) panel.classList.add("hidden");
-      else dropdownSort.classList.add("hidden");
-      applySortAndFilter();
+        if (!panel) dropdownSort.classList.add("hidden");
+        applySortAndFilter();
+      });
     });
-  });
+  }
 
   // Setup Filter Logic
   const filterOptions = dropdownFilter.querySelectorAll("[data-filter-key]");
@@ -348,7 +355,7 @@ export function setupRegOfficeCombobox() {
         renderOfficeOptions();
       }
     } catch (err) {
-      console.error("Failed to fetch offices:", err);
+      if (import.meta.env.DEV) console.error("[SPES] Failed to fetch offices:", err?.message);
     }
   };
 

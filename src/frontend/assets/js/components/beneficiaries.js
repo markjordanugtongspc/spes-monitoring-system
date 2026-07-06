@@ -13,6 +13,7 @@ import {
   archiveBeneficiary,
   fetchBatches,
   addBatch,
+  updateBatch,
   invalidateBatchCache,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
@@ -340,150 +341,42 @@ function initOfficeSortPanel(onFilter) {
   return panel;
 }
 
-// ── Batch Sort Panel (DB-driven) ──────────────────────────────
+// ── Batch Sort Panel (DB-driven) ──────────────────────────────────
 function initBatchSortPanel(onFilter) {
   const BATCH_PALETTES = [
-    { bg: "bg-rose-500/20",    text: "text-rose-200",    border: "border-rose-500/30"    },
-    { bg: "bg-sky-500/20",     text: "text-sky-200",     border: "border-sky-500/30"     },
-    { bg: "bg-emerald-500/20", text: "text-emerald-200", border: "border-emerald-500/30" },
-    { bg: "bg-amber-500/20",   text: "text-amber-200",   border: "border-amber-500/30"   },
-    { bg: "bg-fuchsia-500/20", text: "text-fuchsia-200", border: "border-fuchsia-500/30" },
-    { bg: "bg-violet-500/20",  text: "text-violet-200",  border: "border-violet-500/30"  },
-    { bg: "bg-cyan-500/20",    text: "text-cyan-200",    border: "border-cyan-500/30"    },
-    { bg: "bg-orange-500/20",  text: "text-orange-200",  border: "border-orange-500/30"  },
+    { bg: "bg-rose-500/25",    text: "text-rose-700 dark:text-rose-300",    border: "border-rose-500/40" },
+    { bg: "bg-sky-500/25",     text: "text-sky-700 dark:text-sky-300",       border: "border-sky-500/40" },
+    { bg: "bg-emerald-500/25", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-500/40" },
+    { bg: "bg-amber-500/25",   text: "text-amber-700 dark:text-amber-300",   border: "border-amber-500/40" },
+    { bg: "bg-fuchsia-500/25", text: "text-fuchsia-700 dark:text-fuchsia-300", border: "border-fuchsia-500/40" },
+    { bg: "bg-violet-500/25",  text: "text-violet-700 dark:text-violet-300",  border: "border-violet-500/40" },
+    { bg: "bg-cyan-500/25",    text: "text-cyan-700 dark:text-cyan-300",    border: "border-cyan-500/40" },
+    { bg: "bg-orange-500/25",  text: "text-orange-700 dark:text-orange-300",  border: "border-orange-500/40" },
   ];
 
   const COLLAPSE_IDS = ["sortfilter-wrap", "staff-search-wrap"];
-
-  // Session role check — only admins can add batches
-  const session = getSession();
-  const _isAdmin = session && session.role === "admin";
 
   const inner = initAnimatedBadgePanel({
     panelId:       "sort-batch-panel",
     btnId:         "btn-sort-batch",
     wrapId:        "batch-badges-container",
-    searchWrapId:  null,
-    searchInputId: null,
+    searchWrapId:  "",
+    searchInputId: "",
     badgesListId:  "batch-badges-list",
     allLabel:      "All Batches",
     fetchItems:    async () => {
-      const { data, error } = await fetchBatches({ forceRefresh: true });
-      if (error && import.meta.env.DEV) console.error("[SPES] Sort Batch fetch error:", error);
-      return data ?? [];
+      const { data } = await fetchBatches({ forceRefresh: false });
+      return data || [];
     },
-    getLabel:      (b) => `BATCH ${b.batch_number}`,
-    getId:         (b) => String(b.batch_number),
+    getLabel:      (b) => b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`,
+    getId:         (b) => String(b.id),
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
-    onOpen() {
-      const title = document.getElementById("table-title");
-      if (title) { title.classList.add("truncate", "max-w-[120px]", "sm:max-w-[200px]"); }
-      COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.add("hidden"));
-
-      // Append the "Add Batch" button after badges list renders (admin only)
-      if (_isAdmin) {
-        setTimeout(() => _appendAddBatchBtn(), 80);
-      }
-    },
-    onClose() {
-      const title = document.getElementById("table-title");
-      if (title) { title.classList.remove("truncate", "max-w-[120px]", "sm:max-w-[200px]"); }
-      COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.remove("hidden"));
-    },
+    onOpen:        () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.add("hidden")),
+    onClose:       () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.remove("hidden")),
   });
 
   addDragScroll(document.getElementById("batch-badges-list"));
-
-  // ── Add Batch inline widget ───────────────────────────────────
-  function _appendAddBatchBtn() {
-    const badgesList = document.getElementById("batch-badges-list");
-    if (!badgesList) return;
-    // Remove existing if already appended
-    badgesList.querySelector(".add-batch-widget")?.remove();
-
-    const widget = document.createElement("div");
-    widget.className = "add-batch-widget shrink-0 inline-flex items-center gap-1 opacity-0 scale-75 transition-all duration-200";
-
-    // "+" add button
-    const addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.title = "Add Batch";
-    addBtn.className =
-      "add-batch-trigger cursor-pointer shrink-0 inline-flex items-center justify-center rounded border border-emerald-400/50 bg-emerald-500/20 px-2 py-1 text-emerald-300 hover:bg-emerald-500/40 hover:border-emerald-400/80 transition-all duration-200";
-    addBtn.innerHTML = `<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>`;
-
-    // Inline input row (hidden by default)
-    const inputRow = document.createElement("div");
-    inputRow.className = "add-batch-input-row hidden items-center gap-1";
-    inputRow.innerHTML = `
-      <input type="number" min="1" max="99" placeholder="No."
-        class="add-batch-num h-7 w-16 rounded border border-white/25 bg-white/10 px-2 text-[11px] text-white placeholder:text-white/40 focus:border-white/50 focus:bg-white/15 focus:outline-none transition-all"
-        autocomplete="off" />
-      <span class="text-[9px] font-black uppercase tracking-wider text-white/60 select-none">BATCH</span>
-      <button type="button" title="Add Batch" class="add-batch-confirm cursor-pointer inline-flex items-center justify-center h-6 w-6 rounded border border-emerald-400/50 bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/40 transition-all">
-        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-      </button>
-      <button type="button" title="Cancel" class="add-batch-cancel cursor-pointer inline-flex items-center justify-center h-6 w-6 rounded border border-white/20 bg-white/10 text-white/60 hover:bg-white/20 transition-all">
-        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    `;
-
-    widget.appendChild(addBtn);
-    widget.appendChild(inputRow);
-    badgesList.appendChild(widget);
-
-    // Animate in
-    setTimeout(() => {
-      widget.classList.remove("opacity-0", "scale-75");
-      widget.classList.add("opacity-100", "scale-100");
-    }, 60);
-
-    const numInput = widget.querySelector(".add-batch-num");
-    const confirmBtn = widget.querySelector(".add-batch-confirm");
-    const cancelBtn = widget.querySelector(".add-batch-cancel");
-
-    const _showInput = () => {
-      addBtn.classList.add("hidden");
-      inputRow.classList.remove("hidden");
-      inputRow.classList.add("flex");
-      numInput.value = "";
-      numInput.focus();
-    };
-
-    const _hideInput = () => {
-      addBtn.classList.remove("hidden");
-      inputRow.classList.add("hidden");
-      inputRow.classList.remove("flex");
-    };
-
-    const _submit = async () => {
-      const num = numInput.value.trim();
-      if (!num) return;
-      confirmBtn.disabled = true;
-      const res = await addBatch(num);
-      confirmBtn.disabled = false;
-      if (!res.success) {
-        modals.error("Add Batch Failed", res.error);
-        return;
-      }
-      invalidateBatchCache();
-      _hideInput();
-      // Rebuild panel so new badge appears
-      inner.rebuild();
-    };
-
-    addBtn.addEventListener("click", (e) => { e.stopPropagation(); _showInput(); });
-    cancelBtn.addEventListener("click", (e) => { e.stopPropagation(); _hideInput(); });
-    confirmBtn.addEventListener("click", (e) => { e.stopPropagation(); _submit(); });
-    numInput.addEventListener("keydown", (e) => {
-      e.stopPropagation();
-      if (e.key === "Enter") _submit();
-      if (e.key === "Escape") _hideInput();
-    });
-    numInput.addEventListener("click", (e) => e.stopPropagation());
-  }
-
   return inner;
 }
 
@@ -523,6 +416,9 @@ export function initBeneficiaries() {
           .single();
         if (!error && data) {
           officerOffice = data;
+          currentOfficeName = data.name;
+          currentOfficeId = session.office_id;
+          currentOfficeLocation = data.location;
 
           const officeInfoTop = document.getElementById("officer-assigned-office-info-top");
           const officeInfoDesktop = document.getElementById("officer-assigned-office-info-desktop");
@@ -556,17 +452,19 @@ export function initBeneficiaries() {
   let activeBeneficiaries = [];
   let currentPage = 1;
   let sortFilterInstance = null;
+  let selectedBatchId = null;
+  let currentOfficeName = "";
 
   // ── Batch Sort Panel (admin + officer, beneficiary view) ─────
-  const batchSortPanel = initBatchSortPanel(
-    (batchId) => {
-      if (batchId === null) {
-        sortFilterInstance?.setFilter("batch_number", "all");
-      } else {
-        sortFilterInstance?.setFilter("batch_number", batchId);
-      }
+  const batchSortPanel = initBatchSortPanel((batchId) => {
+    if (batchId === null || batchId === "all") {
+      selectedBatchId = null;
+    } else {
+      selectedBatchId = batchId;
     }
-  );
+    currentPage = 1;
+    renderPaginatedTable();
+  });
 
   // ── NEW / SPES BABY status switch (shown only on a specific implementor's roster) ─
   const statusSwitch    = document.getElementById("status-mode-switch");
@@ -680,6 +578,8 @@ export function initBeneficiaries() {
     currentOfficeLocation = officeLocation;
     currentOfficeId = officeId;
     currentStaffIdView = staffId;
+    currentOfficeName = officeName;
+    selectedBatchId = null;
 
     // Persist to URL — just the office id; location/name resolved from cache on restore
     _setUrlParam("office", officeId ?? officeLocation);
@@ -699,10 +599,21 @@ export function initBeneficiaries() {
       backBtn.classList.add("inline-flex");
     }
 
-    // Show Add Beneficiary Button
+    // Swap Buttons: Hide Add Beneficiary until inside a batch, Show Create Batch
     const addBtn = document.getElementById("btn-add-beneficiary");
+    const createBatchBtn = document.getElementById("btn-create-batch");
     if (addBtn) {
-      addBtn.classList.remove("hidden");
+      addBtn.classList.remove("inline-flex");
+      addBtn.classList.add("hidden");
+    }
+    if (createBatchBtn) {
+      if (currentOfficeId && currentOfficeId !== "ALL") {
+        createBatchBtn.classList.remove("hidden");
+        createBatchBtn.classList.add("inline-flex");
+      } else {
+        createBatchBtn.classList.add("hidden");
+        createBatchBtn.classList.remove("inline-flex");
+      }
     }
 
     // Beneficiary view: show controls container with Sort Batch visible inside it
@@ -742,8 +653,7 @@ export function initBeneficiaries() {
       }
     }
 
-    batchSortPanel.show();
-    batchSortPanel.rebuild();
+    batchSortPanel?.show();
     setupSortFilter(filteredData);
 
     // Status switch only for a specific implementor's roster (not the ALL aggregate)
@@ -759,6 +669,7 @@ export function initBeneficiaries() {
 
     // Clear URL state — back to implementors list
     _clearUrlParam("office");
+    _clearUrlParam("batch");
     _clearUrlParam("b");
 
     // Update Title and hide back button
@@ -774,15 +685,24 @@ export function initBeneficiaries() {
       backBtn.classList.add("hidden");
     }
 
-    // Hide Add Beneficiary Button
-    document.getElementById("btn-add-beneficiary")?.classList.add("hidden");
+    // Hide Add Beneficiary & Create Batch Buttons
+    const addBtn = document.getElementById("btn-add-beneficiary");
+    const createBatchBtn = document.getElementById("btn-create-batch");
+    if (addBtn) {
+      addBtn.classList.remove("inline-flex");
+      addBtn.classList.add("hidden");
+    }
+    if (createBatchBtn) {
+      createBatchBtn.classList.remove("inline-flex");
+      createBatchBtn.classList.add("hidden");
+    }
 
     // Hide the whole table-controls-container (no search/filter needed for implementors list)
     document.getElementById("table-controls-container")?.classList.add("hidden");
 
     // Show Sort Offices panel; hide Sort Batch panel + status switch
     officeSortPanel.show();
-    batchSortPanel.hide();
+    batchSortPanel?.hide();
     _showStatusSwitch(false);
 
     // Clear batch buttons
@@ -899,7 +819,7 @@ export function initBeneficiaries() {
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Batch</span>
           ${b.batch?.batch_number != null
-            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">BATCH ${escHtml(String(b.batch.batch_number))}</span>`
+            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.batch_number}`)}</span>`
             : `<span class="italic text-[10px] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
           }
         </div>
@@ -1021,6 +941,14 @@ export function initBeneficiaries() {
     }
 
     if (viewMode === "implementors") {
+      const tableWrap = document.getElementById("implementors-table-wrapper");
+      const kanbanWrap = document.getElementById("batches-kanban-wrapper");
+      const paginationControls = document.querySelector("nav[aria-label='Table navigation']");
+
+      if (tableWrap) tableWrap.classList.remove("hidden");
+      if (paginationControls) paginationControls.classList.remove("hidden");
+      if (kanbanWrap) kanbanWrap.classList.add("hidden");
+
       const page = activeImplementors.slice(start, end);
       tbody.innerHTML = page.map((s, idx) => {
         const absIdx = start + idx;
@@ -1071,98 +999,275 @@ export function initBeneficiaries() {
       // Page indicators
       updatePageIndicators(activeImplementors.length);
     } else {
-      const BATCH_CHIP_PALETTES = {
-        1: "bg-rose-100    text-rose-700    dark:bg-rose-500/20    dark:text-rose-300",
-        2: "bg-sky-100     text-sky-700     dark:bg-sky-500/20     dark:text-sky-300",
-        3: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-        4: "bg-amber-100   text-amber-700   dark:bg-amber-500/20   dark:text-amber-300",
-        5: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-300",
-      };
+      // ── Beneficiaries View (Batches or Filtered List) ──
+      const tableWrap = document.getElementById("implementors-table-wrapper");
+      const kanbanWrap = document.getElementById("batches-kanban-wrapper");
+      const paginationControls = document.querySelector("nav[aria-label='Table navigation']");
 
-      const page = activeBeneficiaries.slice(start, end);
-      const showOfficeCol = currentOfficeLocation === "ALL";
-      tbody.innerHTML = page.map((b, idx) => {
-        const absIdx   = start + idx;
-        const period   = formatPeriod(b);
-        const batchNum = b.batch?.batch_number != null ? Number(b.batch.batch_number) : null;
-        const chipCls  = batchNum !== null
-          ? (BATCH_CHIP_PALETTES[batchNum] || "bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-white/60")
-          : "";
-        const batchChip = batchNum !== null
-          ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide ${chipCls}">B${batchNum}</span>`
-          : "";
+      // Dynamic back button visibility
+      const backBtn = document.getElementById("btn-back-to-implementors");
+      if (backBtn) {
+        if (selectedBatchId !== null) {
+          backBtn.classList.remove("hidden");
+          backBtn.classList.add("inline-flex");
+        } else if (isAdmin) {
+          backBtn.classList.remove("hidden");
+          backBtn.classList.add("inline-flex");
+        } else {
+          backBtn.classList.remove("inline-flex");
+          backBtn.classList.add("hidden");
+        }
+      }
 
-        const isBaby = String(b.return_status || "NEW").toUpperCase() === "SPES BABY";
-        const statusChip = isBaby
-          ? `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-red-400/15 text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
-          : `<span class="ml-1.5 inline-flex items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
+      // Title update based on selectedBatchId
+      const tableTitle = document.getElementById("table-title");
+      if (tableTitle) {
+        const offName = currentOfficeName || "SPES";
+        if (selectedBatchId === null) {
+          tableTitle.textContent = `BATCHES - ${offName.toUpperCase()}`;
+        } else if (selectedBatchId === "unassigned") {
+          tableTitle.textContent = `UNASSIGNED - ${offName.toUpperCase()}`;
+        } else {
+          const matchBatch = activeBeneficiaries.find(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId))?.batch;
+          const batchLabel = matchBatch ? (matchBatch.batch_name ? matchBatch.batch_name.toUpperCase() : `BATCH ${matchBatch.batch_number}`) : "BATCH LIST";
+          tableTitle.textContent = `${batchLabel} - ${offName.toUpperCase()}`;
+        }
+      }
 
-        let officeName = "N/A";
-        if (b.staffs && b.staffs.office_id) {
-          const matchedOffice = allOffices.find(o => o.id === b.staffs.office_id);
-          if (matchedOffice) {
-            officeName = matchedOffice.name;
+      const addBtn = document.getElementById("btn-add-beneficiary");
+      const createBatchBtn = document.getElementById("btn-create-batch");
+      const sortBatchPanel = document.getElementById("sort-batch-panel");
+
+      if (selectedBatchId === null) {
+        // Show Batch Cards Grid
+        if (addBtn) {
+          addBtn.classList.remove("inline-flex");
+          addBtn.classList.add("hidden");
+        }
+        if (createBatchBtn) {
+          if (currentOfficeId && currentOfficeId !== "ALL") {
+            createBatchBtn.classList.remove("hidden");
+            createBatchBtn.classList.add("inline-flex");
+          } else {
+            createBatchBtn.classList.add("hidden");
+            createBatchBtn.classList.remove("inline-flex");
           }
         }
-        // Fallback in case staff is missing office_id but has a name
-        if (officeName === "N/A" && b.staffs && b.staffs.full_name) {
-          officeName = b.staffs.full_name;
+        if (sortBatchPanel) {
+          sortBatchPanel.classList.remove("hidden");
+          sortBatchPanel.classList.add("flex");
         }
-        
-        const officeNameShort = formatOfficeShort(officeName);
-        const officeTd = showOfficeCol ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap" title="${escHtml(officeName)}">${escHtml(officeNameShort)}</td>` : '';
+        if (tableWrap) tableWrap.classList.add("hidden");
+        if (paginationControls) paginationControls.classList.add("hidden");
+        if (kanbanWrap) {
+          kanbanWrap.classList.remove("hidden");
+        }
+        renderBatchCards();
+      } else {
+        // Show Filtered Beneficiaries Table
+        if (addBtn) {
+          addBtn.classList.remove("hidden");
+          addBtn.classList.add("inline-flex");
+        }
+        if (createBatchBtn) {
+          createBatchBtn.classList.add("hidden");
+          createBatchBtn.classList.remove("inline-flex");
+        }
+        if (sortBatchPanel) {
+          sortBatchPanel.classList.add("hidden");
+          sortBatchPanel.classList.remove("flex");
+        }
+        if (kanbanWrap) kanbanWrap.classList.add("hidden");
+        if (tableWrap) tableWrap.classList.remove("hidden");
+        if (paginationControls) paginationControls.classList.remove("hidden");
 
-        const isTarget = new URLSearchParams(window.location.search).get("b") === String(b.id);
-        const rowClass = isTarget 
-          ? "border-b border-gray-100 dark:border-white/5 bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse cursor-pointer" 
-          : "border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary transition-all duration-200 hover:bg-spes-blue/8 dark:hover:bg-spes-yellow/8 hover:border-l-4 hover:border-spes-blue dark:hover:border-spes-yellow cursor-pointer";
+        // Filter activeBeneficiaries by selectedBatchId
+        let filteredList = activeBeneficiaries;
+        if (selectedBatchId === "unassigned") {
+          filteredList = activeBeneficiaries.filter(b => b.batch_id === null || b.batch?.id === null);
+        } else {
+          filteredList = activeBeneficiaries.filter(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId));
+        }
 
-        return `
-          <tr class="${rowClass}"
-              data-bene-idx="${absIdx}">
+        // Paginate and render
+        const page = filteredList.slice(start, end);
+        tbody.innerHTML = page.map((b, idx) => {
+          const absIdx = start + idx;
+          const period = formatPeriod(b);
+          const isBaby = String(b.return_status || "NEW").toUpperCase() === "SPES BABY";
+
+          const checkboxTd = `
             <td class="p-4 text-center">
               <div class="flex items-center justify-center">
-                <input type="checkbox" class="beneficiary-row-checkbox h-4 w-4 cursor-pointer rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                <input type="checkbox" data-bene-id="${b.id}" class="beneficiary-row-checkbox h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
               </div>
             </td>
-            <td class="px-6 py-4 text-left whitespace-nowrap">
-              <span class="font-extrabold text-spes-black dark:text-spes-white">${escHtml(b.full_name?.toUpperCase() || "—")}</span>${batchChip}${statusChip}
-            </td>
-            ${officeTd}
-            <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
-            <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(period)}</td>
-            <td class="px-6 py-4 text-center font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap">${escHtml(b.contact_number || "—")}</td>
+          `;
+
+          const statusBadge = isBaby
+            ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">SPES Baby</span>`
+            : `<span class="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
+
+          const actionsTd = `
             <td class="px-6 py-4 text-center whitespace-nowrap">
-              <button class="btn-edit-bene cursor-pointer inline-flex items-center justify-center rounded-lg p-2 text-spes-blue transition-colors hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10" data-bene-idx="${absIdx}" title="Edit">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
+              <div class="inline-flex items-center gap-1">
+                <button class="btn-edit-bene cursor-pointer p-1 text-spes-blue hover:text-spes-blue/80 dark:text-spes-yellow dark:hover:text-spes-yellow/80" title="Edit">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button class="btn-archive-bene cursor-pointer p-1 text-red-500 hover:text-red-600" title="Archive">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
             </td>
-          </tr>`;
-      }).join("");
+          `;
 
-      // Row click → open drawer
-      tbody.querySelectorAll("tr").forEach(row => {
-        row.querySelector(".beneficiary-row-checkbox")?.addEventListener("click", e => e.stopPropagation());
-        row.querySelector(".btn-edit-bene")?.addEventListener("click", e => {
-          e.stopPropagation();
-          const idx = parseInt(e.currentTarget.getAttribute("data-bene-idx"), 10);
-          showEditModal(activeBeneficiaries[idx]);
+          const showOfficeCol = currentOfficeLocation === "ALL";
+          const officeTd = showOfficeCol
+            ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.staffs?.offices?.name || "N/A")}</td>`
+            : "";
+
+          return `
+            <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200" data-bene-id="${b.id}">
+              ${checkboxTd}
+              <td class="px-6 py-4 text-left font-extrabold text-spes-black dark:text-spes-white whitespace-nowrap">
+                <span class="btn-open-drawer cursor-pointer hover:underline hover:text-spes-blue dark:hover:text-spes-yellow">${escHtml(b.full_name?.toUpperCase() || "—")}</span>
+                ${statusBadge}
+              </td>
+              <td class="px-6 py-4 text-left text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
+              ${officeTd}
+              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(period)}</td>
+              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.contact_number || "—")}</td>
+              ${actionsTd}
+            </tr>
+          `;
+        }).join("");
+
+        // Wire up row buttons
+        tbody.querySelectorAll("tr").forEach(row => {
+          const beneId = row.dataset.beneId;
+          const bData = allBeneficiaries.find(b => String(b.id) === beneId);
+          if (!bData) return;
+
+          row.querySelector(".btn-open-drawer")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const idx = activeBeneficiaries.findIndex(b => String(b.id) === beneId);
+            openDrawer(bData, idx === -1 ? 0 : idx);
+          });
+
+          row.querySelector(".btn-edit-bene")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            showEditModal(bData);
+          });
+
+          row.querySelector(".btn-archive-bene")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            confirmArchive(bData.id, bData.full_name);
+          });
         });
-        row.addEventListener("click", () => {
-          const idx = parseInt(row.getAttribute("data-bene-idx"), 10);
-          openDrawer(activeBeneficiaries[idx], idx);
-        });
-      });
 
-      // Pagination info
-      const totalEl = document.getElementById("pagination-total");
-      const rangeEl = document.getElementById("pagination-range");
-      if (totalEl) totalEl.textContent = activeBeneficiaries.length;
-      if (rangeEl) rangeEl.textContent = activeBeneficiaries.length === 0 ? "0" : `${start + 1}–${Math.min(end, activeBeneficiaries.length)}`;
+        // Pagination info
+        const totalEl = document.getElementById("pagination-total");
+        const rangeEl = document.getElementById("pagination-range");
+        if (totalEl) totalEl.textContent = filteredList.length;
+        if (rangeEl) rangeEl.textContent = filteredList.length === 0 ? "0" : `${start + 1}–${Math.min(end, filteredList.length)}`;
 
-      // Page indicators
-      updatePageIndicators(activeBeneficiaries.length);
+        // Page indicators
+        updatePageIndicators(filteredList.length);
+      }
     }
+  }
+
+  async function renderBatchCards() {
+    const kanbanWrap = document.getElementById("batches-kanban-wrapper");
+    if (!kanbanWrap) return;
+    kanbanWrap.innerHTML = "";
+    kanbanWrap.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 select-none min-h-[300px] items-start";
+
+    // Fetch batches to know the columns
+    const { data: batchesData } = await fetchBatches({ forceRefresh: false });
+    const batches = batchesData || [];
+
+    // Group active beneficiaries
+    const grouped = { unassigned: [] };
+    batches.forEach(b => { grouped[b.id] = []; });
+
+    activeBeneficiaries.forEach(bene => {
+      const bid = bene.batch_id ?? bene.batch?.id;
+      if (bid && grouped[bid]) {
+        grouped[bid].push(bene);
+      } else {
+        grouped["unassigned"].push(bene);
+      }
+    });
+
+    const BATCH_PALETTES = [
+      { bg: "bg-sky-500/20",     border: "border-sky-500/30",     text: "text-sky-600 dark:text-sky-400" },
+      { bg: "bg-emerald-500/20", border: "border-emerald-500/30", text: "text-emerald-600 dark:text-emerald-400" },
+      { bg: "bg-amber-500/20",   border: "border-amber-500/30",   text: "text-amber-600 dark:text-amber-400" },
+      { bg: "bg-rose-500/20",    border: "border-rose-500/30",    text: "text-rose-600 dark:text-rose-400" },
+      { bg: "bg-fuchsia-500/20", border: "border-fuchsia-500/30", text: "text-fuchsia-600 dark:text-fuchsia-400" },
+      { bg: "bg-violet-500/20",  border: "border-violet-500/30",  text: "text-violet-600 dark:text-violet-400" },
+      { bg: "bg-cyan-500/20",    border: "border-cyan-500/30",    text: "text-cyan-600 dark:text-cyan-400" },
+      { bg: "bg-orange-500/20",  border: "border-orange-500/30",  text: "text-orange-600 dark:text-orange-400" },
+    ];
+
+    const totalBene = activeBeneficiaries.length || 1;
+
+    const createCard = (title, items, colId, pal, isUnassigned = false, batchNumber = "", batchName = "") => {
+      const percentage = Math.round((items.length / totalBene) * 100);
+      let progColor = "bg-emerald-500";
+      if (percentage > 33 && percentage <= 66) progColor = "bg-orange-500";
+      if (percentage > 66) progColor = "bg-red-500";
+
+      return `
+        <div class="batch-card cursor-pointer group flex flex-col justify-between p-5 rounded-none border ${pal.border} ${pal.bg} bg-opacity-40 dark:bg-opacity-10 backdrop-blur-md shadow-md hover:shadow-xl hover:scale-[1.02] hover:skew-x-[-6deg] active:scale-95 transition-all duration-300 min-h-[160px]" data-batch-id="${colId}">
+          <div class="flex flex-col justify-between h-full w-full group-hover:skew-x-[6deg] transition-all duration-300">
+            <div class="flex items-start justify-between">
+              <div class="space-y-1">
+                <h3 class="font-montserrat font-black text-base uppercase tracking-wider ${pal.text}">${title}</h3>
+                <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${items.length} Beneficiaries</p>
+              </div>
+            <div class="h-8 w-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center shadow-inner hover:bg-white dark:hover:bg-black/40 transition-all z-10"
+                 onclick="event.stopPropagation(); if (window.openEditBatchDrawer) window.openEditBatchDrawer('${colId}', '${batchNumber || ''}', '${batchName || ''}')">
+              <svg class="h-4 w-4 ${pal.text}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </div>
+          </div>
+          <div class="space-y-2 mt-4">
+            <div class="w-full bg-black/5 dark:bg-white/5 rounded-full h-2 overflow-hidden">
+              <div class="${progColor} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+            </div>
+            <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
+              <span>Progress</span>
+              <span>${percentage}% of Total</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+    };
+
+    let cardsHtml = "";
+
+    // Batches
+    batches.forEach((b, i) => {
+      const pal = BATCH_PALETTES[i % BATCH_PALETTES.length];
+      const title = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
+      cardsHtml += createCard(title, grouped[b.id] || [], b.id, pal, false, b.batch_number, b.batch_name);
+    });
+
+    kanbanWrap.innerHTML = cardsHtml;
+
+    // Click event to drill down
+    kanbanWrap.querySelectorAll(".batch-card").forEach(card => {
+      card.addEventListener("click", () => {
+        selectedBatchId = card.dataset.batchId;
+        currentPage = 1;
+        _setUrlParam("batch", selectedBatchId);
+        renderPaginatedTable();
+      });
+    });
   }
 
   function updatePageIndicators(totalCount) {
@@ -1191,7 +1296,16 @@ export function initBeneficiaries() {
     if (currentPage > 1) { currentPage--; renderPaginatedTable(); }
   });
   document.getElementById("next-page")?.addEventListener("click", () => {
-    const listLength = viewMode === "implementors" ? activeImplementors.length : activeBeneficiaries.length;
+    let listLength = 0;
+    if (viewMode === "implementors") {
+      listLength = activeImplementors.length;
+    } else if (selectedBatchId === "unassigned") {
+      listLength = activeBeneficiaries.filter(b => b.batch_id === null || b.batch?.id === null).length;
+    } else if (selectedBatchId !== null) {
+      listLength = activeBeneficiaries.filter(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId)).length;
+    } else {
+      listLength = activeBeneficiaries.length;
+    }
     const total = Math.ceil(listLength / ROWS_PER_PAGE);
     if (currentPage < total) { currentPage++; renderPaginatedTable(); }
   });
@@ -1208,7 +1322,6 @@ export function initBeneficiaries() {
     } else {
       sortFilterInstance = setupSortFiltration({
         tableId: "beneficiary-table-body",
-        btnSortId: "btn-sort-beneficiary",
         dropdownSortId: "dropdown-sort-beneficiary",
         btnFilterId: "btn-filter-beneficiary",
         dropdownFilterId: "dropdown-filter-beneficiary",
@@ -1254,11 +1367,9 @@ export function initBeneficiaries() {
     }
 
     allBeneficiaries = filteredData;
-    // Show controls container; Sort Batch lives inside it
+    // Show controls container
     document.getElementById("table-controls-container")?.classList.remove("hidden");
 
-    batchSortPanel.show();
-    batchSortPanel.rebuild();
     setupSortFilter(filteredData);
 
     // Officers see their own office roster directly — show the status switch for them.
@@ -1485,11 +1596,148 @@ export function initBeneficiaries() {
     addBtn.addEventListener("click", showAddModal);
   }
 
-  if (isAdmin) {
-    document.getElementById("btn-back-to-implementors")?.addEventListener("click", () => {
-      switchToImplementorsView();
-    });
+  // ── Wire Create Batch button (Admin only) ──────────────────────
+  const createBatchBtn = document.getElementById("btn-create-batch");
+  const batchDrawer = document.getElementById("drawer-batch-form");
+  const batchDrawerOverlay = document.getElementById("drawer-batch-form-overlay");
+  
+  if (createBatchBtn && batchDrawer) {
+    let currentEditBatchId = null;
+    const batchFormTitle = document.getElementById("drawer-batch-form-title");
+
+    const closeBatchDrawer = () => {
+      batchDrawer.classList.remove("translate-y-0", "sm:translate-x-0");
+      batchDrawer.classList.add("translate-y-full", "sm:translate-x-full");
+      batchDrawerOverlay.classList.remove("opacity-100");
+      batchDrawerOverlay.classList.add("opacity-0");
+      document.body.classList.remove("overflow-hidden");
+      setTimeout(() => {
+        batchDrawerOverlay.classList.add("hidden");
+        batchDrawerOverlay.classList.remove("block");
+        batchDrawer.classList.add("hidden");
+      }, 300);
+    };
+
+    const openBatchDrawer = () => {
+      currentEditBatchId = null;
+      if (batchFormTitle) batchFormTitle.textContent = "Create Batch";
+      document.getElementById("form-batch-drawer")?.reset();
+      document.getElementById("batch-form-error")?.classList.add("hidden");
+      batchDrawer.classList.remove("hidden");
+      batchDrawerOverlay.classList.remove("hidden");
+      batchDrawerOverlay.classList.add("block");
+      document.body.classList.add("overflow-hidden");
+      
+      // Trigger reflow
+      void batchDrawer.offsetWidth;
+      
+      requestAnimationFrame(() => {
+        batchDrawerOverlay.classList.remove("opacity-0");
+        batchDrawerOverlay.classList.add("opacity-100");
+        batchDrawer.classList.remove("translate-y-full", "sm:translate-x-full");
+        batchDrawer.classList.add("translate-y-0", "sm:translate-x-0");
+      });
+
+      setTimeout(() => {
+        document.getElementById("batch-form-number")?.focus();
+      }, 300);
+    };
+
+    // --- START: Edit Batch Drawer ---
+    window.openEditBatchDrawer = (batchId, batchNumber, batchName) => {
+      currentEditBatchId = batchId;
+      if (batchFormTitle) batchFormTitle.textContent = "Update Batch";
+      document.getElementById("form-batch-drawer")?.reset();
+      document.getElementById("batch-form-error")?.classList.add("hidden");
+      
+      const numInput = document.getElementById("batch-form-number");
+      const nameInput = document.getElementById("batch-form-name");
+      if (numInput) numInput.value = batchNumber;
+      if (nameInput) nameInput.value = batchName !== "null" ? batchName : "";
+
+      batchDrawer.classList.remove("hidden");
+      batchDrawerOverlay.classList.remove("hidden");
+      batchDrawerOverlay.classList.add("block");
+      document.body.classList.add("overflow-hidden");
+      
+      // Trigger reflow
+      void batchDrawer.offsetWidth;
+
+      requestAnimationFrame(() => {
+        batchDrawerOverlay.classList.remove("opacity-0");
+        batchDrawerOverlay.classList.add("opacity-100");
+        batchDrawer.classList.remove("translate-y-full", "sm:translate-x-full");
+        batchDrawer.classList.add("translate-y-0", "sm:translate-x-0");
+      });
+    };
+    // --- END: Edit Batch Drawer ---
+
+    createBatchBtn.addEventListener("click", openBatchDrawer);
+    document.getElementById("btn-close-batch-form-drawer")?.addEventListener("click", closeBatchDrawer);
+    document.getElementById("btn-cancel-batch-form")?.addEventListener("click", closeBatchDrawer);
+    batchDrawerOverlay?.addEventListener("click", closeBatchDrawer);
+
+    // Save Batch
+    const btnSaveBatch = document.getElementById("btn-save-batch-form");
+    if (btnSaveBatch) {
+      btnSaveBatch.addEventListener("click", async () => {
+        const numInput = document.getElementById("batch-form-number").value.trim();
+        const nameInput = document.getElementById("batch-form-name").value.trim();
+        const errDiv = document.getElementById("batch-form-error");
+        
+        if (!numInput) {
+          errDiv.textContent = "Batch Number is required.";
+          errDiv.classList.remove("hidden");
+          return;
+        }
+
+        btnSaveBatch.disabled = true;
+        btnSaveBatch.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Saving...`;
+        
+        const payload = { batchNumber: numInput, batchName: nameInput };
+        let res;
+        
+        if (currentEditBatchId) {
+          res = await updateBatch(currentEditBatchId, payload);
+        } else {
+          res = await addBatch(payload);
+        }
+        
+        btnSaveBatch.disabled = false;
+        btnSaveBatch.innerHTML = "Save Batch";
+        
+        if (!res.success) {
+          errDiv.textContent = res.error || (currentEditBatchId ? "Failed to update batch." : "Failed to add batch.");
+          errDiv.classList.remove("hidden");
+          return;
+        }
+        
+        // Success
+        modals.success("Success", `Batch ${numInput} ${currentEditBatchId ? "updated" : "added"} successfully!`);
+        invalidateBatchCache();
+        closeBatchDrawer();
+        
+        // Refresh view if in beneficiaries view
+        if (viewMode === "beneficiaries") {
+           batchSortPanel?.rebuild();
+           renderPaginatedTable();
+        }
+      });
+    }
   }
+
+  document.getElementById("btn-back-to-implementors")?.addEventListener("click", () => {
+    if (viewMode === "beneficiaries" && selectedBatchId !== null) {
+      selectedBatchId = null;
+      currentPage = 1;
+      _clearUrlParam("batch");
+      renderPaginatedTable();
+    } else {
+      if (isAdmin) {
+        switchToImplementorsView();
+      }
+    }
+  });
 
   window.openAddBeneficiaryDrawer = openBdfDrawer;
 
@@ -1606,8 +1854,9 @@ export function initBeneficiaries() {
       btn.type = "button";
       btn.className = "batch-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors font-bold text-sm";
       btn.dataset.batchId    = b.id;
-      btn.dataset.batchLabel = `BATCH ${b.batch_number}`;
-      btn.textContent = `BATCH ${b.batch_number}`;
+      const displayName = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
+      btn.dataset.batchLabel = displayName;
+      btn.textContent = displayName;
       li.appendChild(btn);
       batchOptionsList.appendChild(li);
     });
@@ -1759,8 +2008,14 @@ export function initBeneficiaries() {
           .find(s => String(s.office_id) === String(urlOffice));
         if (match) {
           await switchToBeneficiariesView(match.office, match.office_location, urlOffice);
+          const urlBatch = _getUrlParam("batch");
+          if (urlBatch) {
+            selectedBatchId = urlBatch;
+            renderPaginatedTable();
+          }
         } else {
           _clearUrlParam("office");
+          _clearUrlParam("batch");
           _clearUrlParam("b");
           await loadData();
         }
@@ -1819,14 +2074,14 @@ export async function calculateTotalBeneficiariesByImplementor(officeId) {
       }
       
       if (error) {
-        console.error("[SPES] Error fetching beneficiaries for count:", error);
+        if (import.meta.env.DEV) console.error("[SPES] Error fetching beneficiaries for count:", error?.code);
         return 0;
       }
     }
 
     return count || 0;
   } catch (err) {
-    console.error("[SPES] Exception in calculateTotalBeneficiariesByImplementor:", err);
+    if (import.meta.env.DEV) console.error("[SPES] Exception in calculateTotalBeneficiariesByImplementor:", err?.message);
     return 0;
   }
 }

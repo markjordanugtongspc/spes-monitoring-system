@@ -105,6 +105,18 @@ export async function fetchRoles(options = {}) {
 export async function addStaff(payload) {
   const clean = _sanitize(payload);
 
+  try {
+    const raw = localStorage.getItem("spes_session");
+    if (raw) {
+      const sessionObj = JSON.parse(raw);
+      if (sessionObj && sessionObj.id) {
+        clean.created_by = parseInt(sessionObj.id, 10);
+      }
+    }
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn("[SPES Staff] Could not set created_by field:", e);
+  }
+
   const required = ["full_name", "username", "email", "password"];
   for (const f of required) {
     if (!clean[f]) return { success: false, error: `${f.replace("_", " ")} is required.` };
@@ -113,7 +125,7 @@ export async function addStaff(payload) {
   const { data, error } = await supabase
     .from("staffs")
     .insert([clean])
-    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id")
+    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id, created_by")
     .single();
 
   if (error) {

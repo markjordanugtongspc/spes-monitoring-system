@@ -25,32 +25,56 @@ export function invalidateBatchCache() {
   try { localStorage.removeItem(BATCH_CACHE_KEY); } catch {}
 }
 
-export async function fetchBatches({ forceRefresh = false } = {}) {
-  if (!forceRefresh) {
+export async function fetchBatches({ forceRefresh = false, created_by_staff_id = undefined } = {}) {
+  if (!forceRefresh && created_by_staff_id === undefined) {
     const cached = _readBatchCache();
     if (cached) return { data: cached, fromCache: true };
   }
-  const { data, error } = await supabase
+  
+  let query = supabase
     .from("batch")
     .select("*")
     .order("batch_number", { ascending: true });
+    
+  if (created_by_staff_id !== undefined) {
+    query = query.or(`created_by_staff_id.is.null,created_by_staff_id.eq.${created_by_staff_id}`);
+  }
+  
+  const { data, error } = await query;
+  
   if (error) {
     if (import.meta.env.DEV) console.error("[SPES Batch] fetch error:", error.code, error.hint);
     return { data: [], error: "Unable to load batches." };
   }
+  
   const records = data ?? [];
-  _writeBatchCache(records);
+  if (created_by_staff_id === undefined) {
+    _writeBatchCache(records);
+  }
   return { data: records };
 }
 
-export async function addBatch(batchNumber) {
-  const num = parseInt(batchNumber, 10);
+export async function addBatch(payload) {
+  let num, name, staff_id;
+  if (typeof payload === 'object' && payload !== null) {
+      num = parseInt(payload.batchNumber, 10);
+      name = payload.batchName || null;
+      staff_id = payload.created_by_staff_id || null;
+  } else {
+      num = parseInt(payload, 10);
+  }
   if (!num || num < 1) return { success: false, error: "Invalid batch number." };
+
+  const insertData = { batch_number: num };
+  if (name) insertData.batch_name = name;
+  if (staff_id) insertData.created_by_staff_id = staff_id;
+
   const { data, error } = await supabase
     .from("batch")
-    .insert([{ batch_number: num }])
+    .insert([insertData])
     .select()
     .single();
+    
   if (error) {
     if (import.meta.env.DEV) console.error("[SPES Batch] insert error:", error.code, error.hint);
     const msg = error.code === "23505"
@@ -58,6 +82,33 @@ export async function addBatch(batchNumber) {
       : "Failed to add batch. Please try again.";
     return { success: false, error: msg };
   }
+  
+  invalidateBatchCache();
+  return { success: true, data };
+}
+
+export async function updateBatch(id, payload) {
+  const updateData = {};
+  if (payload.batchNumber) updateData.batch_number = parseInt(payload.batchNumber, 10);
+  if (payload.batchName !== undefined) updateData.batch_name = payload.batchName || null;
+  
+  if (Object.keys(updateData).length === 0) return { success: false, error: "No data to update." };
+
+  const { data, error } = await supabase
+    .from("batch")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+    
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] update error:", error.code, error.hint);
+    const msg = error.code === "23505" 
+      ? `Batch number already exists.`
+      : "Failed to update batch. Please try again.";
+    return { success: false, error: msg };
+  }
+  
   invalidateBatchCache();
   return { success: true, data };
 }
@@ -110,7 +161,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     return { data: [], error: "Account Not Approved. List is hidden." };
   }
 
-  let selectStr = "*, batch:batch_id(id, batch_number), education:educ_id(id, name), gender:gender_id(id, name)";
+  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:educ_id(id, name), gender:gender_id(id, name)";
   if (!isAdmin && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
@@ -284,4 +335,52 @@ function _sanitize(p) {
   }
 
   return result;
+}
+
+// ── Cleanup Helper ──────────────────────────────────────────────
+export async function cleanupExtraBatches() {
+  // Fetch IDs of batches 3, 4, 5, 6
+  const { data: batches, error } = await supabase
+    .from("batch")
+    .select("id, batch_number")
+    .in("batch_number", [3, 4, 5, 6]);
+
+  if (error || !batches) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] fetch for cleanup error:", error);
+    return { success: false, error: "Failed to fetch batches for cleanup." };
+  }
+
+  const batch3 = batches.find(b => b.batch_number === 3);
+  const badBatches = batches.filter(b => [4, 5, 6].includes(b.batch_number));
+
+  if (!batch3) return { success: false, error: "Batch 3 does not exist to receive transfers." };
+  if (badBatches.length === 0) return { success: true, message: "No batches 4, 5, or 6 found." };
+
+  const badBatchIds = badBatches.map(b => b.id);
+
+  // 1. Transfer beneficiaries from 4, 5, 6 to batch 3
+  const { error: updateErr } = await supabase
+    .from("beneficiary")
+    .update({ batch_id: batch3.id })
+    .in("batch_id", badBatchIds);
+
+  if (updateErr) {
+    if (import.meta.env.DEV) console.error("[SPES Beneficiary] transfer error:", updateErr);
+    return { success: false, error: "Failed to transfer beneficiaries to Batch 3." };
+  }
+
+  // 2. Delete batches 4, 5, 6
+  const { error: delErr } = await supabase
+    .from("batch")
+    .delete()
+    .in("id", badBatchIds);
+
+  if (delErr) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] delete error:", delErr);
+    return { success: false, error: "Failed to delete extra batches." };
+  }
+
+  invalidateBatchCache();
+  invalidateBeneficiaryCache();
+  return { success: true, message: "Successfully transferred beneficiaries to Batch 3 and deleted batches 4, 5, 6." };
 }

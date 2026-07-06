@@ -124,7 +124,7 @@ export function requireAuth() {
 }
 
 /**
- * Sign out — clear session and all caches, redirect to login.
+ * Sign out — set status OFFLINE in DB, clear session + all caches, redirect to login.
  */
 export function signOut() {
   modals.confirm(
@@ -132,8 +132,20 @@ export function signOut() {
     "Are you sure you want to log out of the SPES Portal?",
     "Yes, Sign Out",
     "Cancel"
-  ).then((result) => {
+  ).then(async (result) => {
     if (result.isConfirmed) {
+      // Set staff status to OFFLINE in DB before clearing the session
+      try {
+        const raw = localStorage.getItem("spes_session");
+        if (raw) {
+          const s = JSON.parse(raw);
+          if (s?.id) {
+            const { supabase } = await import("../../../../backend/api/supabase.js");
+            await supabase.from("staffs").update({ status: "OFFLINE" }).eq("id", s.id);
+          }
+        }
+      } catch { /* non-critical — proceed with logout regardless */ }
+
       localStorage.removeItem("spes_session");
       localStorage.removeItem("spes_supabase_token");
       sessionStorage.clear();

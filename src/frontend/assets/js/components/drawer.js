@@ -670,3 +670,135 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   return { open: openDrawer, close: closeDrawer };
 }
 // --- END: ADD IMPLEMENTOR BOTTOM OFFCANVAS DRAWER ---
+
+// --- START: BATCH FORM DRAWER ---
+export function initBatchFormDrawer({ onSuccess } = {}) {
+  const overlay = document.getElementById("drawer-batch-form-overlay");
+  const drawerEl = document.getElementById("drawer-batch-form");
+  const form = document.getElementById("form-batch-drawer");
+  const errorBanner = document.getElementById("batch-form-error");
+  const cancelBtn = document.getElementById("btn-cancel-batch-form");
+  const closeBtn = document.getElementById("btn-close-batch-form-drawer");
+  const submitBtn = document.getElementById("btn-save-batch-form");
+
+  if (!drawerEl || !overlay || !form) return { open: () => {}, close: () => {} };
+
+  let _addBatch;
+  const _loadApis = async () => {
+    if (_addBatch) return;
+    const mod = await import("../../../../backend/api/beneficiary.js");
+    _addBatch = mod.addBatch;
+  };
+
+  const _showError = (msg) => {
+    errorBanner.textContent = msg;
+    errorBanner.classList.remove("hidden");
+  };
+
+  const _hideError = () => {
+    errorBanner.textContent = "";
+    errorBanner.classList.add("hidden");
+  };
+
+  const _isMobile = () => window.innerWidth < 640;
+
+  const openDrawer = () => {
+    form.reset();
+    _hideError();
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Save Batch";
+
+    drawerEl.classList.remove("hidden");
+    drawerEl.setAttribute("aria-hidden", "false");
+    overlay.classList.remove("hidden");
+    drawerEl.offsetHeight; // trigger reflow
+    requestAnimationFrame(() => {
+      overlay.classList.remove("opacity-0");
+      overlay.classList.add("opacity-100");
+      if (_isMobile()) {
+        drawerEl.classList.remove("translate-y-full");
+        drawerEl.classList.add("translate-y-0");
+      } else {
+        drawerEl.classList.remove("sm:translate-x-full");
+        drawerEl.classList.add("sm:translate-x-0");
+      }
+    });
+    document.body.classList.add("overflow-hidden");
+  };
+
+  const closeDrawer = () => {
+    drawerEl.setAttribute("aria-hidden", "true");
+    if (_isMobile()) {
+      drawerEl.classList.remove("translate-y-0");
+      drawerEl.classList.add("translate-y-full");
+    } else {
+      drawerEl.classList.remove("sm:translate-x-0");
+      drawerEl.classList.add("sm:translate-x-full");
+    }
+    overlay.classList.remove("opacity-100");
+    overlay.classList.add("opacity-0");
+    setTimeout(() => {
+      overlay.classList.add("hidden");
+      if (drawerEl.classList.contains("translate-y-full") || drawerEl.classList.contains("sm:translate-x-full")) {
+        drawerEl.classList.add("hidden");
+      }
+      document.body.classList.remove("overflow-hidden");
+    }, 300);
+  };
+
+  cancelBtn?.addEventListener("click", closeDrawer);
+  closeBtn?.addEventListener("click", closeDrawer);
+  overlay.addEventListener("click", closeDrawer);
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    _hideError();
+
+    const batchNumber = document.getElementById("batch-form-number").value.trim();
+    const batchName = document.getElementById("batch-form-name").value.trim();
+
+    if (!batchNumber) return _showError("Batch Number is required.");
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+    
+    await _loadApis();
+
+    let sessionStaffId = null;
+    try {
+      const sessionRaw = localStorage.getItem("spes_session");
+      if (sessionRaw) {
+        const session = JSON.parse(sessionRaw);
+        if (session.role !== "admin") {
+          sessionStaffId = session.id;
+        }
+      }
+    } catch (e) {}
+
+    const payload = {
+      batchNumber,
+      batchName: batchName || null,
+      created_by_staff_id: sessionStaffId
+    };
+
+    const result = await _addBatch(payload);
+    
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Save Batch";
+
+    if (!result.success) {
+      return _showError(result.error || "Failed to create batch.");
+    }
+
+    closeDrawer();
+    
+    import("./modals.js").then(({ modals }) => {
+      modals.success("Batch Created", `Batch ${batchNumber} has been created successfully.`);
+    });
+    
+    if (typeof onSuccess === "function") onSuccess(result.data);
+  });
+
+  return { open: openDrawer, close: closeDrawer };
+}
+// --- END: BATCH FORM DRAWER ---

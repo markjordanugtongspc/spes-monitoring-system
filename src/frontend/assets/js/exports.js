@@ -145,14 +145,31 @@ async function _loadData(user) {
   // scoped to their own office — same rule as the Beneficiaries page.
   const scopeToOwnOffice = !isAdmin && !Boolean(user.permissions?.view_users);
 
+  // Build beneficiary select — for officers scope via staffs!staff_id inner join
+  // so only beneficiaries whose assigned staff belongs to the officer's office are returned.
+  let benefSelectStr = "id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name)";
+  if (!isAdmin && scopeToOwnOffice && user.office_id) {
+    // Inner join: excludes beneficiaries with no staff or staff in a different office
+    benefSelectStr += ", staffs!staff_id!inner(office_id, full_name)";
+  } else {
+    // Outer join: admin or officer with cross-office view gets all, with office info attached
+    benefSelectStr += ", staffs!staff_id(office_id, full_name)";
+  }
+
   // All three datasets are independent — fetch them in parallel
+  let benefQuery = supabase
+    .from("beneficiary")
+    .select(benefSelectStr)
+    .order("id", { ascending: true });
+
+  // Server-side office scope for officers (mirrors beneficiary.js fetchBeneficiaries logic)
+  if (!isAdmin && scopeToOwnOffice && user.office_id) {
+    benefQuery = benefQuery.eq("staffs.office_id", user.office_id);
+  }
+
   const [officesRes, benefRes, staffsRes] = await Promise.all([
     fetchOffices(),
-    supabase
-      .from("beneficiary")
-      .select("id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name)")
-      .order("id", { ascending: true })
-      .then(r => r, e => ({ data: null, error: e })),
+    benefQuery.then(r => r, e => ({ data: null, error: e })),
     supabase
       .from("staffs")
       .select("id, full_name, email, phone, address, status, role_id, office_id, approved, archive_at, offices(name), roles(name)")
@@ -163,32 +180,32 @@ async function _loadData(user) {
   _allOffices = officesRes.data ?? [];
 
   // ── Beneficiaries ──
-  // Schema: NO office_id, NO archive_at. FK to education(name) via education_id.
-  // Grouped by year_period in the preview since there is no office field.
+  // Beneficiary rows are already server-side filtered by office_id (for officers)
+  // via the staffs!staff_id join in the query above. Admins get all records.
   {
     const { data, error } = benefRes;
     if (import.meta.env.DEV && error) console.warn("[SPES Exports] beneficiary fetch:", error.message ?? error);
 
-    // RBAC scoping: officers see only beneficiaries whose address matches
-    // their office location (mirrors the Beneficiaries page logic)
-    let rows = data ?? [];
-    if (scopeToOwnOffice) {
-      const loc = (user.office_location ?? "").trim().toLowerCase();
-      rows = loc ? rows.filter(b => b.address && b.address.trim().toLowerCase() === loc) : [];
-    }
+    const rows = data ?? [];
 
-    _allBeneficiaries = rows.map(b => ({
-      ...b,
-      id_display: `ROX-RD-ESIG-${String(b.year_period ?? new Date().getFullYear()).slice(-4)}-${String(b.id).padStart(4, "0")}`,
-      gender:     b.gender_id === 1 ? "Male" : b.gender_id === 2 ? "Female" : "N/A",
-      education:  b.education?.name ?? _eduLabel(b.educ_id),
-      period:     [b.month_period, b.year_period].filter(Boolean).join(" ") || "N/A",
-      birthday:   b.birthday
-                    ? new Date(b.birthday).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
-                    : "N/A",
-      // group_key used internally for preview/print grouping
-      _group:     b.year_period ? `Year ${b.year_period}` : "Period N/A",
-    }));
+    _allBeneficiaries = rows.map(b => {
+      // Resolve the office name from the joined staffs row (if present)
+      const officeName = b.staffs?.offices?.name ?? b.staffs?.[0]?.offices?.name ?? null;
+      return {
+        ...b,
+        id_display: `ROX-RD-ESIG-${String(b.year_period ?? new Date().getFullYear()).slice(-4)}-${String(b.id).padStart(4, "0")}`,
+        gender:     b.gender_id === 1 ? "Male" : b.gender_id === 2 ? "Female" : "N/A",
+        education:  b.education?.name ?? _eduLabel(b.educ_id),
+        period:     [b.month_period, b.year_period].filter(Boolean).join(" ") || "N/A",
+        birthday:   b.birthday
+                      ? new Date(b.birthday).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+                      : "N/A",
+        // group_key: group by year period (primary) for the preview table
+        _group:     b.year_period ? `Year ${b.year_period}` : "Period N/A",
+        // Keep resolved office for possible filtering extension
+        _office:    officeName,
+      };
+    });
   }
 
   // ── Implementors ──

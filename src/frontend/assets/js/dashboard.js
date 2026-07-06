@@ -389,7 +389,20 @@ async function _loadTimelineMetrics() {
 
       if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-blue dark:text-spes-yellow">${total.toLocaleString()}</p>`;
       if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-emerald-500">${avg.toLocaleString()}</p>`;
-      if (growthEl) growthEl.innerHTML = `<p class="text-lg font-black text-spes-blue dark:text-spes-yellow">+14%</p>`;
+
+      // Real month-over-month growth: compare latest month vs previous month
+      const now = new Date();
+      const curMonthCount  = monthly[now.getMonth()];
+      const prevMonthIdx   = (now.getMonth() - 1 + 12) % 12;
+      const prevMonthCount = monthly[prevMonthIdx];
+      let growthStr = "N/A";
+      if (prevMonthCount > 0) {
+        const pct = Math.round(((curMonthCount - prevMonthCount) / prevMonthCount) * 100);
+        growthStr = `${pct >= 0 ? "+" : ""}${pct}%`;
+      } else if (curMonthCount > 0) {
+        growthStr = "+100%"; // brand new month with data
+      }
+      if (growthEl) growthEl.innerHTML = `<p class="text-lg font-black ${growthStr.startsWith("+") || growthStr === "N/A" ? "text-spes-blue dark:text-spes-yellow" : "text-rose-500"}">${growthStr}</p>`;
     } else {
       if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
       if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;

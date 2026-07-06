@@ -35,13 +35,27 @@ export async function fetchOwnProfile(id) {
 
 // ── Update the caller's own profile ────────────────────────────
 /**
- * @param {number|string} id      – the caller's staff id
- * @param {object} payload        – { full_name, address, religion, language, blood_type, password? }
+ * @param {number|string} id      – the caller's staff id (from session)
+ * @param {object} payload        – { full_name, address, religion, language, blood_type, phone, password? }
  *
  * Only whitelisted fields are written. `password` is included only when non-empty.
+ * The UPDATE is scoped to `.eq("id", id)` which, combined with RLS policies on
+ * the `staffs` table, ensures a user can only touch their own row.
  */
 export async function updateOwnProfile(id, payload) {
   if (!id) return { success: false, error: "Missing account id." };
+
+  // Verify the caller is only updating their own record by cross-checking the session
+  try {
+    const raw = typeof window !== "undefined" ? localStorage.getItem("spes_session") : null;
+    if (raw) {
+      const session = JSON.parse(raw);
+      // Strict equality check: session id must match the requested id
+      if (session?.id && String(session.id) !== String(id)) {
+        return { success: false, error: "Unauthorized: you may only edit your own profile." };
+      }
+    }
+  } catch { /* If localStorage is unavailable (SSR/tests), skip the check */ }
 
   const str = (v) => String(v ?? "").trim() || null;
 
@@ -55,6 +69,7 @@ export async function updateOwnProfile(id, payload) {
     religion:   str(payload.religion),
     language:   str(payload.language),
     blood_type: str(payload.blood_type),
+    phone:      str(payload.phone),
     updated_at: new Date().toISOString(),
   };
 
@@ -66,7 +81,7 @@ export async function updateOwnProfile(id, payload) {
     .from("staffs")
     .update(update)
     .eq("id", id)
-    .select("id, full_name, address, religion, language, blood_type")
+    .select("id, full_name, address, religion, language, blood_type, phone")
     .single();
 
   if (error) {

@@ -59,7 +59,7 @@ export function initLoginHandler() {
       }
     } catch (err) {
       modals.close();
-      console.error("[SPES] Login handler error:", err);
+      if (import.meta.env.DEV) console.error("[SPES] Login handler error:", err?.message);
       modals.error("System Error", "An unexpected error occurred. Please try again later.");
       signInBtn.disabled = false;
       signInBtn.textContent = "Sign In";
