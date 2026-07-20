@@ -103,6 +103,38 @@ export async function loginImplementor(username, password) {
   }
 }
 
+// ── Update Password ─────────────────────────────────────────────
+/**
+ * Update an implementor's password via the secure RPC function.
+ * 
+ * @param {string|number} staffId 
+ * @param {string} newPassword 
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function updateImplementorPassword(staffId, newPassword) {
+  try {
+    const { data, error } = await supabase
+      .from("staffs")
+      .update({ 
+        password: newPassword, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq("id", staffId)
+      .select()
+      .single();
+
+    if (error) {
+      if (import.meta.env.DEV) console.error("[SPES Auth] Update password error:", error.code);
+      return { success: false, error: "Failed to update password. Please try again." };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("[SPES Auth] Update password catch:", err?.message);
+    return { success: false, error: "An unexpected error occurred." };
+  }
+}
+
 // ── Registration ────────────────────────────────────────────────
 /**
  * Register a new staff member (Implementor).

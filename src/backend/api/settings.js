@@ -75,7 +75,13 @@ export async function updateOwnProfile(id, payload) {
 
   // Only change the password when the user typed a new one.
   const newPassword = String(payload.password ?? "").trim();
-  if (newPassword) update.password = newPassword;
+  if (newPassword) {
+    const auth = await import("./auth.js");
+    const pwdResult = await auth.updateImplementorPassword(id, newPassword);
+    if (!pwdResult.success) {
+      return { success: false, error: pwdResult.error || "Failed to update password." };
+    }
+  }
 
   const { data, error } = await supabase
     .from("staffs")

@@ -521,6 +521,9 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     const pwdLabel = document.querySelector('label[for="aif-password"]');
     const confirmPwdLabel = document.querySelector('label[for="aif-confirm-password"]');
 
+    const pwdInput = document.getElementById("aif-password");
+    const confirmPwdInput = document.getElementById("aif-confirm-password");
+
     if (staffData) {
       currentEditId = staffData.id;
       titleEl.textContent = "Edit Implementor";
@@ -528,6 +531,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Update Implementor`;
       pwdLabel.innerHTML = `New Password <span class="text-gray-400 text-xs font-normal">(Leave blank to keep current)</span>`;
       confirmPwdLabel.innerHTML = `Confirm New Password`;
+      pwdInput.required = false;
+      confirmPwdInput.required = false;
 
       document.getElementById("aif-full-name").value = staffData.full_name || "";
       document.getElementById("aif-username").value = staffData.username || "";
@@ -561,6 +566,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`;
       pwdLabel.innerHTML = `Password <span class="text-red-500">*</span>`;
       confirmPwdLabel.innerHTML = `Confirm Password <span class="text-red-500">*</span>`;
+      pwdInput.required = true;
+      confirmPwdInput.required = true;
       
       const approvedToggle = document.getElementById("aif-approved");
       approvedToggle.checked = false;
@@ -623,7 +630,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     const confirmPwd = document.getElementById("aif-confirm-password").value;
 
     if (!currentEditId && !pwd) return _showError("Password is required.");
-    if (pwd !== confirmPwd) return _showError("Passwords do not match.");
+    if (pwd && pwd !== confirmPwd) return _showError("Passwords do not match.");
 
     const payload = {
       full_name:  document.getElementById("aif-full-name").value.trim(),
@@ -639,7 +646,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       approved:   document.getElementById("aif-approved")?.checked || false,
     };
     
-    if (pwd) {
+    if (pwd && !currentEditId) {
       payload.password = pwd;
     }
 
@@ -654,6 +661,14 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     let result;
     if (currentEditId) {
       result = await _updateStaff(currentEditId, payload);
+      if (result.success && pwd) {
+        const auth = await import("../../../../backend/api/auth.js");
+        const pwdResult = await auth.updateImplementorPassword(currentEditId, pwd);
+        if (!pwdResult.success) {
+           _setLoading(false);
+           return _showError(pwdResult.error || "Failed to update password.");
+        }
+      }
     } else {
       payload.status = "OFFLINE";
       result = await _addStaff(payload);
