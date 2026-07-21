@@ -1026,7 +1026,7 @@ export function initBeneficiaries() {
           </th>
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
           ${showOfficeCol ? `<th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Office</th>` : ""}
-          <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
+          <th scope="col" class="px-6 py-3 text-left pl-22 whitespace-nowrap">Address</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Year Level</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Gender</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
@@ -2148,7 +2148,35 @@ export function initBeneficiaries() {
     if (urlBene) {
       const idx = activeBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
       if (idx !== -1) {
-        openDrawer(activeBeneficiaries[idx], idx);
+        // Go to the correct page
+        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+        
+        // renderPaginatedTable might not be in scope here if it's defined inside another block,
+        // but wait, it is hoisted or accessible? We should check if we can call it.
+        // But instead we can just click the pagination button or call renderPaginatedTable if it's available.
+        // Actually, we can dispatch a custom event or just assume renderPaginatedTable is accessible.
+        try {
+          if (typeof renderPaginatedTable === 'function') {
+             renderPaginatedTable();
+          }
+        } catch(e) {}
+
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-bene-id="${urlBene}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Add highlight effect
+            row.classList.add("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+            
+            // Wait for 1.5 seconds to let the user see the highlight before opening the drawer
+            setTimeout(() => {
+              row.classList.remove("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+              openDrawer(activeBeneficiaries[idx], idx);
+            }, 1500);
+          } else {
+            openDrawer(activeBeneficiaries[idx], idx);
+          }
+        }, 300);
       } else {
         // onRender is sync after fetch, so if not found the id is simply gone
         _clearUrlParam("b");

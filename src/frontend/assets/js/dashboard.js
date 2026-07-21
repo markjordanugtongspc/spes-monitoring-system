@@ -1605,18 +1605,21 @@ function initGlobalSearch(user) {
       searchContainer.classList.remove("max-w-lg");
       searchContainer.classList.add("max-w-5xl");
 
-      // 1. Search offices matching query
+      // Clean query of characters that break PostgREST .or() syntax (like commas and quotes)
+      const safeQuery = query.replace(/[,()"]/g, '').trim();
+
+      // 1. Search offices matching query (by name or location)
       const { data: matchedOffices } = await supabase
         .from("offices")
         .select("id")
-        .ilike("name", `%${query}%`);
+        .or(`name.ilike.%${safeQuery}%,location.ilike.%${safeQuery}%`);
       const officeIds = (matchedOffices || []).map(o => o.id);
 
       // 2. Setup Base Queries
       let benQuery = supabase
         .from("beneficiary")
         .select(`
-          id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id,
+          id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id, batch_id,
           staffs!staff_id${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
@@ -1677,18 +1680,18 @@ function initGlobalSearch(user) {
         }
       } else {
         if (roleId === 2) {
-          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
+          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
         } else {
           if (officeIds.length > 0) {
             const { data: staffsInOffice } = await supabase.from("staffs").select("id").in("office_id", officeIds);
             const sIds = (staffsInOffice || []).map(s => s.id);
             if (sIds.length > 0) {
-              benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%",staff_id.in."(${sIds.join(",")})"`);
+              benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%,staff_id.in.(${sIds.join(",")})`);
             } else {
-              benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
+              benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
             }
           } else {
-            benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
+            benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
           }
         }
 
@@ -1698,9 +1701,9 @@ function initGlobalSearch(user) {
 
         if (staffSearchQuery) {
           if (officeIds.length > 0) {
-            staffSearchQuery = staffSearchQuery.or(`full_name.ilike."%${query}%",office_id.in."(${officeIds.join(",")})"`).limit(10);
+            staffSearchQuery = staffSearchQuery.or(`full_name.ilike.%${safeQuery}%,office_id.in.(${officeIds.join(",")})`).limit(10);
           } else {
-            staffSearchQuery = staffSearchQuery.ilike("full_name", `%${query}%`).limit(10);
+            staffSearchQuery = staffSearchQuery.ilike("full_name", `%${safeQuery}%`).limit(10);
           }
           const { data: staffs } = await staffSearchQuery;
           if (staffs) staffResults = staffs;
@@ -1827,8 +1830,17 @@ function initGlobalSearch(user) {
           : "bg-emerald-500/10 text-emerald-500";
         const statusLabel = isSpesBaby ? "RETURNING" : "ONGOING";
 
+        let officeParam = "";
+        if (b.staffs && b.staffs.office_id) {
+          officeParam = `&office=${b.staffs.office_id}`;
+        }
+        let batchParam = "";
+        if (b.batch_id) {
+          batchParam = `&batch=${b.batch_id}`;
+        }
+
         listHtml += `
-          <a href="../beneficiaries/?b=${b.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
+          <a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
              <div>
                 <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(b.full_name, query)}</div>
                 <div class="text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
