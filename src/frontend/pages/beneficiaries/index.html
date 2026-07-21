@@ -44,7 +44,7 @@
             <!-- NEW / SPES BABY status switch — hidden by default, shown only when
                  an admin drills into a specific implementor's roster. Filters by return_status. -->
             <label for="toggle-status-mode" id="status-mode-switch"
-              class="hidden select-none items-center rounded-md cursor-pointer text-[10px] font-black uppercase tracking-widest shadow-lg overflow-hidden border border-white/20">
+              class="hidden select-none items-center rounded-md cursor-pointer text-[0.625rem] font-black uppercase tracking-widest shadow-lg overflow-hidden border border-white/20">
               <input id="toggle-status-mode" type="checkbox" class="hidden peer" />
               <span class="px-4 py-2 bg-emerald-500 text-white peer-checked:bg-white/10 peer-checked:text-white/70 transition-colors">New</span>
               <span class="px-4 py-2 bg-white/10 text-white/70 peer-checked:bg-red-400 peer-checked:text-white transition-colors">SPES Baby</span>
@@ -52,14 +52,14 @@
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <button id="btn-create-batch"
-              class="hidden cursor-pointer items-center gap-2 rounded-md bg-spes-yellow px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-spes-blue shadow-lg transition-all hover:bg-yellow-400 hover:scale-[1.02] active:scale-95">
+              class="hidden cursor-pointer items-center gap-2 rounded-md bg-spes-yellow px-5 py-2.5 text-[0.6875rem] font-black uppercase tracking-widest text-spes-blue shadow-lg transition-all hover:bg-yellow-400 hover:scale-[1.02] active:scale-95">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
               </svg>
               Create Batch
             </button>
             <button id="btn-add-beneficiary"
-              class="hidden cursor-pointer items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
+              class="hidden cursor-pointer items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-[0.6875rem] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
               </svg>
@@ -91,7 +91,7 @@
               <div class="flex flex-col gap-2 min-w-0">
                 <div class="flex items-center gap-3 min-w-0">
                   <button id="btn-back-to-implementors"
-                    class="cursor-pointer hidden items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-white/20 transition-all shrink-0"
+                    class="cursor-pointer hidden items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-white hover:bg-white/20 transition-all shrink-0"
                     title="Back to Implementors">
                     <svg class="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -118,7 +118,7 @@
                       </svg>
                     </div>
                     <input type="text" id="office-search-input"
-                      class="h-7 w-28 rounded border border-white/20 bg-white/10 pl-7 pr-2 text-[10px] text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15 focus:outline-none transition-all"
+                      class="h-7 w-28 rounded border border-white/20 bg-white/10 pl-7 pr-2 text-[0.625rem] text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15 focus:outline-none transition-all"
                       placeholder="Search offices…" autocomplete="off" />
                   </div>
                   <!-- Badge list: drag-scrollable single row -->
@@ -127,7 +127,7 @@
                     style="max-width:780px;scrollbar-width:none;-ms-overflow-style:none;"></div>
                 </div>
                 <button id="btn-sort-offices"
-                  class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
+                  class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
                   <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
@@ -147,7 +147,7 @@
                       style="max-width:480px;scrollbar-width:none;-ms-overflow-style:none;"></div>
                   </div>
                   <button id="btn-sort-batch"
-                    class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
+                    class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -177,9 +177,9 @@
                     <!-- Segmented Sort | Filter switcher -->
                     <div class="mb-2 flex items-center rounded-lg bg-gray-100 p-0.5 dark:bg-white/5 border border-black/5 dark:border-white/5">
                       <button type="button" id="sf-tab-sort"
-                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-all duration-200 bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow">Sort</button>
+                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[0.625rem] font-black uppercase tracking-wider transition-all duration-200 bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow">Sort</button>
                       <button type="button" id="sf-tab-filter"
-                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">Filter</button>
+                        class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[0.625rem] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">Filter</button>
                     </div>
 
                     <!-- Sort panel -->
@@ -194,7 +194,7 @@
 
                     <!-- Filter panel -->
                     <div id="dropdown-filter-beneficiary" class="hidden flex-col">
-                      <span class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Period</span>
+                      <span class="block px-2 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Period</span>
                       <button data-filter-key="period" data-filter-val="all"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Periods</button>
                       <button data-filter-key="period" data-filter-val="MAY 2026"
@@ -204,7 +204,7 @@
                       <button data-filter-key="period" data-filter-val="APRIL 2026"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">April 2026</button>
 
-                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Relationship</span>
+                      <span class="block px-2 py-1 mt-2 text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Relationship</span>
                       <button data-filter-key="relationship" data-filter-val="all"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Relationships</button>
                       <button data-filter-key="relationship" data-filter-val="MOTHER"
@@ -214,7 +214,7 @@
                       <button data-filter-key="relationship" data-filter-val="SPOUSE"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Spouse</button>
 
-                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Status</span>
+                      <span class="block px-2 py-1 mt-2 text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Status</span>
                       <button data-filter-key="return_status" data-filter-val="all"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Students</button>
                       <button data-filter-key="return_status" data-filter-val="NEW"
@@ -224,7 +224,7 @@
                         class="cursor-pointer flex w-full items-center gap-1.5 rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">
                         <span class="inline-block h-2 w-2 rounded-sm bg-red-400"></span>SPES Baby</button>
 
-                      <span class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive Status</span>
+                      <span class="block px-2 py-1 mt-2 text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive Status</span>
                       <button data-filter-key="status" data-filter-val="active"
                         class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Active Only</button>
                       <button data-filter-key="status" data-filter-val="archived"
@@ -267,9 +267,9 @@
                       </div>
                     </th>
                     <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
-                    <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
-                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Period of Employment</th>
-                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Contact No.</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Address</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Year Level</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Gender</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
@@ -447,7 +447,7 @@
     tabindex="-1" aria-labelledby="drawer-label">
     <div class="flex items-center justify-between border-b-2 border-spes-black pb-4 mb-5 dark:border-white/20">
       <h5 id="drawer-label"
-        class="inline-flex items-center text-sm sm:text-base md:text-lg font-montserrat font-black text-spes-blue dark:text-white tracking-tight uppercase truncate whitespace-nowrap max-w-[200px] sm:max-w-[260px]">
+        class="inline-flex items-center text-sm sm:text-base md:text-lg font-montserrat font-black text-spes-blue dark:text-white tracking-tight uppercase whitespace-nowrap">
         Beneficiary Details
       </h5>
       <button type="button" id="btn-close-beneficiary-drawer"
@@ -601,20 +601,11 @@
               class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
               Batch
             </label>
-            <!-- Hidden input still carries the batch_id value to _bdfCollect() -->
-            <input type="hidden" id="bdf-batch-id" name="batch_id" value="" />
-            <!-- Read-only display — populated by JS from selectedBatchId -->
-            <div id="bdf-batch-display"
-              class="flex items-center gap-2 rounded-none border border-spes-blue/10 bg-spes-blue/5 px-3.5 py-2.5 dark:border-spes-white/10 dark:bg-spes-white/5">
-              <span id="bdf-batch-badge"
-                class="inline-flex items-center gap-1.5 rounded bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">
-                <!-- JS fills this -->
-              </span>
-              <span id="bdf-batch-none"
-                class="text-xs italic text-spes-black/35 dark:text-spes-white/30 hidden">
-                No batch selected
-              </span>
-            </div>
+            <select id="bdf-batch-id" name="batch_id"
+              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+              <option value="">— Unassigned —</option>
+              <!-- JS fills this -->
+            </select>
           </div>
         </div>
 

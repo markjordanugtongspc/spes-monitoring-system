@@ -19,6 +19,7 @@ import {
   initPasswordConfirmReveal
 } from "./components/animations";
 import { setupRegOfficeCombobox } from "./components/sort-filtration";
+import { applyTextSize } from "./components/settings";
 
 
 function initAppVersionLabel() {
@@ -71,6 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initLoginSignupSlider();
   initPasswordConfirmReveal();
   setupRegOfficeCombobox();
+
+  // Apply saved global text size scale
+  const savedTextSize = parseInt(localStorage.getItem("spes-text-size") ?? "0", 10) || 0;
+  applyTextSize(savedTextSize);
 });
 
 

@@ -21,6 +21,7 @@ import { setupSortFiltration } from "./components/sort-filtration.js";
 import { initImplementorsDrawer, initAddImplementorDrawer } from "./components/drawer.js";
 import Swal from "sweetalert2";
 import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations.js";
+import { applyTextSize } from "./components/settings.js";
 
 // ── DEV: Supabase connection debug ────────────────────────────
 if (import.meta.env.DEV) {
@@ -181,6 +182,11 @@ async function init(user) {
   initAutoYear();
   initYearDropdown();
   initThemeToggle();
+  
+  // Apply saved global text size scale
+  const savedTextSize = parseInt(localStorage.getItem("spes-text-size") ?? "0", 10) || 0;
+  applyTextSize(savedTextSize);
+
   document.getElementById("staff-checkbox-all")?.addEventListener("change", onSelectAll);
   initSidebarState();
 }
@@ -359,7 +365,7 @@ function updateDynamicBadges() {
     const active = allImplementors.filter(s => !s.archive_at);
     const total = active.length || 0;
     const formattedTotal = Number(total).toLocaleString();
-    staffBadge.className = "rounded-full bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow";
+    staffBadge.className = "rounded-full bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow";
     staffBadge.textContent = `${formattedTotal} TOTAL`;
   }
 }
@@ -494,7 +500,7 @@ function renderTableRows(implementors, userRole) {
                      </svg>`
                 }
                 <!-- Tooltip -->
-                <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
                   ${s.approved ? "Approved" : "Not Approved"}
                   <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
                 </div>
@@ -502,12 +508,12 @@ function renderTableRows(implementors, userRole) {
 
               <div class="flex flex-col">
                 <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}</span>
-                <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)} · ${escHtml(displayRole)}</span>
+                <span class="text-[0.625rem] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)} · ${escHtml(displayRole)}</span>
               </div>
             </div>
           </td>
           <td class="px-6 py-4 text-center">
-            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
+            <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
               ${escHtml(_formatOfficeName(s.office))}
             </span>
           </td>
@@ -520,7 +526,7 @@ function renderTableRows(implementors, userRole) {
               <button data-clear-user-id="${s.id}" data-clear-role-id="${s.role_id}" ${isAdmin ? "disabled" : ""} class="btn-clear-perms cursor-pointer p-1.5 rounded-lg text-spes-red hover:bg-spes-red/10 transition-all flex items-center justify-center ${isAdmin ? "opacity-40 cursor-not-allowed" : ""}" aria-label="Clear Permissions">
                 <svg class="h-4.5 w-4.5 shrink-0 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
-              <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+              <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
                 Clear Permissions
                 <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
               </div>
@@ -562,36 +568,36 @@ function renderTableRows(implementors, userRole) {
                  </svg>`
             }
             <!-- Tooltip -->
-            <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+            <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
               ${s.approved ? "Approved" : "Not Approved"}
               <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
             </div>
           </div>
 
           <div class="flex flex-col">
-            <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}${isArchived ? ' <span class="ml-1 inline-flex rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">Archived</span>' : ""}</span>
-            <span class="text-[10px] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)}</span>
+            <span class="text-sm font-extrabold text-spes-black dark:text-spes-white leading-tight">${escHtml(s.full_name)}${isArchived ? ' <span class="ml-1 inline-flex rounded px-1.5 py-0.5 text-[0.5625rem] font-black uppercase tracking-wider bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400">Archived</span>' : ""}</span>
+            <span class="text-[0.625rem] font-bold text-spes-black/40 dark:text-spes-white/40 tracking-tighter mt-0.5">@${escHtml(s.username)}</span>
           </div>
         </div>
       </td>
       <td class="px-6 py-4 text-center">
-        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
+        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
           ${escHtml(_formatOfficeName(s.office))}
         </span>
       </td>
       <td class="px-6 py-4 text-center">
-        <span class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black tracking-widest ${getRoleBadgeClasses(s.role)}">${s.role}</span>
+        <span class="inline-flex rounded-full px-2.5 py-0.5 text-[0.625rem] font-black tracking-widest ${getRoleBadgeClasses(s.role)}">${s.role}</span>
       </td>
       <td class="px-6 py-4 text-center">
         <div class="flex items-center justify-center gap-1.5">
           <div class="h-2 w-2 rounded-full ${getStatusColor(s.status)}${isArchived ? "" : " animate-pulse"}"></div>
-          <span class="text-[10px] font-black uppercase tracking-widest">${isArchived ? "ARCHIVED" : s.status}</span>
+          <span class="text-[0.625rem] font-black uppercase tracking-widest">${isArchived ? "ARCHIVED" : s.status}</span>
         </div>
       </td>
       <td class="px-6 py-4 text-center whitespace-nowrap">
         <div class="flex items-center justify-center gap-2">
         ${isArchived && canEdit
-          ? `<button class="btn-restore-impl cursor-pointer text-[11px] font-black uppercase text-emerald-600 hover:underline dark:text-emerald-400 transition-all">Restore</button>`
+          ? `<button class="btn-restore-impl cursor-pointer text-[0.6875rem] font-black uppercase text-emerald-600 hover:underline dark:text-emerald-400 transition-all">Restore</button>`
           : (!isArchived && canEdit
             ? `<div class="relative group cursor-pointer inline-flex">
                  <button class="btn-edit-impl p-1.5 rounded-lg text-spes-blue hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors cursor-pointer" aria-label="Edit">
@@ -599,7 +605,7 @@ function renderTableRows(implementors, userRole) {
                      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z"/>
                    </svg>
                  </button>
-                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
                    Edit
                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
                  </div>
@@ -611,12 +617,12 @@ function renderTableRows(implementors, userRole) {
                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                    </svg>
                  </button>
-                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
+                 <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
                    ${s.approved ? "Already Approved" : "Approve"}
                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
                  </div>
                </div>`
-            : `<span class="text-[10px] text-gray-400 dark:text-white/25">—</span>`)}
+            : `<span class="text-[0.625rem] text-gray-400 dark:text-white/25">—</span>`)}
         </div>
       </td>
     </tr>`;
@@ -1671,18 +1677,18 @@ function initGlobalSearch(user) {
         }
       } else {
         if (roleId === 2) {
-          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
+          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
         } else {
           if (officeIds.length > 0) {
             const { data: staffsInOffice } = await supabase.from("staffs").select("id").in("office_id", officeIds);
             const sIds = (staffsInOffice || []).map(s => s.id);
             if (sIds.length > 0) {
-              benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%,staff_id.in.(${sIds.join(",")})`);
+              benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%",staff_id.in."(${sIds.join(",")})"`);
             } else {
-              benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
+              benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
             }
           } else {
-            benQuery = benQuery.or(`full_name.ilike.%${query}%,address.ilike.%${query}%,designated.ilike.%${query}%`);
+            benQuery = benQuery.or(`full_name.ilike."%${query}%",address.ilike."%${query}%",designated.ilike."%${query}%"`);
           }
         }
 
@@ -1692,7 +1698,7 @@ function initGlobalSearch(user) {
 
         if (staffSearchQuery) {
           if (officeIds.length > 0) {
-            staffSearchQuery = staffSearchQuery.or(`full_name.ilike.%${query}%,office_id.in.(${officeIds.join(",")})`).limit(10);
+            staffSearchQuery = staffSearchQuery.or(`full_name.ilike."%${query}%",office_id.in."(${officeIds.join(",")})"`).limit(10);
           } else {
             staffSearchQuery = staffSearchQuery.ilike("full_name", `%${query}%`).limit(10);
           }
@@ -1716,7 +1722,7 @@ function initGlobalSearch(user) {
             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
           </svg>
           <div class="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">No results found for "<span class="text-spes-blue dark:text-spes-yellow">${query}</span>"</div>
-          <p class="text-[10px] text-gray-400 dark:text-white/40 mt-2 font-semibold uppercase tracking-wider">Try adjusting your search keywords</p>
+          <p class="text-[0.625rem] text-gray-400 dark:text-white/40 mt-2 font-semibold uppercase tracking-wider">Try adjusting your search keywords</p>
         </div>
       `;
       return;
@@ -1739,13 +1745,13 @@ function initGlobalSearch(user) {
                <div class="flex items-center justify-between mb-6">
                   <h4 id="search-chart-title" class="text-xs font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Gender Distribution</h4>
                   <div class="flex items-center gap-2 bg-white dark:bg-spes-dark-secondary rounded-lg p-1 border border-gray-100 dark:border-white/5 shadow-xs">
-                     <button id="btn-search-chart-gender" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs">
+                     <button id="btn-search-chart-gender" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] font-black uppercase tracking-wider rounded-md transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
                         </svg>
                         <span>Gender</span>
                      </button>
-                     <button id="btn-search-chart-total" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
+                     <button id="btn-search-chart-total" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/>
                         </svg>
@@ -1759,7 +1765,7 @@ function initGlobalSearch(user) {
                </div>
             </div>
             
-            <p class="text-[9px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-widest text-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5 leading-relaxed">
+            <p class="text-[0.5625rem] font-bold text-gray-400 dark:text-white/30 uppercase tracking-widest text-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5 leading-relaxed">
                • Showing aggregated analytics based on your search criteria. Data is dynamically cached for optimized performance.
             </p>
          </div>
@@ -1773,10 +1779,10 @@ function initGlobalSearch(user) {
                      <img src="/c_spes.png" class="h-10 w-10 rounded-full bg-white/10 p-1 object-cover" alt="Logo" />
                      <div>
                         <h4 class="text-base font-black uppercase tracking-wider font-montserrat">Extra Stats</h4>
-                        <p class="text-[10px] text-white/70 font-semibold tracking-wide">Keyword: "<span id="search-keyword-display" class="font-bold text-spes-yellow">${query}</span>"</p>
+                        <p class="text-[0.625rem] text-white/70 font-semibold tracking-wide">Keyword: "<span id="search-keyword-display" class="font-bold text-spes-yellow">${query}</span>"</p>
                      </div>
                   </div>
-                  <div class="text-[9px] bg-white/10 px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider text-right" id="search-timestamp">
+                  <div class="text-[0.5625rem] bg-white/10 px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider text-right" id="search-timestamp">
                      ${timestamp}
                   </div>
                </div>
@@ -1789,7 +1795,7 @@ function initGlobalSearch(user) {
             
             <!-- Footer -->
             <div class="p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 text-center flex flex-col gap-1">
-               <span class="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-white/30">End of Report</span>
+               <span class="text-[0.5625rem] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-white/30">End of Report</span>
                <span class="text-[8px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20">Generated by 2026 GIP Monitor</span>
             </div>
          </div>
@@ -1807,7 +1813,7 @@ function initGlobalSearch(user) {
     };
 
     if (beneficiaries.length > 0) {
-      listHtml += `<h5 class="text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
+      listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
       beneficiaries.forEach(b => {
         let officeName = "N/A";
         if (b.staffs && b.staffs.offices) {
@@ -1825,9 +1831,9 @@ function initGlobalSearch(user) {
           <a href="../beneficiaries/?b=${b.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
              <div>
                 <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(b.full_name, query)}</div>
-                <div class="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
+                <div class="text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
              </div>
-             <span class="text-[9px] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
+             <span class="text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
                 SPES - ${statusLabel}
              </span>
           </a>
@@ -1836,7 +1842,7 @@ function initGlobalSearch(user) {
     }
 
     if (staffs.length > 0) {
-      listHtml += `<h5 class="text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">Implementors (${staffs.length})</h5>`;
+      listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">Implementors (${staffs.length})</h5>`;
       staffs.forEach(s => {
         let officeName = "N/A";
         if (s.offices) {
@@ -1855,9 +1861,9 @@ function initGlobalSearch(user) {
           <a href="../implementors/?id=${s.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-yellow/40 hover:scale-[1.01] transition-all duration-200">
              <div>
                 <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(s.full_name, query)}</div>
-                <div class="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
+                <div class="text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
              </div>
-             <span class="text-[9px] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
+             <span class="text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
                 STAFF - ${statusText}
              </span>
           </a>
@@ -1965,8 +1971,8 @@ function initGlobalSearch(user) {
       if (chartMode === "GENDER") return;
       chartMode = "GENDER";
       if (titleEl) titleEl.textContent = "Gender Distribution";
-      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
-      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
       renderChartInstance(chartMode);
     });
 
@@ -1974,8 +1980,8 @@ function initGlobalSearch(user) {
       if (chartMode === "TOTAL") return;
       chartMode = "TOTAL";
       if (titleEl) titleEl.textContent = "Status Breakdown";
-      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
-      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
       renderChartInstance(chartMode);
     });
   }

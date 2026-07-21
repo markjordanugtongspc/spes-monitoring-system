@@ -1,6 +1,6 @@
 {
   "name": "spes",
-  "version": "0.2.78",
+  "version": "0.3.2",
   "description": "DOLE SPES Portal desktop and web client",
   "author": "DOLE SPES",
   "private": true,
@@ -10,7 +10,7 @@
     "dev": "npm run version:patch && vite",
     "build": "npm run version:patch && vite build",
     "generate:icon": "node scripts/generate-icon.mjs",
-    "version:patch": "npm version patch --no-git-tag-version",
+    "version:patch": "node scripts/custom-version.mjs",
     "postversion": "node scripts/sync-version.mjs",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",

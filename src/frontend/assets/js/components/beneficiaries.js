@@ -207,7 +207,7 @@ function initAnimatedBadgePanel(config) {
     const allBadge = document.createElement("button");
     allBadge.type = "button";
     allBadge.className =
-      "anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 " +
+      "anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 " +
       "bg-white text-spes-blue border-white/50 ring-2 ring-white/60 ring-offset-1";
     allBadge.dataset.badgeId = "all";
     allBadge.dataset.label   = "all";
@@ -220,7 +220,7 @@ function initAnimatedBadgePanel(config) {
       const badge = document.createElement("button");
       badge.type  = "button";
       badge.className =
-        `anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 ` +
+        `anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 ` +
         `${pal.bg} ${pal.text} ${pal.border} hover:brightness-125 hover:scale-105`;
       badge.dataset.badgeId = config.getId(item);
       badge.dataset.label   = config.getLabel(item).toLowerCase();
@@ -645,6 +645,8 @@ export function initBeneficiaries() {
     allBeneficiaries = filteredData;
     currentPage = 1;
 
+    updateDynamicFilterDropdown(filteredData);
+
     const targetB = _getUrlParam("b");
     if (targetB) {
       const idx = filteredData.findIndex(item => String(item.id) === String(targetB));
@@ -658,6 +660,105 @@ export function initBeneficiaries() {
 
     // Status switch only for a specific implementor's roster (not the ALL aggregate)
     _showStatusSwitch(officeLocation !== "ALL");
+  }
+
+  function updateDynamicFilterDropdown(data) {
+    const filterContainer = document.getElementById("dropdown-filter-beneficiary");
+    if (!filterContainer) return;
+
+    // 1. Periods (unique month_period + year_period)
+    const periods = new Set();
+    data.forEach(b => {
+      const p = formatPeriod(b);
+      if (p !== "N/A") periods.add(p);
+    });
+    const sortedPeriods = Array.from(periods).sort((a, b) => new Date(b) - new Date(a));
+
+    // 2. Education
+    const educations = new Set();
+    data.forEach(b => {
+      if (b.education?.name) educations.add(b.education.name);
+    });
+    const sortedEducations = Array.from(educations).sort();
+
+    // 3. Gender
+    const genders = new Set();
+    data.forEach(b => {
+      if (b.gender?.name) genders.add(b.gender.name);
+    });
+    const sortedGenders = Array.from(genders).sort();
+
+    // 4. Birthday Months
+    const bdayMonths = new Set();
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    data.forEach(b => {
+      if (b.birthday) {
+        const d = new Date(b.birthday);
+        if (!isNaN(d.getTime())) bdayMonths.add(monthNames[d.getMonth()]);
+      }
+    });
+    const sortedBdayMonths = Array.from(bdayMonths).sort((a, b) => monthNames.indexOf(a) - monthNames.indexOf(b));
+
+    let html = "";
+    const renderBtns = (key, label, allLabel, arr) => {
+      if (arr.length === 0) return "";
+      let h = `
+        <details class="group mb-1">
+          <summary class="flex justify-between items-center cursor-pointer rounded-md p-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 transition-colors">
+            <span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">${label}</span>
+            <svg class="h-3 w-3 text-spes-blue/50 dark:text-spes-yellow/50 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="pl-3 mt-1 flex flex-col space-y-0.5 mb-2">
+            <button data-filter-key="${key}" data-filter-val="all" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">${allLabel}</button>
+      `;
+      arr.forEach(item => {
+        h += `<button data-filter-key="${key}" data-filter-val="${item.toLowerCase()}" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left uppercase text-xs">${item}</button>`;
+      });
+      h += `</div></details>`;
+      return h;
+    };
+
+    html += renderBtns("period", "Period", "All Periods", sortedPeriods);
+    html += renderBtns("education_name", "Education Level", "All Education", sortedEducations);
+    html += renderBtns("gender_name", "Gender", "All Genders", sortedGenders);
+    html += renderBtns("bday_month", "Birthday Month", "All Months", sortedBdayMonths);
+
+    // Static Status
+    html += `
+      <details class="group mb-1">
+        <summary class="flex justify-between items-center cursor-pointer rounded-md p-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 transition-colors">
+          <span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Status</span>
+          <svg class="h-3 w-3 text-spes-blue/50 dark:text-spes-yellow/50 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div class="pl-3 mt-1 flex flex-col space-y-0.5 mb-2">
+          <button data-filter-key="return_status" data-filter-val="all" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Students</button>
+          <button data-filter-key="return_status" data-filter-val="new" class="cursor-pointer flex w-full items-center gap-1.5 rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-xs"><span class="inline-block h-2 w-2 rounded-sm bg-emerald-500"></span>New</button>
+          <button data-filter-key="return_status" data-filter-val="spes baby" class="cursor-pointer flex w-full items-center gap-1.5 rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-xs"><span class="inline-block h-2 w-2 rounded-sm bg-red-400"></span>SPES Baby</button>
+        </div>
+      </details>
+    `;
+
+    // Static Archive Status
+    html += `
+      <details class="group mb-1">
+        <summary class="flex justify-between items-center cursor-pointer rounded-md p-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 transition-colors">
+          <span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive Status</span>
+          <svg class="h-3 w-3 text-spes-blue/50 dark:text-spes-yellow/50 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div class="pl-3 mt-1 flex flex-col space-y-0.5 mb-2">
+          <button data-filter-key="status" data-filter-val="active" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Active Only</button>
+          <button data-filter-key="status" data-filter-val="archived" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-xs">Archived Only</button>
+        </div>
+      </details>
+    `;
+
+    filterContainer.innerHTML = html;
   }
 
   async function switchToImplementorsView() {
@@ -748,7 +849,7 @@ export function initBeneficiaries() {
     if (drawerLabel) {
       drawerLabel.textContent = (b.full_name || "").toUpperCase();
       drawerLabel.className =
-        "text-sm sm:text-base md:text-lg font-montserrat font-black text-spes-blue dark:text-white tracking-tight uppercase truncate whitespace-nowrap max-w-[190px] sm:max-w-[250px]";
+        "text-sm sm:text-base md:text-lg font-montserrat font-black text-spes-blue dark:text-white tracking-tight uppercase";
     }
 
     const period = formatPeriod(b);
@@ -772,11 +873,11 @@ export function initBeneficiaries() {
       <div class="flex items-center justify-between mb-5">
         <h4 class="font-montserrat text-xs font-black uppercase tracking-wider text-spes-black/50 dark:text-white/50">Personal Profile</h4>
         <div class="flex items-center gap-1.5">
-          <button id="btn-drawer-prev" class="cursor-pointer inline-flex items-center gap-1 rounded-md border border-spes-blue/20 bg-white dark:bg-transparent dark:border-white/10 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/5 transition-all">
+          <button id="btn-drawer-prev" ${index === 0 ? 'disabled' : ''} class="${index === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5'} inline-flex items-center gap-1 rounded-md border border-spes-blue/20 bg-white dark:bg-transparent dark:border-white/10 px-2.5 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/70 transition-all">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
             Prev
           </button>
-          <button id="btn-drawer-next" class="cursor-pointer inline-flex items-center gap-1 rounded-md bg-spes-blue px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white hover:bg-spes-blue/90 shadow-md transition-all">
+          <button id="btn-drawer-next" ${index === activeBeneficiaries.length - 1 ? 'disabled' : ''} class="${index === activeBeneficiaries.length - 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-spes-blue/90'} inline-flex items-center gap-1 rounded-md bg-spes-blue px-3 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-white shadow-md transition-all">
             Next
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
           </button>
@@ -819,20 +920,20 @@ export function initBeneficiaries() {
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Batch</span>
           ${b.batch?.batch_number != null
-            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.batch_number}`)}</span>`
-            : `<span class="italic text-[10px] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
+            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.batch_number}`)}</span>`
+            : `<span class="italic text-[0.625rem] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
           }
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Status</span>
           ${String(b.return_status || "NEW").toUpperCase() === "SPES BABY"
-            ? `<span class="inline-flex items-center gap-1 bg-red-400/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
-            : `<span class="inline-flex items-center gap-1 bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`
+            ? `<span class="inline-flex items-center gap-1 bg-red-400/15 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
+            : `<span class="inline-flex items-center gap-1 bg-emerald-500/15 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`
           }
         </div>
         <div class="flex justify-between items-center py-1">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Education</span>
-          <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[10px] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+          <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
             ${escHtml(b.education?.name || "Not Provided")}
           </span>
@@ -842,12 +943,10 @@ export function initBeneficiaries() {
 
     // Prev / Next within drawer
     document.getElementById("btn-drawer-prev")?.addEventListener("click", () => {
-      const prev = (index - 1 + activeBeneficiaries.length) % activeBeneficiaries.length;
-      openDrawer(activeBeneficiaries[prev], prev);
+      if (index > 0) openDrawer(activeBeneficiaries[index - 1], index - 1);
     });
     document.getElementById("btn-drawer-next")?.addEventListener("click", () => {
-      const next = (index + 1) % activeBeneficiaries.length;
-      openDrawer(activeBeneficiaries[next], next);
+      if (index < activeBeneficiaries.length - 1) openDrawer(activeBeneficiaries[index + 1], index + 1);
     });
 
     // Edit
@@ -928,8 +1027,8 @@ export function initBeneficiaries() {
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
           ${showOfficeCol ? `<th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Office</th>` : ""}
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Address</th>
-          <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Period of Employment</th>
-          <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Contact No.</th>
+          <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Year Level</th>
+          <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Gender</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
         `;
         if (controlsContainer) controlsContainer.classList.remove("hidden");
@@ -953,7 +1052,7 @@ export function initBeneficiaries() {
       tbody.innerHTML = page.map((s, idx) => {
         const absIdx = start + idx;
         const officeBadge = s.office && s.office !== "N/A"
-          ? `<span class="inline-flex items-center gap-1 rounded bg-spes-blue/10 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow" title="${escHtml(s.office)}">${escHtml(formatOfficeShort(s.office))}</span>`
+          ? `<span class="inline-flex items-center gap-1 rounded bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow" title="${escHtml(s.office)}">${escHtml(formatOfficeShort(s.office))}</span>`
           : `<span class="text-spes-black/30 dark:text-spes-white/30 italic text-xs">None</span>`;
 
         const isRowAdmin = String(s.role).toLowerCase().includes("admin") || String(s.full_name).toLowerCase().includes("system administrator");
@@ -967,7 +1066,7 @@ export function initBeneficiaries() {
               data-impl-idx="${absIdx}">
             <td class="px-6 py-4 text-left font-extrabold text-spes-black dark:text-spes-white whitespace-nowrap">
               ${escHtml(s.full_name?.toUpperCase() || "—")}
-              ${isRowAdmin ? '<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">Admin</span>' : ''}
+              ${isRowAdmin ? '<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">Admin</span>' : ''}
             </td>
             <td class="px-6 py-4 text-left whitespace-nowrap">${officeBadge}</td>
             <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(s.office_location || "N/A")}</td>
@@ -1105,8 +1204,18 @@ export function initBeneficiaries() {
           `;
 
           const statusBadge = isBaby
-            ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">SPES Baby</span>`
-            : `<span class="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
+            ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">SPES Baby</span>`
+            : `<span class="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
+
+          const searchQ = (document.getElementById('staff-search-input')?.value || "").trim().toLowerCase();
+          const hasMatchedPhone = searchQ && b.contact_number && b.contact_number.toLowerCase().includes(searchQ);
+
+          const contactTooltip = hasMatchedPhone
+            ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-spes-blue/10 dark:bg-spes-yellow/10 px-2 py-0.5 text-[0.625rem] font-black uppercase text-spes-blue dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/20">
+                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                 ${escHtml(b.contact_number)}
+               </span>`
+            : "";
 
           const actionsTd = `
             <td class="px-6 py-4 text-center whitespace-nowrap">
@@ -1121,22 +1230,22 @@ export function initBeneficiaries() {
             </td>
           `;
 
-          const showOfficeCol = currentOfficeLocation === "ALL";
-          const officeTd = showOfficeCol
-            ? `<td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.staffs?.offices?.name || "N/A")}</td>`
-            : "";
-
           return `
-            <tr class="border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200" data-bene-id="${b.id}">
+            <tr title="Click for Details" class="cursor-pointer border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200" data-bene-id="${b.id}">
               ${checkboxTd}
               <td class="px-6 py-4 text-left font-extrabold text-spes-black dark:text-spes-white whitespace-nowrap">
                 <span class="btn-open-drawer cursor-pointer hover:underline hover:text-spes-blue dark:hover:text-spes-yellow">${escHtml(b.full_name?.toUpperCase() || "—")}</span>
                 ${statusBadge}
+                ${contactTooltip}
               </td>
               <td class="px-6 py-4 text-left text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
-              ${officeTd}
-              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(period)}</td>
-              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.contact_number || "—")}</td>
+              <td class="px-6 py-4 text-center whitespace-nowrap">
+                <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
+                  ${escHtml(b.education?.name || "Not Provided")}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap uppercase">${escHtml(b.gender?.name || "—")}</td>
               ${actionsTd}
             </tr>
           `;
@@ -1147,6 +1256,13 @@ export function initBeneficiaries() {
           const beneId = row.dataset.beneId;
           const bData = allBeneficiaries.find(b => String(b.id) === beneId);
           if (!bData) return;
+
+          // Add click on the row itself
+          row.addEventListener("click", (e) => {
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+            const idx = activeBeneficiaries.findIndex(b => String(b.id) === beneId);
+            openDrawer(bData, idx === -1 ? 0 : idx);
+          });
 
           row.querySelector(".btn-open-drawer")?.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -1238,7 +1354,7 @@ export function initBeneficiaries() {
             <div class="w-full bg-black/5 dark:bg-white/5 rounded-full h-2 overflow-hidden">
               <div class="${progColor} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
             </div>
-            <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
+            <div class="flex justify-between items-center text-[0.625rem] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
               <span>Progress</span>
               <span>${percentage}% of Total</span>
             </div>
@@ -1270,24 +1386,64 @@ export function initBeneficiaries() {
     });
   }
 
+  // ── Pagination Indicators (Updated to compacted + responsive input) ──────
   function updatePageIndicators(totalCount) {
     const indicatorsEl = document.getElementById("page-indicators-container");
     if (indicatorsEl) {
       const totalPages = Math.max(1, Math.ceil(totalCount / ROWS_PER_PAGE));
-      indicatorsEl.innerHTML = Array.from({ length: totalPages }, (_, i) => {
-        const n = i + 1;
-        const active = n === currentPage
-          ? "bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold border-spes-blue/15"
-          : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow border-spes-blue/15 dark:border-white/10";
-        return `<li><button class="cursor-pointer border px-3 py-2 text-sm font-medium ${active}" data-page="${n}">${n}</button></li>`;
-      }).join("");
+      
+      let pages = [];
+      if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages = [1, 2, 3, 4, 'input', totalPages];
+      }
 
-      indicatorsEl.querySelectorAll("button").forEach(btn => {
+      let html = "";
+      pages.forEach(p => {
+        if (p === 'input') {
+          const showValue = (currentPage > 4 && currentPage < totalPages) ? currentPage : '';
+          const activeClass = showValue !== '' ? 'bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold' : 'text-spes-black/60 dark:text-spes-white/60';
+          
+          html += `
+            <li class="flex items-center border border-spes-blue/15 dark:border-white/10 bg-spes-white dark:bg-spes-dark-primary">
+              <input type="number" min="1" max="${totalPages}" value="${showValue}" placeholder="..." 
+                     class="w-12 py-2 text-center text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-spes-blue dark:focus:ring-spes-yellow transition-colors [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${activeClass}" 
+                     style="-moz-appearance: textfield;" title="Type page and press Enter" />
+            </li>
+          `;
+        } else {
+          const active = p === currentPage
+            ? "bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold border-spes-blue/15"
+            : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow border-spes-blue/15 dark:border-white/10";
+          html += `<li><button class="page-btn cursor-pointer border px-3 py-2 text-sm font-medium ${active} transition-colors" data-page="${p}">${p}</button></li>`;
+        }
+      });
+      
+      indicatorsEl.innerHTML = html;
+      
+      indicatorsEl.querySelectorAll(".page-btn").forEach(btn => {
         btn.addEventListener("click", e => {
           currentPage = parseInt(e.currentTarget.getAttribute("data-page"), 10);
           renderPaginatedTable();
         });
       });
+      
+      const input = indicatorsEl.querySelector("input");
+      if (input) {
+        input.addEventListener("change", (e) => {
+          let val = parseInt(e.target.value, 10);
+          if (isNaN(val) || val < 1) val = 1;
+          if (val > totalPages) val = totalPages;
+          currentPage = val;
+          renderPaginatedTable();
+        });
+        input.addEventListener("keyup", (e) => {
+          if (e.key === "Enter") {
+            input.blur();
+          }
+        });
+      }
     }
   }
 
@@ -1486,12 +1642,9 @@ export function initBeneficiaries() {
       assignContainer.classList.add("hidden");
     }
     // --- Auto-inject batch from selectedBatchId (Add mode) or from defaults (Edit mode) ---
-    const batchIdInput   = document.getElementById("bdf-batch-id");
-    const batchBadgeEl   = document.getElementById("bdf-batch-badge");
-    const batchNoneEl    = document.getElementById("bdf-batch-none");
-    if (batchIdInput) {
-      let resolvedBatchId   = null;
-      let resolvedBatchLabel = "";
+    const batchIdSelect = document.getElementById("bdf-batch-id");
+    if (batchIdSelect) {
+      let resolvedBatchId = null;
       if (_bdfEditId && defaults?.batch_id) {
         // Edit mode — use the existing batch on the record
         resolvedBatchId = String(defaults.batch_id);
@@ -1500,30 +1653,22 @@ export function initBeneficiaries() {
         resolvedBatchId = String(selectedBatchId);
       }
 
-      batchIdInput.value = resolvedBatchId ?? "";
+      // Fetch batch list
+      const { fetchBatches: _fb } = await import("../../../../backend/api/beneficiary.js");
+      const { data: batches } = await _fb({ forceRefresh: false });
 
-      if (batchBadgeEl && batchNoneEl) {
-        if (resolvedBatchId) {
-          // Fetch batch label from cached list
-          const { fetchBatches: _fb } = await import("../../../../backend/api/beneficiary.js");
-          const { data: batches } = await _fb({ forceRefresh: false });
-          const match = (batches ?? []).find(b => String(b.id) === resolvedBatchId);
-          resolvedBatchLabel = match
-            ? (match.batch_name ? match.batch_name.toUpperCase() : `BATCH ${match.batch_number}`)
-            : `BATCH ID ${resolvedBatchId}`;
-          batchBadgeEl.textContent = resolvedBatchLabel;
-          batchBadgeEl.classList.remove("hidden");
-          batchNoneEl.classList.add("hidden");
-        } else {
-          batchBadgeEl.textContent = "";
-          batchBadgeEl.classList.add("hidden");
-          batchNoneEl.classList.remove("hidden");
-        }
-      }
+      let html = `<option value="">— Unassigned —</option>`;
+      (batches ?? []).forEach(b => {
+        const label = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
+        html += `<option value="${b.id}">${label}</option>`;
+      });
+      batchIdSelect.innerHTML = html;
+      batchIdSelect.value = resolvedBatchId ?? "";
     }
     // --- End batch auto-inject ---
 
 
+    if (bdfTitle) bdfTitle.textContent = _bdfEditId ? "Edit Beneficiary" : "Add Beneficiary";
     if (bdfSubtitle) bdfSubtitle.textContent = _bdfEditId ? "Update the beneficiary record below." : "Fill in the details to register a new beneficiary.";
 
     bdfDrawer.classList.remove("hidden");

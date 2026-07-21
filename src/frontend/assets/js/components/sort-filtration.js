@@ -116,26 +116,26 @@ export function setupSortFiltration({
     });
   }
 
-  // Setup Filter Logic
-  const filterOptions = dropdownFilter.querySelectorAll("[data-filter-key]");
-  filterOptions.forEach(opt => {
-    opt.addEventListener("click", () => {
-      const key = opt.getAttribute("data-filter-key");
-      const val = opt.getAttribute("data-filter-val");
+  // Setup Filter Logic via Event Delegation
+  dropdownFilter.addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-filter-key]");
+    if (!opt) return;
 
-      if (val === "all") {
-        delete activeFilters[key];
-      } else {
-        activeFilters[key] = val;
-      }
+    const key = opt.getAttribute("data-filter-key");
+    const val = opt.getAttribute("data-filter-val");
 
-      // Update active highlights for siblings in the same group
-      const siblings = dropdownFilter.querySelectorAll(`[data-filter-key="${key}"]`);
-      siblings.forEach(s => s.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
-      opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    if (val === "all") {
+      delete activeFilters[key];
+    } else {
+      activeFilters[key] = val;
+    }
 
-      applySortAndFilter();
-    });
+    // Update active highlights for siblings in the same group
+    const siblings = dropdownFilter.querySelectorAll(`[data-filter-key="${key}"]`);
+    siblings.forEach(s => s.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+    opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+
+    applySortAndFilter();
   });
 
   // Setup Search Input Listener
@@ -165,11 +165,13 @@ export function setupSortFiltration({
           const emailVal  = (item.email || "").toLowerCase();
           const officeVal = (item.office || "").toLowerCase();
           const addrVal   = (item.address || "").toLowerCase();
+          const contactVal= (item.contact_number || "").toLowerCase();
           return (
             nameVal.includes(activeValue) ||
             emailVal.includes(activeValue) ||
             officeVal.includes(activeValue) ||
-            addrVal.includes(activeValue)
+            addrVal.includes(activeValue) ||
+            contactVal.includes(activeValue)
           );
         });
       } else if (key === "status") {
@@ -195,6 +197,23 @@ export function setupSortFiltration({
         processed = processed.filter(item =>
           String(item.return_status || "NEW").toLowerCase() === activeValue
         );
+      } else if (key === "period") {
+        processed = processed.filter(item => {
+          const p = [item.month_period, item.year_period].filter(Boolean).join(" ").toLowerCase();
+          return p === activeValue;
+        });
+      } else if (key === "education_name") {
+        processed = processed.filter(item => (item.education?.name || "").toLowerCase() === activeValue);
+      } else if (key === "gender_name") {
+        processed = processed.filter(item => (item.gender?.name || "").toLowerCase() === activeValue);
+      } else if (key === "bday_month") {
+        const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+        processed = processed.filter(item => {
+          if (!item.birthday) return false;
+          const d = new Date(item.birthday);
+          if (isNaN(d.getTime())) return false;
+          return monthNames[d.getMonth()] === activeValue;
+        });
       } else {
         processed = processed.filter(item => {
           const itemVal = (item[key] || "").toString().toLowerCase();
