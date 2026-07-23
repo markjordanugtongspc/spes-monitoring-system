@@ -155,6 +155,20 @@ async function init(user) {
         }
       }, 500);
     }
+
+    const editParams = new URLSearchParams(window.location.search);
+    const editTargetId = editParams.get("id");
+    if (editParams.get("edit") === "1" && editTargetId) {
+      const editTarget = allImplementors.find(item => String(item.id) === String(editTargetId));
+      if (editTarget) {
+        setTimeout(() => {
+          window.openAddEditImplementorDrawer?.(editTarget);
+          editParams.delete("edit");
+          const cleanSearch = editParams.toString();
+          history.replaceState(null, "", `${window.location.pathname}${cleanSearch ? `?${cleanSearch}` : ""}`);
+        }, 250);
+      }
+    }
   }
 
   updateDynamicBadges();
@@ -634,9 +648,12 @@ function renderTableRows(implementors, userRole) {
       e.stopPropagation();
       try {
         const data = JSON.parse(decodeURIComponent(row.getAttribute("data-impl-info")));
-        if (window.openAddEditImplementorDrawer) {
+        const isImplementorsPage = window.location.pathname.includes("/implementors/");
+        if (isImplementorsPage && window.openAddEditImplementorDrawer) {
           window.openAddEditImplementorDrawer(data);
+          return;
         }
+        window.location.href = `../implementors/?id=${encodeURIComponent(data.id)}&edit=1`;
       } catch {}
     });
 
@@ -1155,7 +1172,7 @@ async function loadRecentBeneficiaries() {
   if (!tbody) return;
 
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  const isAdmin = session.role === "admin";
+  const isAdmin = String(session.role || "").toLowerCase() === "admin";
   const isApproved = isAdmin || session.approved;
 
   if (!isApproved) {
@@ -1164,10 +1181,14 @@ async function loadRecentBeneficiaries() {
   }
 
   try {
-    const { fetchBeneficiaries } = await import("../../../backend/api/beneficiary.js");
-    const { data } = await fetchBeneficiaries();
-    const recent = (data ?? []).slice(0, 3);
+    const { fetchRecentBeneficiaries } = await import("../../../backend/api/beneficiary.js");
+    const { data, error } = await fetchRecentBeneficiaries({ limit: 4 });
+    const recent = data ?? [];
 
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm text-red-500/80 dark:text-red-400/80 font-extrabold">${escHtml(error)}</td></tr>`;
+      return;
+    }
     if (recent.length === 0) {
       tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm text-spes-black/40 dark:text-white/40 font-extrabold italic">No recent beneficiaries found.</td></tr>`;
       return;

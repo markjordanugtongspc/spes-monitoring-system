@@ -691,92 +691,131 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   const overlay = document.getElementById("drawer-batch-form-overlay");
   const drawerEl = document.getElementById("drawer-batch-form");
   const form = document.getElementById("form-batch-drawer");
+  const title = document.getElementById("drawer-batch-form-title");
+  const subtitle = document.getElementById("drawer-batch-form-subtitle");
   const errorBanner = document.getElementById("batch-form-error");
   const cancelBtn = document.getElementById("btn-cancel-batch-form");
   const closeBtn = document.getElementById("btn-close-batch-form-drawer");
   const submitBtn = document.getElementById("btn-save-batch-form");
+  const batchNumberInput = document.getElementById("batch-form-number");
+  const batchNameInput = document.getElementById("batch-form-name");
 
-  if (!drawerEl || !overlay || !form) return { open: () => {}, close: () => {} };
+  if (!drawerEl || !overlay || !form) {
+    const missing = [
+      !drawerEl && "#drawer-batch-form",
+      !overlay && "#drawer-batch-form-overlay",
+      !form && "#form-batch-drawer"
+    ].filter(Boolean);
+    console.error(`[SPES Batch Drawer] Cannot initialize. Missing: ${missing.join(", ")}`);
+    return { open: () => false, close: () => false, isOpen: () => false };
+  }
 
+  let currentEditId = null;
+  let closeTimer = null;
   let _addBatch;
+  let _updateBatch;
   const _loadApis = async () => {
-    if (_addBatch) return;
+    if (_addBatch && _updateBatch) return;
     const mod = await import("../../../../backend/api/beneficiary.js");
     _addBatch = mod.addBatch;
+    _updateBatch = mod.updateBatch;
   };
 
   const _showError = (msg) => {
+    if (!errorBanner) return;
     errorBanner.textContent = msg;
     errorBanner.classList.remove("hidden");
   };
 
   const _hideError = () => {
+    if (!errorBanner) return;
     errorBanner.textContent = "";
     errorBanner.classList.add("hidden");
   };
 
   const _isMobile = () => window.innerWidth < 640;
+  const _setDrawerTransform = (isOpen) => {
+    drawerEl.style.transform = isOpen
+      ? "translate3d(0, 0, 0)"
+      : (_isMobile() ? "translate3d(0, 100%, 0)" : "translate3d(100%, 0, 0)");
+  };
 
-  const openDrawer = () => {
+  const openDrawer = (batch = null) => {
+    if (closeTimer) {
+      clearTimeout(closeTimer);
+      closeTimer = null;
+    }
+    currentEditId = batch?.id ?? null;
     form.reset();
     _hideError();
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Save Batch";
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = currentEditId ? "Update Batch" : "Save Batch";
+    }
+    if (title) title.textContent = currentEditId ? "Edit Batch" : "Create Batch";
+    if (subtitle) {
+      subtitle.textContent = currentEditId
+        ? "Update the batch details below."
+        : "Define a new batch group.";
+    }
+    if (batchNumberInput) batchNumberInput.value = batch?.batchNumber ?? "";
+    if (batchNameInput) batchNameInput.value = batch?.batchName ?? "";
 
     drawerEl.classList.remove("hidden");
     drawerEl.setAttribute("aria-hidden", "false");
     overlay.classList.remove("hidden");
-    drawerEl.offsetHeight; // trigger reflow
+    overlay.classList.add("block");
+    _setDrawerTransform(false);
+    drawerEl.offsetHeight;
     requestAnimationFrame(() => {
       overlay.classList.remove("opacity-0");
       overlay.classList.add("opacity-100");
-      if (_isMobile()) {
-        drawerEl.classList.remove("translate-y-full");
-        drawerEl.classList.add("translate-y-0");
-      } else {
-        drawerEl.classList.remove("sm:translate-x-full");
-        drawerEl.classList.add("sm:translate-x-0");
-      }
+      _setDrawerTransform(true);
     });
     document.body.classList.add("overflow-hidden");
+    setTimeout(() => batchNumberInput?.focus(), 300);
+    return true;
   };
 
-  const closeDrawer = () => {
-    drawerEl.setAttribute("aria-hidden", "true");
-    if (_isMobile()) {
-      drawerEl.classList.remove("translate-y-0");
-      drawerEl.classList.add("translate-y-full");
-    } else {
-      drawerEl.classList.remove("sm:translate-x-0");
-      drawerEl.classList.add("sm:translate-x-full");
+  const closeDrawer = ({ immediate = false } = {}) => {
+    if (closeTimer) {
+      clearTimeout(closeTimer);
+      closeTimer = null;
     }
+    drawerEl.setAttribute("aria-hidden", "true");
+    _setDrawerTransform(false);
     overlay.classList.remove("opacity-100");
     overlay.classList.add("opacity-0");
-    setTimeout(() => {
+
+    const finishClose = () => {
       overlay.classList.add("hidden");
-      if (drawerEl.classList.contains("translate-y-full") || drawerEl.classList.contains("sm:translate-x-full")) {
-        drawerEl.classList.add("hidden");
-      }
+      overlay.classList.remove("block");
+      drawerEl.classList.add("hidden");
       document.body.classList.remove("overflow-hidden");
-    }, 300);
+      closeTimer = null;
+    };
+
+    if (immediate) finishClose();
+    else closeTimer = setTimeout(finishClose, 300);
+    return true;
   };
 
-  cancelBtn?.addEventListener("click", closeDrawer);
-  closeBtn?.addEventListener("click", closeDrawer);
-  overlay.addEventListener("click", closeDrawer);
+  cancelBtn?.addEventListener("click", () => closeDrawer());
+  closeBtn?.addEventListener("click", () => closeDrawer());
+  overlay.addEventListener("click", () => closeDrawer());
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     _hideError();
 
-    const batchNumber = document.getElementById("batch-form-number").value.trim();
-    const batchName = document.getElementById("batch-form-name").value.trim();
-
+    const batchNumber = batchNumberInput?.value.trim() ?? "";
+    const batchName = batchNameInput?.value.trim() ?? "";
     if (!batchNumber) return _showError("Batch Number is required.");
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Saving...";
-    
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving...";
+    }
     await _loadApis();
 
     let sessionStaffId = null;
@@ -784,36 +823,41 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       const sessionRaw = localStorage.getItem("spes_session");
       if (sessionRaw) {
         const session = JSON.parse(sessionRaw);
-        if (session.role !== "admin") {
-          sessionStaffId = session.id;
-        }
+        if (String(session.role).toLowerCase() !== "admin") sessionStaffId = session.id;
       }
-    } catch (e) {}
+    } catch {}
 
     const payload = {
       batchNumber,
       batchName: batchName || null,
       created_by_staff_id: sessionStaffId
     };
+    const result = currentEditId
+      ? await _updateBatch(currentEditId, payload)
+      : await _addBatch(payload);
 
-    const result = await _addBatch(payload);
-    
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Save Batch";
-
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = currentEditId ? "Update Batch" : "Save Batch";
+    }
     if (!result.success) {
-      return _showError(result.error || "Failed to create batch.");
+      return _showError(result.error || (currentEditId ? "Failed to update batch." : "Failed to create batch."));
     }
 
+    const completedMode = currentEditId ? "updated" : "created";
     closeDrawer();
-    
     import("./modals.js").then(({ modals }) => {
-      modals.success("Batch Created", `Batch ${batchNumber} has been created successfully.`);
+      modals.success(
+        completedMode === "updated" ? "Batch Updated" : "Batch Created",
+        `Batch ${batchNumber} has been ${completedMode} successfully.`
+      );
     });
-    
-    if (typeof onSuccess === "function") onSuccess(result.data);
+    if (typeof onSuccess === "function") onSuccess(result.data, { mode: completedMode });
   });
 
-  return { open: openDrawer, close: closeDrawer };
-}
-// --- END: BATCH FORM DRAWER ---
+  return {
+    open: openDrawer,
+    close: closeDrawer,
+    isOpen: () => drawerEl.getAttribute("aria-hidden") === "false"
+  };
+}// --- END: BATCH FORM DRAWER ---

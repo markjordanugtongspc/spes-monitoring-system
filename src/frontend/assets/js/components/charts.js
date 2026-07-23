@@ -48,23 +48,50 @@ function _deriveReturnStatus(beneficiaries) {
   });
 }
 
+const CHART_PAGE_SIZE = 1000;
+
+async function _fetchAllBeneficiaryChartRows({ isAdmin, officeId }) {
+  if (!isAdmin && !officeId) {
+    return { data: [], error: "No office is assigned to this account." };
+  }
+
+  const selectStr = "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status" +
+    (isAdmin ? "" : ", staffs!staff_id!inner(office_id)");
+  const rows = [];
+
+  for (let from = 0; ; from += CHART_PAGE_SIZE) {
+    let query = supabase
+      .from("beneficiary")
+      .select(selectStr);
+
+    if (!isAdmin) query = query.eq("staffs.office_id", officeId);
+    query = query
+      .order("id", { ascending: true })
+      .range(from, from + CHART_PAGE_SIZE - 1);
+
+    const { data, error } = await query;
+    if (error) return { data: [], error };
+
+    rows.push(...(data ?? []));
+    if (!data || data.length < CHART_PAGE_SIZE) break;
+  }
+
+  return { data: rows, error: null };
+}
 export async function initDashboardCharts() {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
-  const isAdmin = session.role === "admin";
+  const isAdmin = String(session.role || "").toLowerCase() === "admin";
   const officeId = session.office_id;
 
-  let staffQuery = fetchStaffs({ officeId: !isAdmin ? officeId : null });
-      
-  let benefQuery = supabase
-      .from("beneficiary")
-      .select("id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status" + (isAdmin ? "" : ", staffs!staff_id!inner(office_id)"));
+  const [staffResult, beneficiaryResult] = await Promise.all([
+    fetchStaffs({ officeId: isAdmin ? null : officeId }),
+    _fetchAllBeneficiaryChartRows({ isAdmin, officeId })
+  ]);
 
-  if (!isAdmin && officeId) {
-    benefQuery = benefQuery.eq("staffs.office_id", officeId);
+  if (beneficiaryResult.error && import.meta.env.DEV) {
+    console.error("[SPES Charts] beneficiary fetch error:", beneficiaryResult.error);
   }
-
-  const [staffResult, beneficiaryResult] = await Promise.all([staffQuery, benefQuery]);
 
   const staffs = staffResult.data ?? [];
   const beneficiaries = beneficiaryResult.data ?? [];
@@ -308,7 +335,7 @@ function _renderImplementorStatus(beneficiaries, staffs = []) {
     const officeStats = {};
     beneficiaries.forEach(b => {
       if (b.staff_id) {
-        const staff = staffs.find(s => s.id === b.staff_id);
+        const staff = staffs.find(s => String(s.id) === String(b.staff_id));
         const officeName = staff?.offices?.name || "Unknown Office";
         if (!officeStats[officeName]) officeStats[officeName] = { male: 0, female: 0, total: 0 };
         officeStats[officeName].total++;
@@ -351,18 +378,20 @@ function _drawGenderConnectorLines(el, series, total) {
 
   const rect = pieGroup.getBoundingClientRect();
   const containerRect = el.getBoundingClientRect();
+  const containerWidth = Math.max(el.clientWidth, containerRect.width);
+  const containerHeight = Math.max(el.clientHeight, containerRect.height);
   const centerX = (rect.left - containerRect.left) + rect.width / 2;
   const centerY = (rect.top - containerRect.top) + rect.height / 2;
-  const radius = rect.width / 2;
+  const radius = Math.min(rect.width, rect.height) / 2;
 
-  const oldOverlay = el.querySelector(".custom-chart-overlay");
-  if (oldOverlay) oldOverlay.remove();
+  el.querySelector(".custom-chart-overlay")?.remove();
 
   const overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  overlay.setAttribute("class", "custom-chart-overlay absolute inset-0 pointer-events-none w-full h-full z-10");
+  overlay.setAttribute("class", "custom-chart-overlay absolute inset-0 pointer-events-none h-full w-full z-20 overflow-visible");
+  overlay.setAttribute("viewBox", `0 0 ${containerWidth} ${containerHeight}`);
+  overlay.setAttribute("preserveAspectRatio", "none");
   overlay.style.position = "absolute";
-  overlay.style.top = "0";
-  overlay.style.left = "0";
+  overlay.style.inset = "0";
   overlay.style.width = "100%";
   overlay.style.height = "100%";
 
@@ -376,23 +405,26 @@ function _drawGenderConnectorLines(el, series, total) {
 
     const cos = Math.cos(midAngle);
     const sin = Math.sin(midAngle);
-
     const startX = centerX + cos * radius;
     const startY = centerY + sin * radius;
-
-    let endX = centerX + cos * (radius + 35);
-    let endY = centerY + sin * (radius + 35);
-
+    const verticalOffset = idx === 0 ? -12 : 0;
+    const endX = centerX + cos * (radius + 28);
+    const endY = centerY + sin * (radius + 28) + verticalOffset;
     const isRightSide = cos > 0 || (Math.abs(cos) < 1e-5 && sin < 0);
-    let elbowX = endX + (isRightSide ? 25 : -25);
-    let elbowY = endY;
+    const estimatedLabelWidth = 64;
+    const horizontalPadding = 8;
+    let elbowY = Math.min(containerHeight - 22, Math.max(14, endY));
+    let textX;
+    let elbowX;
 
-    // Shift MALE indicator down and left to prevent collision
-    if (idx === 0) {
-      endX -= 10;
-      endY += 20;
-      elbowX -= 15;
-      elbowY += 20;
+    if (isRightSide) {
+      textX = Math.min(containerWidth - estimatedLabelWidth - horizontalPadding, endX + 30);
+      textX = Math.max(centerX + 8, textX);
+      elbowX = textX - 5;
+    } else {
+      textX = Math.max(estimatedLabelWidth + horizontalPadding, endX - 30);
+      textX = Math.min(centerX - 8, textX);
+      elbowX = textX + 5;
     }
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -403,15 +435,17 @@ function _drawGenderConnectorLines(el, series, total) {
     overlay.appendChild(path);
 
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    const textX = elbowX + (isRightSide ? 5 : -5);
-    const textY = elbowY + 4;
     text.setAttribute("x", textX);
-    text.setAttribute("y", textY);
+    text.setAttribute("y", elbowY + 4);
     text.setAttribute("text-anchor", isRightSide ? "start" : "end");
     text.setAttribute("fill", idx === 0 ? "#4F91FF" : "#FF5B9B");
     text.style.fontFamily = "Inter, sans-serif";
     text.style.fontSize = "10px";
     text.style.fontWeight = "bold";
+    text.style.paintOrder = "stroke";
+    text.style.stroke = document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff";
+    text.style.strokeWidth = "3px";
+    text.style.strokeLinejoin = "round";
     text.textContent = `${val} (${Math.round((val / total) * 100)}%)`;
     overlay.appendChild(text);
   });
@@ -419,7 +453,6 @@ function _drawGenderConnectorLines(el, series, total) {
   el.style.position = "relative";
   el.appendChild(overlay);
 }
-
 // Chart 3 — Added SPES per Year (colored column per year + trend line)
 function _renderBeneficiariesByYear(beneficiaries) {
   const el = document.getElementById("column-chart");
