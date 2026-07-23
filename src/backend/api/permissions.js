@@ -4,7 +4,7 @@
  * Manages the `permissions` table which is keyed by role_id.
  * Each role has exactly one permissions row.
  */
-import { supabase, supabaseAdmin } from "./supabase.js";
+import { supabase } from "./supabase.js";
 
 const CACHE_KEY = "spes_role_permissions_v1";
 const CACHE_TTL = 10 * 60 * 1000; // 10 min
@@ -79,17 +79,26 @@ export async function upsertRolePermissions(roleId, updates) {
     if (key in updates) payload[key] = Boolean(updates[key]);
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("permissions")
-    .upsert(payload, { onConflict: "role_id" })
-    .select("role_id, view_users, create_users, edit_users, delete_users, export_reports")
-    .single();
+  try {
+    const response = await fetch("/api/permissions", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roleId, updates: payload }),
+    });
+    const result = await response.json().catch(() => ({}));
 
-  if (error) {
-    if (import.meta.env.DEV) console.error("[SPES Permissions] upsert error:", error.code, error.hint);
-    return { success: false, error: "Failed to update permissions. Please try again." };
+    if (!response.ok) {
+      if (import.meta.env.DEV) {
+        console.error("[SPES Permissions] API error:", response.status, result.error);
+      }
+      return { success: false, error: result.error || "Failed to update permissions. Please try again." };
+    }
+
+    invalidatePermissionsCache();
+    return { success: true, data: result.data };
+  } catch (error) {
+    if (import.meta.env.DEV) console.error("[SPES Permissions] network error:", error?.message);
+    return { success: false, error: "Could not reach the secure permissions service." };
   }
-
-  invalidatePermissionsCache();
-  return { success: true, data };
 }

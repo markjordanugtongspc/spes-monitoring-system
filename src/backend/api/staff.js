@@ -60,19 +60,28 @@ export async function addOffice(name, type = "public") {
   const cleanName = String(name ?? "").trim();
   if (!cleanName) return { success: false, error: "Office name is required." };
 
-  const { data, error } = await supabase
-    .from("offices")
-    .insert([{ name: cleanName, type: type, location: "ILIGAN CITY" }])
-    .select()
-    .single();
+  try {
+    const response = await fetch("/api/offices", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: cleanName, type }),
+    });
+    const result = await response.json().catch(() => ({}));
 
-  if (error) {
-    if (import.meta.env.DEV) console.error("[SPES Staff] addOffice error:", error.code, error.hint);
-    return { success: false, error: "Failed to add office." };
+    if (!response.ok) {
+      if (import.meta.env.DEV) {
+        console.error("[SPES Staff] addOffice API error:", response.status, result.error);
+      }
+      return { success: false, error: result.error || "Failed to add office." };
+    }
+
+    try { sessionStorage.removeItem(OFFICES_CACHE_KEY); } catch {}
+    return { success: true, data: result.data };
+  } catch (error) {
+    if (import.meta.env.DEV) console.error("[SPES Staff] addOffice network error:", error?.message);
+    return { success: false, error: "Could not reach the secure office service." };
   }
-
-  try { sessionStorage.removeItem(OFFICES_CACHE_KEY); } catch {}
-  return { success: true, data };
 }
 
 

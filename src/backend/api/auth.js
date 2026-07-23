@@ -41,18 +41,16 @@ export function invalidateImplementorCache() {
  */
 export async function loginImplementor(username, password) {
   try {
-    const { data, error } = await supabase.rpc("login_staff", {
-      p_username: username,
-      p_password: password
+    const response = await fetch("/api/session", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
+    const data = await response.json().catch(() => ({}));
 
-    if (error) {
-      // Log only the safe error code in DEV — never the full object
-      if (import.meta.env.DEV) console.error("[SPES Auth] RPC code:", error.code);
-      return { success: false, error: "A system error occurred. Please try again." };
-    }
-
-    if (!data?.success) {
+    if (!response.ok || !data?.success) {
+      if (import.meta.env.DEV) console.error("[SPES Auth] session API status:", response.status);
       return { success: false, error: data?.error || "Invalid username or password." };
     }
 
@@ -278,6 +276,14 @@ export async function logoutImplementor() {
   localStorage.removeItem("spes_session");
   localStorage.removeItem("spes_supabase_token");
   sessionStorage.clear();
+  try {
+    await fetch("/api/session", {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
+  } catch {
+    // Local session is already cleared; the server cookie expires automatically.
+  }
   window.location.href = "/src/frontend/login/";
 }
 

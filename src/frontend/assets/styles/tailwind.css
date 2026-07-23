@@ -1,6 +1,6 @@
 @config "../../../../tailwind.config.js";
 @import "tailwindcss";
-@source "../../services/index.html";
+@source "../../services/beneficiary-csv-import-review.html";
 @import "flowbite/src/themes/default";
 
 @custom-variant dark (&:where(.dark, .dark *));

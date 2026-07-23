@@ -1397,7 +1397,7 @@ export function initBeneficiaries() {
     const grouped = { unassigned: [] };
     batches.forEach(b => { grouped[b.id] = []; });
 
-    activeBeneficiaries.forEach(bene => {
+    allBeneficiaries.forEach(bene => {
       const bid = bene.batch_id ?? bene.batch?.id;
       if (bid && grouped[bid]) {
         grouped[bid].push(bene);
@@ -1417,10 +1417,17 @@ export function initBeneficiaries() {
       { bg: "bg-orange-500/20",  border: "border-orange-500/30",  text: "text-orange-600 dark:text-orange-400" },
     ];
 
-    const totalBene = activeBeneficiaries.length || 1;
+    const BATCH_CAPACITY_TARGET = 250;
 
     const createCard = (title, items, colId, pal, isUnassigned = false, batchNumber = "", batchName = "") => {
-      const percentage = Math.round((items.length / totalBene) * 100);
+      const totalCount = items.length;
+      const newCount = items.filter(item =>
+        String(item.return_status || "").trim().toUpperCase() === "NEW"
+      ).length;
+      const spesBabyCount = items.filter(item =>
+        String(item.return_status || "").trim().toUpperCase() === "SPES BABY"
+      ).length;
+      const percentage = Math.min(100, Math.round((totalCount / BATCH_CAPACITY_TARGET) * 100));
       let progColor = "bg-emerald-500";
       if (percentage > 33 && percentage <= 66) progColor = "bg-orange-500";
       if (percentage > 66) progColor = "bg-red-500";
@@ -1431,7 +1438,7 @@ export function initBeneficiaries() {
             <div class="flex items-start justify-between">
               <div class="space-y-1">
                 <h3 class="font-montserrat font-black text-base uppercase tracking-wider ${pal.text}">${title}</h3>
-                <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${items.length} Beneficiaries</p>
+                <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount} of ${BATCH_CAPACITY_TARGET} beneficiaries</p>
               </div>
             <div class="h-8 w-8 rounded-full bg-white/60 dark:bg-black/20 flex items-center justify-center shadow-inner hover:bg-white dark:hover:bg-black/40 transition-all z-10"
                  onclick="event.stopPropagation(); if (window.openEditBatchDrawer) window.openEditBatchDrawer('${colId}', '${batchNumber || ''}', '${batchName || ''}')">
@@ -1440,13 +1447,27 @@ export function initBeneficiaries() {
               </svg>
             </div>
           </div>
-          <div class="space-y-2 mt-4">
+          <div class="mt-4 grid grid-cols-3 gap-2" aria-label="${totalCount} total beneficiaries: ${newCount} new and ${spesBabyCount} SPES Baby">
+            <div class="rounded-lg border border-black/5 bg-white/55 px-2 py-2 text-center shadow-sm dark:border-white/10 dark:bg-black/15">
+              <div class="text-sm font-black text-spes-black dark:text-white">${totalCount}</div>
+              <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-spes-black/45 dark:text-white/45">Total</div>
+            </div>
+            <div class="rounded-lg border border-emerald-500/15 bg-emerald-500/10 px-2 py-2 text-center shadow-sm">
+              <div class="text-sm font-black text-emerald-700 dark:text-emerald-400">${newCount}</div>
+              <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70">New</div>
+            </div>
+            <div class="rounded-lg border border-blue-500/15 bg-blue-500/10 px-2 py-2 text-center shadow-sm">
+              <div class="text-sm font-black text-blue-700 dark:text-blue-300">${spesBabyCount}</div>
+              <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-blue-700/70 dark:text-blue-300/70">SPES Baby</div>
+            </div>
+          </div>
+          <div class="space-y-2 mt-3">
             <div class="w-full bg-black/5 dark:bg-white/5 rounded-full h-2 overflow-hidden">
               <div class="${progColor} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
             </div>
             <div class="flex justify-between items-center text-[0.625rem] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
-              <span>Progress</span>
-              <span>${percentage}% of Total</span>
+              <span>Batch capacity</span>
+              <span>${percentage}% of ${BATCH_CAPACITY_TARGET}</span>
             </div>
           </div>
         </div>

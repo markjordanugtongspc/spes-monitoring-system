@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -92,8 +92,64 @@ function spesSitePartials() {
   };
 }
 
+function spesVercelApiDev(env) {
+  const routes = {
+    "/api/session": () => import("./api/session.js"),
+    "/api/offices": () => import("./api/offices.js"),
+    "/api/permissions": () => import("./api/permissions.js"),
+  };
 
-export default defineConfig({
+  for (const name of [
+    "SUPABASE_URL",
+    "VITE_SUPABASE_URL",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_ROLE",
+    "SPES_SESSION_SECRET",
+  ]) {
+    if (!process.env[name] && env[name]) process.env[name] = env[name];
+  }
+
+  return {
+    name: "spes-vercel-api-dev",
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const pathname = new URL(req.url || "/", "http://localhost").pathname;
+        const loadRoute = routes[pathname];
+        if (!loadRoute) return next();
+
+        try {
+          if (req.method !== "GET" && req.method !== "HEAD") {
+            const chunks = [];
+            for await (const chunk of req) chunks.push(chunk);
+            const rawBody = Buffer.concat(chunks).toString("utf8");
+            req.body = rawBody ? JSON.parse(rawBody) : {};
+          }
+
+          res.status = (code) => {
+            res.statusCode = code;
+            return res;
+          };
+          res.json = (value) => {
+            if (!res.headersSent) res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify(value));
+          };
+
+          const module = await loadRoute();
+          await module.default(req, res);
+        } catch (error) {
+          console.error("[SPES Dev API]", error.message);
+          if (!res.headersSent) res.statusCode = 500;
+          res.end(JSON.stringify({ error: "Local API request failed." }));
+        }
+      });
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, join(__dirname, "src/backend"), "");
+
+  return {
   base: "./",
   envDir: join(__dirname, "src/backend"),
   define: {
@@ -101,6 +157,7 @@ export default defineConfig({
   },
   plugins: [
     spesSitePartials(), 
+    spesVercelApiDev(env),
     tailwindcss(),
     {
       name: "remove-crossorigin",
@@ -137,6 +194,5 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true
   }
+  };
 });
-
-
