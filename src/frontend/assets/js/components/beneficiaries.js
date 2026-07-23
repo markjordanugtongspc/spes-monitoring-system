@@ -37,25 +37,18 @@ const DEFAULT_EDU_LEVELS = [
 ];
 
 function formatEducationDisplay(b) {
-  if (!b) return "Not Provided";
-  const catName = (typeof b === "object" ? b.education?.name : b) || "";
-  if (!catName) return "Not Provided";
+  const categoryName = String(b?.education?.name ?? "").trim();
+  const joinedLevelName = String(b?.education_level?.name ?? "").trim();
+  const idLevelName = DEFAULT_EDU_LEVELS.find(
+    level => Number(level.id) === Number(b?.education_level_id)
+  )?.name ?? "";
+  const levelName = joinedLevelName || idLevelName;
 
-  let levelName = "";
-  if (typeof b === "object") {
-    levelName = b.education_level?.name || preferenceStorage.getBeneficiaryEduLevel(b.id) || "";
-  }
-  if (!levelName) return escHtml(catName.toUpperCase());
+  if (!categoryName && !levelName) return "N/A";
+  if (!levelName) return escHtml(categoryName.toUpperCase());
+  if (!categoryName) return escHtml(levelName.toUpperCase());
 
-  // Resolve numeric ID (e.g. "3") to level name ("1st Year")
-  if (!isNaN(parseInt(levelName, 10)) && String(levelName).trim() === String(parseInt(levelName, 10))) {
-    const lvlId = parseInt(levelName, 10);
-    const found = DEFAULT_EDU_LEVELS.find(l => l.id === lvlId);
-    if (found) levelName = found.name;
-  }
-
-  const cleanLevel = String(levelName).replace(/\s+College$/i, "").trim().toUpperCase();
-  return `${escHtml(catName.toUpperCase())} - <u class="underline decoration-amber-500 font-extrabold decoration-2 underline-offset-2">${escHtml(cleanLevel)}</u>`;
+  return `${escHtml(categoryName.toUpperCase())} - <u class="underline decoration-amber-500 font-extrabold decoration-2 underline-offset-2">${escHtml(levelName.toUpperCase())}</u>`;
 }
 
 

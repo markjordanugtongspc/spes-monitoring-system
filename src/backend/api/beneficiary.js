@@ -1,6 +1,6 @@
 import { supabase } from "./supabase.js";
 
-const CACHE_KEY = "spes_beneficiaries_v3";
+const CACHE_KEY = "spes_beneficiaries_v4";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Batch cache ────────────────────────────────────────────────
@@ -161,7 +161,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     return { data: [], error: "Account Not Approved. List is hidden." };
   }
 
-  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:educ_id(id, name), education_level:education_level_id(id, name, education_id), gender:gender_id(id, name)";
+  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:education!beneficiary_educ_id_fkey(id, name), education_level:education_levels!beneficiary_education_level_id_fkey(id, name), gender:gender_id(id, name)";
   if (!isAdmin && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
