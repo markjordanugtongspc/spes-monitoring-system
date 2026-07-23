@@ -133,6 +133,7 @@ function _bdfCollect() {
     edulevel: eduLvlVal,
     batch_id: g("bdf-batch-id") || null,
     staff_id: g("bdf-assign-staff") !== "" && g("bdf-assign-staff") != null ? parseInt(g("bdf-assign-staff"), 10) : null,
+    return_status: g("bdf-return-status") || "NEW",
   };
 }
 
@@ -148,6 +149,7 @@ function _bdfFill(defaults = {}) {
   set("bdf-gender", defaults.gender_id);
   set("bdf-birthday", defaults.birthday);
   set("bdf-age", defaults.age);
+  set("bdf-return-status", defaults.return_status ? String(defaults.return_status).toUpperCase() : "NEW");
 
   const catId = defaults.educ_id ?? defaults.education?.id ?? "";
   set("bdf-education", catId);

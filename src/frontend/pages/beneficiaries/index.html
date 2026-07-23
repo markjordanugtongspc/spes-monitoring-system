@@ -794,27 +794,38 @@
                   <!-- Dynamically populated options -->
                 </ul>
               </div>
-            </div>
           </div>
         </div>
 
+        <!-- Beneficiary Category / Status (NEW or SPES BABY for transfer) -->
+        <div class="col-span-full">
+          <label for="bdf-return-status"
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            Beneficiary Category / Status (Transfer)
+          </label>
+          <select id="bdf-return-status" name="return_status" required
+            class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm font-bold text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+            <option value="NEW" class="cursor-pointer font-bold text-emerald-600 dark:text-emerald-400">NEW</option>
+            <option value="SPES BABY" class="cursor-pointer font-bold text-red-600 dark:text-red-400">SPES BABY</option>
+          </select>
+        </div>
 
       </form>
     </div>
 
     <!-- Sticky Footer -->
     <div
-      class="shrink-0 flex items-center justify-end gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+      class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white p-3.5 sm:px-5 sm:py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
       <button type="button" id="btn-cancel-bene-form"
-        class="cursor-pointer border border-spes-blue/20 px-5 py-2.5 text-sm font-semibold text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-spes-blue dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-spes-white transition-all duration-150">
+        class="cursor-pointer inline-flex items-center justify-center w-full rounded-none border border-spes-blue/20 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-red-600 dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-red-400 transition-all duration-150 whitespace-nowrap text-center">
         Cancel
       </button>
       <button type="submit" form="form-bene-drawer" id="btn-submit-bene-form"
-        class="cursor-pointer inline-flex items-center gap-2 bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        class="cursor-pointer inline-flex items-center justify-center w-full gap-1.5 bg-emerald-500 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150 whitespace-nowrap text-center">
+        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
         </svg>
-        <span id="btn-submit-bene-label">Save Beneficiary</span>
+        <span id="btn-submit-bene-label" class="whitespace-nowrap">Save Beneficiary</span>
       </button>
     </div>
   </div>
@@ -871,16 +882,17 @@
       </form>
     </div>
     
-    <div class="border-t border-spes-blue/10 bg-gray-50/50 px-6 py-4 dark:border-spes-white/10 dark:bg-white/5 flex gap-3 shrink-0">
+    <div class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white p-3.5 sm:px-5 sm:py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
       <button type="button" id="btn-cancel-batch-form"
-        class="cursor-pointer w-full rounded-lg border border-spes-black/10 px-4 py-2 text-sm font-semibold text-spes-black hover:bg-gray-100 dark:border-white/10 dark:text-spes-white dark:hover:bg-white/10 transition-colors">
+        class="cursor-pointer inline-flex items-center justify-center w-full rounded-none border border-spes-blue/20 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-red-600 dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-red-400 transition-all duration-150 whitespace-nowrap text-center">
         Cancel
       </button>
       <button type="button" id="btn-save-batch-form"
-        class="cursor-pointer w-full rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors">
+        class="cursor-pointer inline-flex items-center justify-center w-full gap-1.5 bg-emerald-500 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150 whitespace-nowrap text-center">
         Save Batch
       </button>
     </div>
+  </div>
   </div>
 
   <script type="module" src="../../assets/js/dashboard.js"></script>

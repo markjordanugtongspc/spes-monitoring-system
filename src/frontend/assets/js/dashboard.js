@@ -1590,7 +1590,6 @@ function initGlobalSearch(user) {
 
   async function performSearch(query, user) {
     const roleId = user.role_id;
-    const staffId = user.id;
     const officeId = user.office_id;
     try {
       resultsContainer.innerHTML = `
@@ -1615,61 +1614,272 @@ function initGlobalSearch(user) {
         .or(`name.ilike.%${safeQuery}%,location.ilike.%${safeQuery}%`);
       const officeIds = (matchedOffices || []).map(o => o.id);
 
-      // 2. Setup Base Queries
+      // 2. Setup Base Queries — includes education_level and education joins for grade/year level filtering
       let benQuery = supabase
         .from("beneficiary")
         .select(`
           id, full_name, gender_id, return_status, birthday, age, address, designated, month_period, year_period, staff_id, batch_id,
+          education_level_id, educ_id,
+          education_level:education_level_id(id, name, education_id),
+          education:educ_id(id, name),
           staffs!staff_id${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
 
-      // 3. Intercept Keywords
-      const qUpper = query.toUpperCase();
+      // ─────────────────────────────────────────────────────────
+      // ─────────────────────────────────────────────────────────────────────
+      // 3. Smart Keyword Intercept
+      //    Keywords → filter beneficiaries + optional groupBy for category view
+      // ─────────────────────────────────────────────────────────────────────
+      const qUpper = query.toUpperCase().trim();
+      const qNorm  = qUpper.replace(/\s+/g, " ");
       let isKeyword = false;
+      let searchGroupMode = null; // null | "EDUCATION_CAT" | "EDUCATION_LEVEL"
+      let groupMeta = [];  // [{ id, name }] — the groups to display
 
-      if (qUpper === "TOTAL" || qUpper === "ALL") {
+      // `education_levels` is currently protected by RLS in production, so an
+      // anon lookup can legitimately return an empty array even though
+      // beneficiary.education_level_id contains valid foreign-key values.
+      // Keep the production IDs as a fallback so quick search still resolves
+      // the level filter. DB rows always take precedence when they are visible.
+      const fallbackEducationLevels = [
+        { id: 1, education_id: 1, name: "Grade 11" },
+        { id: 2, education_id: 1, name: "Grade 12" },
+        { id: 3, education_id: 3, name: "1st Year" },
+        { id: 4, education_id: 3, name: "2nd Year" },
+        { id: 5, education_id: 3, name: "3rd Year" },
+        { id: 6, education_id: 3, name: "4th Year" },
+        { id: 8, education_id: 4, name: "Grade 7" },
+        { id: 9, education_id: 4, name: "Grade 8" },
+        { id: 10, education_id: 4, name: "Grade 9" },
+        { id: 11, education_id: 4, name: "Grade 10" },
+      ];
+
+      // ── DB helpers ──
+      const fetchEducRows = async (nameLike) => {
+        const { data, error } = await supabase
+          .from("education")
+          .select("id, name")
+          .ilike("name", `%${nameLike}%`)
+          .order("name");
+        if (error) throw error;
+        return data || [];
+      };
+      const fetchEduLevelRows = async (nameLike) => {
+        const { data, error } = await supabase
+          .from("education_levels")
+          .select("id, education_id, name")
+          .ilike("name", `%${nameLike}%`)
+          .order("education_id")
+          .order("sort_order");
+        if (error) throw error;
+        if (data?.length) return data;
+
+        const needle = String(nameLike ?? "").trim().toLowerCase();
+        return fallbackEducationLevels.filter(level =>
+          level.name.toLowerCase().includes(needle)
+        );
+      };
+
+      // ── TOTAL / ALL ──
+      if (qNorm === "TOTAL" || qNorm === "ALL") {
         isKeyword = true;
-      } else if (qUpper === "MALE") {
+
+      // ── GENDER ──
+      } else if (qNorm === "MALE" || qNorm === "LALAKI") {
         isKeyword = true;
         benQuery = benQuery.eq("gender_id", 1);
         staffSearchQuery = null;
-      } else if (qUpper === "FEMALE") {
+
+      } else if (qNorm === "FEMALE" || qNorm === "BABAE") {
         isKeyword = true;
         benQuery = benQuery.eq("gender_id", 2);
         staffSearchQuery = null;
-      } else if (qUpper === "SPES" || qUpper === "BENEFICIARIES") {
+
+      // ── SPES / BENEFICIARIES ──
+      } else if (qNorm === "SPES" || qNorm === "BENEFICIARIES" || qNorm === "BENEFICIARY") {
         isKeyword = true;
         staffSearchQuery = null;
-      } else if (qUpper === "IMPLEMENTORS" || qUpper === "STAFF" || qUpper === "STAFFS") {
+
+      // ── IMPLEMENTORS / STAFF ──
+      } else if (["IMPLEMENTORS","IMPLEMENTOR","STAFF","STAFFS","OFFICER","OFFICERS"].includes(qNorm)) {
         isKeyword = true;
         benQuery = null;
-      } else if (qUpper === "ONGOING") {
+
+      // ── RETURN STATUS: NEW ──
+      } else if (qNorm === "NEW" || qNorm === "NEW BENEFICIARY" || qNorm === "FIRST TIME" || qNorm === "NEWCOMER") {
         isKeyword = true;
-        benQuery = benQuery.neq("return_status", "SPES BABY");
+        benQuery = benQuery.eq("return_status", "NEW");
         staffSearchQuery = null;
-      } else if (qUpper === "RETURNING" || qUpper === "SPES BABY") {
+
+      // ── RETURN STATUS: SPES BABY / RETURNING ──
+      } else if (
+        qNorm === "RETURNING" || qNorm === "SPES BABY" || qNorm === "RETURNEE" ||
+        qNorm === "RETURN" || qNorm === "RETURNER" || qNorm === "BABY"
+      ) {
         isKeyword = true;
         benQuery = benQuery.eq("return_status", "SPES BABY");
         staffSearchQuery = null;
-      } else if (qUpper === "APPROVED") {
+
+      // ── ONGOING (not SPES BABY) ──
+      } else if (qNorm === "ONGOING" || qNorm === "ACTIVE") {
+        isKeyword = true;
+        benQuery = benQuery.neq("return_status", "SPES BABY");
+        staffSearchQuery = null;
+
+      // ── IMPLEMENTOR APPROVAL STATUS ──
+      } else if (qNorm === "APPROVED") {
         isKeyword = true;
         benQuery = null;
         if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", true);
-      } else if (qUpper === "PENDING") {
+
+      } else if (qNorm === "PENDING" || qNorm === "UNAPPROVED") {
         isKeyword = true;
         benQuery = null;
         if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", false);
-      }
+
+      } else {
+        // ─────────────────────────────────────────────────────────────────
+        // EDUCATION-LEVEL GROUPED SEARCH  (education_levels table)
+        // "grade" → shows ALL grades (7-12) grouped
+        // "year"  → shows ALL year levels (1st-4th) grouped
+        // "grade 7" → only Grade 7
+        // ─────────────────────────────────────────────────────────────────
+
+        // Map what user types → DB ILIKE search pattern for education_levels.name
+        const levelPatternMap = [
+          { test: /^GRADE\s*7$|^G\s*7$|^GR\s*7$/,    pattern: "Grade 7"    },
+          { test: /^GRADE\s*8$|^G\s*8$|^GR\s*8$/,    pattern: "Grade 8"    },
+          { test: /^GRADE\s*9$|^G\s*9$|^GR\s*9$/,    pattern: "Grade 9"    },
+          { test: /^GRADE\s*10$|^G\s*10$|^GR\s*10$/, pattern: "Grade 10"   },
+          { test: /^GRADE\s*11$|^G\s*11$|^GR\s*11$/, pattern: "Grade 11"   },
+          { test: /^GRADE\s*12$|^G\s*12$|^GR\s*12$/, pattern: "Grade 12"   },
+          { test: /^1ST\s*YEAR$|^FIRST\s*YEAR$|^1ST\s*YR$|^YEAR\s*1$|^FRESHMAN$/,  pattern: "1st Year"  },
+          { test: /^2ND\s*YEAR$|^SECOND\s*YEAR$|^2ND\s*YR$|^YEAR\s*2$|^SOPHOMORE$/,pattern: "2nd Year"  },
+          { test: /^3RD\s*YEAR$|^THIRD\s*YEAR$|^3RD\s*YR$|^YEAR\s*3$/,             pattern: "3rd Year"  },
+          { test: /^4TH\s*YEAR$|^FOURTH\s*YEAR$|^4TH\s*YR$|^YEAR\s*4$|^GRADUATING$/,pattern: "4th Year" },
+          // BROAD partial → all matching levels from DB (show grouped)
+          { test: /^GRADE$|^GRADES$/,              pattern: "Grade",      grouped: true },
+          { test: /^YEAR$|^YEARS$|^COL$|^COLL$/,  pattern: "Year",       grouped: true },
+          { test: /^JHS$|^JUNIOR\s*HIGH$/,         pattern: "Grade",      grouped: true },
+          { test: /^SHS$|^SENIOR\s*HIGH$/,         pattern: "Grade 1",    grouped: true }, // partial — catches G11, G12
+          { test: /^VOCAT|^TVET$|^TECH.?VOC$|^TESDA$|^VOCATIONAL$|^NC[1-4]$/, pattern: "Vocational", grouped: false },
+        ];
+
+        let levelPattern = null;
+        let levelGrouped = false;
+        for (const lp of levelPatternMap) {
+          if (lp.test.test(qNorm)) {
+            levelPattern = lp.pattern;
+            levelGrouped = !!lp.grouped;
+            break;
+          }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // EDUCATION CATEGORY GROUPED SEARCH  (education table)
+        // "college" → College Graduate, College Level grouped
+        // "vocational" → all vocational categories grouped
+        // ─────────────────────────────────────────────────────────────────
+        const educCatPatternMap = [
+          { test: /^COLLEGE$|^COLLEGIATE$|^TERTIARY$|^UNIVERSITY$/,       pattern: "College",     grouped: true  },
+          { test: /^HIGH\s*SCHOOL$|^HIGHSCHOOL$|^SECONDARY$/,             pattern: "High School", grouped: true  },
+          { test: /^ELEMENTARY$|^ELEM$|^PRIMARY$|^GRADE\s*SCHOOL$/,       pattern: "Elementary",  grouped: true  },
+          { test: /^VOCATIONAL$|^VOCATION$|^TVET$|^TECH.?VOC$|^TESDA$/,  pattern: "Vocational",  grouped: true  },
+          { test: /^EDUCATION$|^EDUC$|^CATEGORY$|^CATEGORIES$/,           pattern: "",            grouped: true  },
+        ];
+
+        let educCatPattern = null;
+        let educCatGrouped = false;
+        for (const ep of educCatPatternMap) {
+          if (ep.test.test(qNorm)) {
+            educCatPattern = ep.pattern;
+            educCatGrouped = ep.grouped;
+            break;
+          }
+        }
+
+        if (levelPattern !== null) {
+          isKeyword = true;
+          staffSearchQuery = null;
+
+          if (levelGrouped) {
+            // Fetch ALL matching levels from DB and group display
+            const rows = await fetchEduLevelRows(levelPattern);
+            if (rows.length > 0) {
+              groupMeta = rows; // [{id, name}]
+              searchGroupMode = "EDUCATION_LEVEL";
+              benQuery = benQuery.in("education_level_id", rows.map(r => r.id));
+            } else {
+              benQuery = benQuery.eq("education_level_id", -999);
+            }
+          } else {
+            // Specific single level
+            const rows = await fetchEduLevelRows(levelPattern);
+            if (rows.length > 0) {
+              groupMeta = rows;
+              searchGroupMode = "EDUCATION_LEVEL";
+              benQuery = benQuery.in("education_level_id", rows.map(r => r.id));
+            } else {
+              benQuery = benQuery.eq("education_level_id", -999);
+            }
+          }
+
+        } else if (educCatPattern !== null) {
+          isKeyword = true;
+          staffSearchQuery = null;
+
+          const rows = await fetchEducRows(educCatPattern);
+          if (rows.length > 0) {
+            groupMeta = rows;
+            searchGroupMode = "EDUCATION_CAT";
+            benQuery = benQuery.in("educ_id", rows.map(r => r.id));
+          } else {
+            benQuery = benQuery.eq("educ_id", -999);
+          }
+
+        } else {
+          // ── Free-text: also search education/education_levels names in DB ──
+          // This allows typing partial education names to be treated as edu search
+          const [eduRows, lvlRows] = await Promise.all([
+            fetchEducRows(safeQuery),
+            fetchEduLevelRows(safeQuery),
+          ]);
+
+          if (eduRows.length > 0 || lvlRows.length > 0) {
+            isKeyword = true;
+            staffSearchQuery = null;
+
+            if (lvlRows.length > 0 && eduRows.length === 0) {
+              groupMeta = lvlRows;
+              searchGroupMode = "EDUCATION_LEVEL";
+              benQuery = benQuery.in("education_level_id", lvlRows.map(r => r.id));
+            } else if (eduRows.length > 0 && lvlRows.length === 0) {
+              groupMeta = eduRows;
+              searchGroupMode = "EDUCATION_CAT";
+              benQuery = benQuery.in("educ_id", eduRows.map(r => r.id));
+            } else {
+              // Both found — combine (flat list, show both badges)
+              const allEduLvlIds = lvlRows.map(r => r.id);
+              const allEduIds    = eduRows.map(r => r.id);
+              groupMeta = [...eduRows, ...lvlRows];
+              searchGroupMode = "EDUCATION_CAT";
+              benQuery = benQuery.or(
+                `educ_id.in.(${allEduIds.join(",")}),education_level_id.in.(${allEduLvlIds.join(",")})`
+              );
+            }
+          }
+        }
+      } // end else (education level / category keywords)
 
       let beneficiaries = [];
-      let staffResults = [];
+      let staffResults  = [];
 
-      // 4. Execute Search
+      // ── Execute Queries ──
       if (isKeyword) {
         if (benQuery) {
           if (roleId === 2) benQuery = benQuery.eq("staffs.office_id", officeId);
-          const { data, error } = await benQuery.limit(1000);
+          const { data, error } = await benQuery.limit(2000);
           if (error) throw error;
           beneficiaries = data || [];
         }
@@ -1710,26 +1920,66 @@ function initGlobalSearch(user) {
         }
       }
 
-      renderSearchDashboard(query, beneficiaries || [], staffResults);
+      renderSearchDashboard(query, beneficiaries || [], staffResults, { searchGroupMode, groupMeta });
+
     } catch (err) {
       console.error("[Search Error]", err);
       resultsContainer.innerHTML = `<div class="p-4 text-center text-sm text-red-500 font-bold">Failed to perform search.</div>`;
     }
   }
 
-  function renderSearchDashboard(query, beneficiaries, staffs) {
+  function renderSearchDashboard(query, beneficiaries, staffs, opts) {
+    const searchGroupMode = opts?.searchGroupMode || null;
+    const groupMeta       = opts?.groupMeta       || [];
+
     if (beneficiaries.length === 0 && staffs.length === 0) {
-      resultsContainer.innerHTML = `
-        <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-none shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center">
-          <svg class="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-          </svg>
-          <div class="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">No results found for "<span class="text-spes-blue dark:text-spes-yellow">${query}</span>"</div>
-          <p class="text-[0.625rem] text-gray-400 dark:text-white/40 mt-2 font-semibold uppercase tracking-wider">Try adjusting your search keywords</p>
-        </div>
-      `;
+      // Build keyword hint chips — using string concatenation to avoid nested template literals
+      const kwGroups = [
+        { label: "Gender",      chips: ["Male", "Female"] },
+        { label: "Status",      chips: ["New", "Returning", "Ongoing"] },
+        { label: "Junior High", chips: ["Grade 7", "Grade 8", "Grade 9", "Grade 10"] },
+        { label: "Senior High", chips: ["Grade 11", "Grade 12"] },
+        { label: "College",     chips: ["1st Year", "2nd Year", "3rd Year", "4th Year"] },
+        { label: "Category",    chips: ["Vocational", "JHS", "SHS", "College"] },
+        { label: "Records",     chips: ["Total", "SPES", "Implementors"] },
+        { label: "Approval",    chips: ["Approved", "Pending"] },
+      ];
+      let kwHtml = "";
+      kwGroups.forEach(function(grp) {
+        let chipHtml = "";
+        grp.chips.forEach(function(c) {
+          chipHtml += "<button data-kw-chip=\"" + c + "\""
+            + " class=\"cursor-pointer text-[0.5625rem] px-2 py-0.5 rounded bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-bold hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary transition-all uppercase tracking-wide\">"
+            + c + "</button>";
+        });
+        kwHtml += "<div class=\"p-2 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5\">"
+          + "<p class=\"text-[0.5rem] font-black uppercase tracking-widest text-spes-blue dark:text-spes-yellow mb-1.5\">" + grp.label + "</p>"
+          + "<div class=\"flex flex-wrap gap-1\">" + chipHtml + "</div></div>";
+      });
+
+      resultsContainer.innerHTML =
+        "<div class=\"bg-white dark:bg-spes-dark-secondary p-8 rounded-none shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center\">"
+        + "<svg class=\"h-12 w-12 mx-auto text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"1.5\">"
+        + "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z\"/></svg>"
+        + "<div class=\"text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest\">No results for &ldquo;" + query + "&rdquo;</div>"
+        + "<p class=\"text-[0.625rem] text-gray-400 dark:text-white/40 mt-2 mb-5 font-semibold uppercase tracking-wider\">Try a keyword below for quick stats</p>"
+        + "<div class=\"grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-left max-w-2xl mx-auto\">" + kwHtml + "</div>"
+        + "</div>";
+
+      // Attach click handlers to chips
+      resultsContainer.querySelectorAll("[data-kw-chip]").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+          var kw = btn.getAttribute("data-kw-chip");
+          var inp = document.getElementById("global-search-input");
+          if (inp) { inp.value = kw; inp.dispatchEvent(new Event("input")); }
+          var frm = document.getElementById("global-search-form");
+          if (frm) frm.dispatchEvent(new Event("submit"));
+        });
+      });
       return;
     }
+
+
 
     const timestamp = new Date().toLocaleString('en-US', { 
       month: 'short', 
@@ -1816,41 +2066,146 @@ function initGlobalSearch(user) {
     };
 
     if (beneficiaries.length > 0) {
-      listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
-      beneficiaries.forEach(b => {
-        let officeName = "N/A";
-        if (b.staffs && b.staffs.offices) {
-          let longName = b.staffs.offices.name || "N/A";
-          officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
+      if (searchGroupMode && groupMeta.length > 0) {
+        // ── GROUPED MODE: show summary cards per education category / level ──
+        // Map group id → array of beneficiaries
+        const groupBuckets = {};
+        const getBucketKey = (b) => {
+          if (searchGroupMode === "EDUCATION_LEVEL") return b.education_level_id;
+          return b.educ_id; // EDUCATION_CAT
+        };
+        const groupMetaMap = {};
+        groupMeta.forEach(g => {
+          groupBuckets[g.id] = [];
+          groupMetaMap[g.id] = g.name;
+        });
+        // Uncategorized bucket
+        let uncatBucket = [];
+
+        beneficiaries.forEach(b => {
+          const key = getBucketKey(b);
+          if (key != null && groupBuckets[key] !== undefined) {
+            groupBuckets[key].push(b);
+          } else {
+            uncatBucket.push(b);
+          }
+        });
+
+        listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-3 mt-0">
+          ${searchGroupMode === "EDUCATION_LEVEL" ? "By Grade / Year Level" : "By Education Category"}
+          <span class="ml-2 font-normal text-gray-400">(Total: ${beneficiaries.length})</span>
+        </h5>`;
+
+        // Sort group meta by name for display
+        const sortedMeta = [...groupMeta].sort((a, b) => a.name.localeCompare(b.name));
+
+        sortedMeta.forEach(grp => {
+          const bucket = groupBuckets[grp.id] || [];
+          const total  = bucket.length;
+          if (total === 0) return;
+          const males   = bucket.filter(b => b.gender_id === 1).length;
+          const females = bucket.filter(b => b.gender_id === 2).length;
+          const newC    = bucket.filter(b => !b.return_status || b.return_status.toUpperCase() !== "SPES BABY").length;
+          const retC    = bucket.filter(b => b.return_status && b.return_status.toUpperCase() === "SPES BABY").length;
+
+          // Compact list preview (max 5)
+          let previewHtml = "";
+          bucket.slice(0, 5).forEach(b => {
+            let officeName = "N/A";
+            if (b.staffs && b.staffs.offices) {
+              let ln = b.staffs.offices.name || "N/A";
+              officeName = ln.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU" : ln.split(" ")[0];
+            }
+            let officeParam = b.staffs?.office_id ? `&office=${b.staffs.office_id}` : "";
+            let batchParam  = b.batch_id ? `&batch=${b.batch_id}` : "";
+            const isBaby    = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
+            const dotColor  = isBaby ? "bg-[#FF5B9B]" : "bg-emerald-500";
+            previewHtml += `<a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer flex items-center gap-1.5 py-1 hover:opacity-75 transition-opacity">
+              <span class="h-1.5 w-1.5 rounded-full ${dotColor} shrink-0"></span>
+              <span class="text-[0.5625rem] font-bold uppercase text-spes-black dark:text-white truncate">${b.full_name}</span>
+              <span class="text-[0.5rem] text-gray-400 dark:text-gray-500 shrink-0 ml-auto">${officeName}</span>
+            </a>`;
+          });
+          if (bucket.length > 5) {
+            previewHtml += `<p class="text-[0.5rem] text-gray-400 dark:text-white/30 font-bold uppercase tracking-widest mt-1">+ ${bucket.length - 5} more</p>`;
+          }
+
+          listHtml += `
+            <div class="rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden mb-3">
+              <!-- Group Header -->
+              <div class="flex items-center justify-between px-3 py-2 bg-spes-blue/5 dark:bg-spes-yellow/5 border-b border-gray-100 dark:border-white/5">
+                <span class="text-[0.625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">${grp.name}</span>
+                <span class="text-[0.625rem] font-black text-spes-black dark:text-white">${total.toLocaleString()} <span class="font-normal text-gray-400">beneficiaries</span></span>
+              </div>
+              <!-- Stats Row -->
+              <div class="grid grid-cols-4 divide-x divide-gray-100 dark:divide-white/5 bg-gray-50 dark:bg-white/[0.02]">
+                <div class="text-center py-1.5 px-1">
+                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">Male</p>
+                  <p class="text-xs font-black text-spes-black dark:text-white">${males}</p>
+                </div>
+                <div class="text-center py-1.5 px-1">
+                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">Female</p>
+                  <p class="text-xs font-black text-spes-black dark:text-white">${females}</p>
+                </div>
+                <div class="text-center py-1.5 px-1">
+                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-emerald-400/80">New</p>
+                  <p class="text-xs font-black text-emerald-600 dark:text-emerald-400">${newC}</p>
+                </div>
+                <div class="text-center py-1.5 px-1">
+                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-[#FF5B9B]/80">Return</p>
+                  <p class="text-xs font-black text-[#FF5B9B]">${retC}</p>
+                </div>
+              </div>
+              <!-- Mini List Preview -->
+              ${previewHtml ? `<div class="px-3 py-2 bg-white dark:bg-spes-dark-secondary space-y-0 divide-y divide-gray-50 dark:divide-white/5">${previewHtml}</div>` : ""}
+            </div>`;
+        });
+
+        if (uncatBucket.length > 0) {
+          listHtml += `<p class="text-[0.5rem] text-gray-400 dark:text-white/30 font-bold uppercase tracking-widest mt-2">+ ${uncatBucket.length} uncategorized</p>`;
         }
 
-        const isSpesBaby = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
-        const statusClass = isSpesBaby
-          ? "bg-[#FF5B9B]/10 text-[#FF5B9B]"
-          : "bg-emerald-500/10 text-emerald-500";
-        const statusLabel = isSpesBaby ? "RETURNING" : "ONGOING";
+      } else {
+        // ── FLAT MODE: original per-beneficiary list ──
+        listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
+        beneficiaries.forEach(b => {
+          let officeName = "N/A";
+          if (b.staffs && b.staffs.offices) {
+            let longName = b.staffs.offices.name || "N/A";
+            officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
+          }
 
-        let officeParam = "";
-        if (b.staffs && b.staffs.office_id) {
-          officeParam = `&office=${b.staffs.office_id}`;
-        }
-        let batchParam = "";
-        if (b.batch_id) {
-          batchParam = `&batch=${b.batch_id}`;
-        }
+          const isSpesBaby = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
+          const statusClass = isSpesBaby ? "bg-[#FF5B9B]/10 text-[#FF5B9B]" : "bg-emerald-500/10 text-emerald-500";
+          const statusLabel = isSpesBaby ? "RETURNING" : "ONGOING";
 
-        listHtml += `
-          <a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
-             <div>
-                <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(b.full_name, query)}</div>
-                <div class="text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
-             </div>
-             <span class="text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
-                SPES - ${statusLabel}
-             </span>
-          </a>
-        `;
-      });
+          const eduLevelName = b.education_level?.name || null;
+          const eduCatName   = b.education?.name || null;
+          const eduBadge = eduLevelName
+            ? `<span class="ml-1.5 text-[0.5rem] px-1.5 py-0.5 rounded bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow font-black uppercase tracking-wider">${eduLevelName}</span>`
+            : eduCatName
+              ? `<span class="ml-1.5 text-[0.5rem] px-1.5 py-0.5 rounded bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow font-black uppercase tracking-wider">${eduCatName}</span>`
+              : "";
+
+          let officeParam = "";
+          if (b.staffs && b.staffs.office_id) officeParam = `&office=${b.staffs.office_id}`;
+          let batchParam = "";
+          if (b.batch_id) batchParam = `&batch=${b.batch_id}`;
+
+          listHtml += `
+            <a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
+               <div class="flex-1 min-w-0 mr-2">
+                  <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide truncate">${highlight(b.full_name, query)}</div>
+                  <div class="flex items-center flex-wrap gap-x-1 text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">
+                    <span>${highlight(officeName, query)}</span>${eduBadge}
+                  </div>
+               </div>
+               <span class="shrink-0 text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
+                  SPES - ${statusLabel}
+               </span>
+            </a>`;
+        });
+      }
     }
 
     if (staffs.length > 0) {
@@ -1892,7 +2247,10 @@ function initGlobalSearch(user) {
     }, 2000);
 
     // Chart Configuration Helper
-    let chartMode = "GENDER"; // or "TOTAL"
+    let chartMode = "GENDER"; // "GENDER" | "TOTAL" | "GROUP"
+
+    // Color palette for group breakdown
+    const groupColors = ["#0038A8","#EFB800","#4F91FF","#FF5B9B","#10B981","#F59E0B","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#84CC16"];
 
     const getChartOptions = (mode) => {
       let series = [];
@@ -1900,7 +2258,23 @@ function initGlobalSearch(user) {
       let colors = [];
       let totalLabel = "TOTAL SPES";
 
-      if (mode === "GENDER") {
+      if (mode === "GROUP" && searchGroupMode && groupMeta.length > 0) {
+        // Grouped mode: one slice per group
+        const sortedMeta = [...groupMeta].sort((a, b) => a.name.localeCompare(b.name));
+        sortedMeta.forEach((grp, idx) => {
+          const cnt = beneficiaries.filter(b => {
+            if (searchGroupMode === "EDUCATION_LEVEL") return b.education_level_id === grp.id;
+            return b.educ_id === grp.id;
+          }).length;
+          if (cnt > 0) {
+            series.push(cnt);
+            labels.push(grp.name.toUpperCase());
+            colors.push(groupColors[idx % groupColors.length]);
+          }
+        });
+        totalLabel = "TOTAL";
+
+      } else if (mode === "GENDER") {
         let male = 0;
         let female = 0;
         beneficiaries.forEach(b => {

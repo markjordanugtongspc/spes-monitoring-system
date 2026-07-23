@@ -196,20 +196,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   // Derive return_status client-side as a fallback if the DB column is missing/null.
   // SPES BABY = same full_name appears in an earlier year_period (returnee); else NEW.
   if (!result.error && Array.isArray(result.data)) {
-    const firstYearByName = {};
-    result.data.forEach(b => {
-      const key = String(b.full_name ?? "").trim().toLowerCase();
-      const yr  = b.year_period != null ? Number(b.year_period) : null;
-      if (!key || yr == null) return;
-      if (firstYearByName[key] == null || yr < firstYearByName[key]) firstYearByName[key] = yr;
-    });
-    result.data.forEach(b => {
-      if (b.return_status) { b.return_status = String(b.return_status).toUpperCase(); return; }
-      const key = String(b.full_name ?? "").trim().toLowerCase();
-      const yr  = b.year_period != null ? Number(b.year_period) : null;
-      b.return_status = (key && yr != null && firstYearByName[key] != null && yr > firstYearByName[key])
-        ? "SPES BABY" : "NEW";
-    });
+    processBeneficiaryReturnStatus(result.data);
   }
 
   if (result.error) {
@@ -357,12 +344,39 @@ function _sanitize(p) {
     batch_id:           p.batch_id !== "" && p.batch_id != null ? parseInt(p.batch_id, 10) : null,
   };
 
+  if (p.return_status !== undefined && p.return_status !== null && String(p.return_status).trim() !== "") {
+    result.return_status = String(p.return_status).trim().toUpperCase();
+  }
+
   // If a staff_id is explicitly provided (e.g., Admin adding to a specific implementor)
   if (p.staff_id !== undefined) {
     result.staff_id = p.staff_id;
   }
 
   return result;
+}
+
+// ── Standalone helper for return status ──────────────────────────
+export function processBeneficiaryReturnStatus(data) {
+  if (!Array.isArray(data)) return data;
+  const firstYearByName = {};
+  data.forEach(b => {
+    const key = String(b.full_name ?? "").trim().toLowerCase();
+    const yr  = b.year_period != null ? Number(b.year_period) : null;
+    if (!key || yr == null) return;
+    if (firstYearByName[key] == null || yr < firstYearByName[key]) firstYearByName[key] = yr;
+  });
+  data.forEach(b => {
+    if (b.return_status && String(b.return_status).trim() !== "") {
+      b.return_status = String(b.return_status).trim().toUpperCase();
+    } else {
+      const key = String(b.full_name ?? "").trim().toLowerCase();
+      const yr  = b.year_period != null ? Number(b.year_period) : null;
+      b.return_status = (key && yr != null && firstYearByName[key] != null && yr > firstYearByName[key])
+        ? "SPES BABY" : "NEW";
+    }
+  });
+  return data;
 }
 
 // ── Cleanup Helper ──────────────────────────────────────────────
