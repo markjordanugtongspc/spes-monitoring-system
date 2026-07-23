@@ -1560,7 +1560,7 @@ function initGlobalSearch(user) {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !overlay.classList.contains("hidden")) {
+    if (e.key === "Escape" && overlay && !overlay.classList.contains("hidden")) {
       closeSearch();
     }
   });

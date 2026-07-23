@@ -161,7 +161,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     return { data: [], error: "Account Not Approved. List is hidden." };
   }
 
-  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:educ_id(id, name), gender:gender_id(id, name)";
+  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:educ_id(id, name), education_level:education_level_id(id, name, education_id), gender:gender_id(id, name)";
   if (!isAdmin && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
@@ -302,6 +302,32 @@ export async function archiveBeneficiary(id) {
   return { success: true };
 }
 
+// ── Education Levels Helper ────────────────────────────────────
+const EDU_LEVEL_CACHE_KEY = "spes_edu_levels_v1";
+
+export async function fetchEducationLevels({ forceRefresh = false } = {}) {
+  if (!forceRefresh) {
+    try {
+      const raw = localStorage.getItem(EDU_LEVEL_CACHE_KEY);
+      if (raw) return { data: JSON.parse(raw) };
+    } catch {}
+  }
+  const { data, error } = await supabase
+    .from("education_levels")
+    .select("*")
+    .order("education_id", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES EduLevel] fetch error:", error);
+    return { data: [] };
+  }
+
+  const records = data ?? [];
+  try { localStorage.setItem(EDU_LEVEL_CACHE_KEY, JSON.stringify(records)); } catch {}
+  return { data: records };
+}
+
 // ── Input sanitiser ────────────────────────────────────────────
 function _sanitize(p) {
   const str = (v) => String(v ?? "").trim() || null;
@@ -313,20 +339,22 @@ function _sanitize(p) {
   } catch {}
 
   const sanitizeEdu = p.educ_id !== undefined ? p.educ_id : p.education_id;
+  const sanitizeEduLevel = p.education_level_id !== undefined ? p.education_level_id : (p.edulevel_id !== undefined ? p.edulevel_id : p.edulevel);
 
   const result = {
-    full_name:      String(p.full_name ?? "").trim(),
-    address:        str(p.address),
-    month_period:   str(p.month_period)?.toUpperCase() ?? null,
-    year_period:    str(p.year_period),
-    gender_id:      p.gender_id !== "" && p.gender_id != null ? parseInt(p.gender_id, 10) : null,
-    designated:     str(p.designated),
-    relationship:   str(p.relationship)?.toUpperCase() ?? null,
-    contact_number: str(p.contact_number),
-    birthday:       p.birthday || null,
-    age:            p.age !== "" && p.age != null ? parseInt(p.age, 10) : null,
-    educ_id:        sanitizeEdu !== "" && sanitizeEdu != null ? parseInt(sanitizeEdu, 10) : null,
-    batch_id:       p.batch_id !== "" && p.batch_id != null ? parseInt(p.batch_id, 10) : null,
+    full_name:          String(p.full_name ?? "").trim(),
+    address:            str(p.address),
+    month_period:       str(p.month_period)?.toUpperCase() ?? null,
+    year_period:        str(p.year_period),
+    gender_id:          p.gender_id !== "" && p.gender_id != null ? parseInt(p.gender_id, 10) : null,
+    designated:         str(p.designated),
+    relationship:       str(p.relationship)?.toUpperCase() ?? null,
+    contact_number:     str(p.contact_number),
+    birthday:           p.birthday || null,
+    age:                p.age !== "" && p.age != null ? parseInt(p.age, 10) : null,
+    educ_id:            sanitizeEdu !== "" && sanitizeEdu != null ? parseInt(sanitizeEdu, 10) : null,
+    education_level_id: sanitizeEduLevel !== "" && sanitizeEduLevel != null && !isNaN(parseInt(sanitizeEduLevel, 10)) ? parseInt(sanitizeEduLevel, 10) : null,
+    batch_id:           p.batch_id !== "" && p.batch_id != null ? parseInt(p.batch_id, 10) : null,
   };
 
   // If a staff_id is explicitly provided (e.g., Admin adding to a specific implementor)

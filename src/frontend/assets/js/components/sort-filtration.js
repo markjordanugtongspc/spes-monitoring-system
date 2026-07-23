@@ -1,3 +1,5 @@
+import { preferenceStorage } from "./storage.js";
+
 /**
  * SPES Portal — General Sorting and Filtration Component
  * ────────────────────────────────────────────────────────
@@ -203,7 +205,20 @@ export function setupSortFiltration({
           return p === activeValue;
         });
       } else if (key === "education_name") {
-        processed = processed.filter(item => (item.education?.name || "").toLowerCase() === activeValue);
+        processed = processed.filter(item => {
+          const catName = (item.education?.name || "").toLowerCase().trim();
+          let lvlName = (item.education_level?.name || "").toLowerCase().trim();
+          const prefLvl = (preferenceStorage.getBeneficiaryEduLevel(item.id) || "").toLowerCase().trim();
+          if (!lvlName && prefLvl) lvlName = prefLvl;
+
+          const cleanLvl = lvlName.replace(/\s+college$/i, "").trim();
+          const target = activeValue.replace(/\s+college$/i, "").trim();
+
+          if (catName === target) return true;
+          if (lvlName === target || cleanLvl === target) return true;
+          if (lvlName.includes(target) || cleanLvl.includes(target)) return true;
+          return false;
+        });
       } else if (key === "gender_name") {
         processed = processed.filter(item => (item.gender?.name || "").toLowerCase() === activeValue);
       } else if (key === "bday_month") {

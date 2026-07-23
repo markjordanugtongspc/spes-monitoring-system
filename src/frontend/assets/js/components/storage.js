@@ -55,6 +55,37 @@ class PreferenceStorage {
     document.cookie = `${this.cookieName}=${payload}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
   }
   // --- FUNCTION: SAVE SESSION METADATA TO COOKIE (END) ---
+
+  // --- FUNCTION: SAVE TEMPORARY BENEFICIARY EDU SUB-LEVEL (START) ---
+  saveBeneficiaryEduLevel(id, edulevel) {
+    if (!id) return;
+    try {
+      const key = "spes_edu_sublevels";
+      const raw = localStorage.getItem(key);
+      const data = raw ? JSON.parse(raw) : {};
+      if (edulevel) {
+        data[String(id)] = edulevel;
+      } else {
+        delete data[String(id)];
+      }
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to save edulevel in localStorage", e);
+    }
+  }
+
+  getBeneficiaryEduLevel(id) {
+    if (!id) return "";
+    try {
+      const raw = localStorage.getItem("spes_edu_sublevels");
+      if (!raw) return "";
+      const data = JSON.parse(raw);
+      return data[String(id)] || "";
+    } catch {
+      return "";
+    }
+  }
+  // --- FUNCTION: SAVE TEMPORARY BENEFICIARY EDU SUB-LEVEL (END) ---
 }
 
 export const preferenceStorage = new PreferenceStorage();

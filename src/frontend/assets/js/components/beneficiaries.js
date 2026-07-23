@@ -21,6 +21,43 @@ import { getSession } from "../rbac/guard.js";
 import { supabase } from "../../../../backend/api/supabase.js";
 import { setupSortFiltration } from "./sort-filtration.js";
 import { modals } from "./modals.js";
+import { preferenceStorage } from "./storage.js";
+
+const DEFAULT_EDU_LEVELS = [
+  { id: 1, education_id: 1, name: "Grade 11" },
+  { id: 2, education_id: 1, name: "Grade 12" },
+  { id: 3, education_id: 3, name: "1st Year" },
+  { id: 4, education_id: 3, name: "2nd Year" },
+  { id: 5, education_id: 3, name: "3rd Year" },
+  { id: 6, education_id: 3, name: "4th Year" },
+  { id: 8, education_id: 4, name: "Grade 7" },
+  { id: 9, education_id: 4, name: "Grade 8" },
+  { id: 10, education_id: 4, name: "Grade 9" },
+  { id: 11, education_id: 4, name: "Grade 10" },
+];
+
+function formatEducationDisplay(b) {
+  if (!b) return "Not Provided";
+  const catName = (typeof b === "object" ? b.education?.name : b) || "";
+  if (!catName) return "Not Provided";
+
+  let levelName = "";
+  if (typeof b === "object") {
+    levelName = b.education_level?.name || preferenceStorage.getBeneficiaryEduLevel(b.id) || "";
+  }
+  if (!levelName) return escHtml(catName.toUpperCase());
+
+  // Resolve numeric ID (e.g. "3") to level name ("1st Year")
+  if (!isNaN(parseInt(levelName, 10)) && String(levelName).trim() === String(parseInt(levelName, 10))) {
+    const lvlId = parseInt(levelName, 10);
+    const found = DEFAULT_EDU_LEVELS.find(l => l.id === lvlId);
+    if (found) levelName = found.name;
+  }
+
+  const cleanLevel = String(levelName).replace(/\s+College$/i, "").trim().toUpperCase();
+  return `${escHtml(catName.toUpperCase())} - <u class="underline decoration-amber-500 font-extrabold decoration-2 underline-offset-2">${escHtml(cleanLevel)}</u>`;
+}
+
 
 // ── Office badge color palette (cycles through offices) ───────────
 const OFFICE_BADGE_PALETTES = [
@@ -64,7 +101,6 @@ function formatPeriod(row) {
   return parts.join(" ") || "N/A";
 }
 
-
 function formatDate(iso) {
   if (!iso) return "N/A";
   const d = new Date(iso);
@@ -80,6 +116,7 @@ function escHtml(str) {
 
 function _bdfCollect() {
   const g = (id) => document.getElementById(id)?.value?.trim() ?? "";
+  const eduLvlVal = g("bdf-edulevel");
   return {
     full_name: g("bdf-full-name"),
     designated: g("bdf-designated"),
@@ -92,6 +129,8 @@ function _bdfCollect() {
     birthday: g("bdf-birthday") || null,
     age: g("bdf-age") || null,
     educ_id: g("bdf-education") !== "" && g("bdf-education") != null ? parseInt(g("bdf-education"), 10) : null,
+    education_level_id: eduLvlVal !== "" && eduLvlVal != null && !isNaN(parseInt(eduLvlVal, 10)) ? parseInt(eduLvlVal, 10) : null,
+    edulevel: eduLvlVal,
     batch_id: g("bdf-batch-id") || null,
     staff_id: g("bdf-assign-staff") !== "" && g("bdf-assign-staff") != null ? parseInt(g("bdf-assign-staff"), 10) : null,
   };
@@ -109,8 +148,13 @@ function _bdfFill(defaults = {}) {
   set("bdf-gender", defaults.gender_id);
   set("bdf-birthday", defaults.birthday);
   set("bdf-age", defaults.age);
-  set("bdf-education", defaults.educ_id);
+
+  const catId = defaults.educ_id ?? defaults.education?.id ?? "";
+  set("bdf-education", catId);
   set("bdf-batch-id", defaults.batch_id);
+
+  const levelVal = defaults.education_level_id ?? defaults.education_level?.id ?? (defaults.id ? preferenceStorage.getBeneficiaryEduLevel(defaults.id) : "");
+  set("bdf-edulevel", levelVal ?? "");
 
   // Sync custom education dropdown visually
   const eduInput = document.getElementById("bdf-education");
@@ -119,7 +163,7 @@ function _bdfFill(defaults = {}) {
 
   if (eduInput && selectedContent && eduMenu) {
     const val = eduInput.value;
-    const option = Array.from(eduMenu.querySelectorAll(".edu-option")).find(opt => opt.getAttribute("data-value") === val);
+    const option = Array.from(eduMenu.querySelectorAll(".edu-option")).find(opt => opt.getAttribute("data-value") === String(val));
     if (option) {
       selectedContent.innerHTML = option.innerHTML;
     } else {
@@ -127,10 +171,21 @@ function _bdfFill(defaults = {}) {
         <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
         </svg>
-        <span class="text-spes-black/50 dark:text-spes-white/50" id="education-selected-text">— Select —</span>
+        <span class="text-spes-black/50 dark:text-spes-white/50" id="education-selected-text">— Select Category —</span>
       `;
     }
+    if (typeof window._updateEduSubLevelDropdown === "function") {
+      window._updateEduSubLevelDropdown(val, levelVal);
+    }
   }
+}
+
+function _patchedBdfFill(defaults = {}, isEdit = false) {
+  _bdfFill(defaults);
+  const batchBadgeEl = document.getElementById("bdf-batch-badge");
+  const batchNoneEl  = document.getElementById("bdf-batch-none");
+  if (batchBadgeEl) { batchBadgeEl.textContent = ""; batchBadgeEl.classList.add("hidden"); }
+  if (batchNoneEl)  batchNoneEl.classList.remove("hidden");
 }
 
 // ── Generic animated badge panel factory ─────────────────────
@@ -674,13 +729,6 @@ export function initBeneficiaries() {
     });
     const sortedPeriods = Array.from(periods).sort((a, b) => new Date(b) - new Date(a));
 
-    // 2. Education
-    const educations = new Set();
-    data.forEach(b => {
-      if (b.education?.name) educations.add(b.education.name);
-    });
-    const sortedEducations = Array.from(educations).sort();
-
     // 3. Gender
     const genders = new Set();
     data.forEach(b => {
@@ -720,8 +768,55 @@ export function initBeneficiaries() {
       return h;
     };
 
+    const renderEduFilterSection = () => {
+      const categories = [
+        { name: "Senior Highschool", sub: ["Grade 11", "Grade 12"] },
+        { name: "Highschool", sub: ["Grade 7", "Grade 8", "Grade 9", "Grade 10"] },
+        { name: "College Level", sub: ["1st Year", "2nd Year", "3rd Year", "4th Year"] },
+        { name: "College Graduate", sub: [] },
+        { name: "OSY", sub: [] },
+      ];
+
+      let h = `
+        <details class="group mb-1">
+          <summary class="flex justify-between items-center cursor-pointer rounded-md p-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 transition-colors">
+            <span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Education Level</span>
+            <svg class="h-3 w-3 text-spes-blue/50 dark:text-spes-yellow/50 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="pl-3 mt-1 flex flex-col space-y-1 mb-2">
+            <button data-filter-key="education_name" data-filter-val="all" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">All Education</button>
+      `;
+
+      categories.forEach(cat => {
+        const hasSub = cat.sub.length > 0;
+        if (!hasSub) {
+          h += `<button data-filter-key="education_name" data-filter-val="${cat.name.toLowerCase()}" class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left uppercase text-xs font-bold">${cat.name}</button>`;
+        } else {
+          h += `
+            <details class="group/sub">
+              <summary class="flex items-center justify-between cursor-pointer rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 transition-colors">
+                <button type="button" data-filter-key="education_name" data-filter-val="${cat.name.toLowerCase()}" class="cursor-pointer flex-1 text-left uppercase text-xs font-bold">${cat.name}</button>
+                <svg class="h-3.5 w-3.5 text-spes-blue/40 dark:text-spes-yellow/40 transition-transform group-open/sub:rotate-180 p-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="pl-3.5 mt-0.5 flex flex-col space-y-0.5 border-l-2 border-spes-blue/15 dark:border-spes-yellow/20 ml-2 py-0.5">
+          `;
+          cat.sub.forEach(sVal => {
+            h += `<button data-filter-key="education_name" data-filter-val="${sVal.toLowerCase()}" class="cursor-pointer flex w-full items-center rounded-md p-1 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left uppercase text-[0.6875rem] text-spes-black/70 dark:text-spes-white/70 font-semibold">• ${sVal}</button>`;
+          });
+          h += `</div></details>`;
+        }
+      });
+
+      h += `</div></details>`;
+      return h;
+    };
+
     html += renderBtns("period", "Period", "All Periods", sortedPeriods);
-    html += renderBtns("education_name", "Education Level", "All Education", sortedEducations);
+    html += renderEduFilterSection();
     html += renderBtns("gender_name", "Gender", "All Genders", sortedGenders);
     html += renderBtns("bday_month", "Birthday Month", "All Months", sortedBdayMonths);
 
@@ -935,7 +1030,7 @@ export function initBeneficiaries() {
           <span class="font-bold text-spes-black/55 dark:text-white/50">Education</span>
           <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
-            ${escHtml(b.education?.name || "Not Provided")}
+            ${formatEducationDisplay(b)}
           </span>
         </div>
       </div>
@@ -1242,7 +1337,7 @@ export function initBeneficiaries() {
               <td class="px-6 py-4 text-center whitespace-nowrap">
                 <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
-                  ${escHtml(b.education?.name || "Not Provided")}
+                  ${formatEducationDisplay(b)}
                 </span>
               </td>
               <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap uppercase">${escHtml(b.gender?.name || "—")}</td>
@@ -1581,38 +1676,16 @@ export function initBeneficiaries() {
     _bdfSetLoading(false);
     if (bdfForm) bdfForm.reset();
 
-    const activeOfficeLoc = isAdmin ? currentOfficeLocation : officerOffice?.location;
     if (defaults) {
       await _patchedBdfFill(defaults, true);
-      if (activeOfficeLoc) {
-        const addressInput = document.getElementById("bdf-address");
-        if (addressInput) {
-          addressInput.setAttribute("readonly", "true");
-          addressInput.classList.add("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
-        }
-      } else {
-        const addressInput = document.getElementById("bdf-address");
-        if (addressInput) {
-          addressInput.removeAttribute("readonly");
-          addressInput.classList.remove("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
-        }
-      }
     } else {
       await _patchedBdfFill({ year_period: new Date().getFullYear() });
-      if (activeOfficeLoc) {
-        const addressInput = document.getElementById("bdf-address");
-        if (addressInput) {
-          addressInput.value = activeOfficeLoc;
-          addressInput.setAttribute("readonly", "true");
-          addressInput.classList.add("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
-        }
-      } else {
-        const addressInput = document.getElementById("bdf-address");
-        if (addressInput) {
-          addressInput.removeAttribute("readonly");
-          addressInput.classList.remove("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
-        }
-      }
+    }
+
+    const addressInput = document.getElementById("bdf-address");
+    if (addressInput) {
+      addressInput.removeAttribute("readonly");
+      addressInput.classList.remove("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
     }
 
     // Populate and show Admin staff assignment dropdown if admin
@@ -1739,6 +1812,18 @@ export function initBeneficiaries() {
     _bdfSetLoading(false);
 
     if (!result.success) return _bdfShowError(result.error ?? "Failed to save. Please try again.");
+
+    const targetId = result.data?.id || _bdfEditId;
+    if (targetId) {
+      let levelText = document.getElementById("edulevel-selected-text")?.textContent?.trim() || values.edulevel;
+      if (levelText && !isNaN(parseInt(levelText, 10))) {
+        const match = DEFAULT_EDU_LEVELS.find(l => String(l.id) === String(levelText));
+        if (match) levelText = match.name;
+      }
+      if (levelText && !levelText.includes("Select Level")) {
+        preferenceStorage.saveBeneficiaryEduLevel(targetId, levelText);
+      }
+    }
 
     closeBdfDrawer();
     await modals.success(
@@ -1964,41 +2049,193 @@ export function initBeneficiaries() {
   setupAutoAgeCalculation();
   // --- END: Auto Calculate Age ---
 
-  // --- START: Custom Education Dropdown ---
-  const eduBtn = document.getElementById("btn-education-dropdown");
-  const eduMenu = document.getElementById("menu-education-dropdown");
-  const eduInput = document.getElementById("bdf-education");
+  // --- START: DB-Driven Education & Sub-Level Dropdown ---
+  let _cachedEduLevels = null;
+  async function _loadEduLevelsFromDb() {
+    if (_cachedEduLevels) return _cachedEduLevels;
+    try {
+      const { fetchEducationLevels } = await import("../../../../backend/api/beneficiary.js");
+      const res = await fetchEducationLevels();
+      if (res.data && res.data.length > 0) {
+        _cachedEduLevels = res.data;
+        return _cachedEduLevels;
+      }
+    } catch (e) {
+      console.warn("Failed to load education_levels from backend", e);
+    }
+    return [];
+  }
 
-  if (eduBtn && eduMenu && eduInput) {
-    eduBtn.addEventListener("click", () => {
-      eduMenu.classList.toggle("hidden");
+  const eduSubContainer    = document.getElementById("container-edulevel-sub");
+  const eduSubBtn          = document.getElementById("btn-edulevel-dropdown");
+  const eduSubMenu         = document.getElementById("menu-edulevel-dropdown");
+  const eduSubInput        = document.getElementById("bdf-edulevel");
+  const eduSubSelectedText = document.getElementById("edulevel-selected-text");
+  const eduSubSearchWrap   = document.getElementById("edulevel-search-wrap");
+  const eduSubSearchInput  = document.getElementById("edulevel-search-input");
+  const eduSubOptionsList  = document.getElementById("edulevel-options-list");
+
+  function renderEduSubOptions(optionsArr) {
+    if (!eduSubOptionsList) return;
+    eduSubOptionsList.innerHTML = "";
+    optionsArr.forEach(item => {
+      const optVal = item.id != null ? item.id : item.name;
+      const optText = item.name || item;
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <button type="button"
+          class="edulevel-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
+          data-value="${optVal}" data-name="${escHtml(optText)}">
+          <svg class="h-3.5 w-3.5 text-spes-blue dark:text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="font-semibold text-xs">${escHtml(optText)}</span>
+        </button>
+      `;
+      const btn = li.querySelector("button");
+      btn.addEventListener("click", () => {
+        if (eduSubInput) eduSubInput.value = optVal;
+        if (eduSubSelectedText) eduSubSelectedText.textContent = optText;
+        if (eduSubMenu) eduSubMenu.classList.add("hidden");
+      });
+      eduSubOptionsList.appendChild(li);
     });
+  }
 
-    // Close on outside click
-    document.addEventListener("click", (e) => {
-      if (!eduBtn.contains(e.target) && !eduMenu.contains(e.target)) {
-        eduMenu.classList.add("hidden");
+  const DEFAULT_EDU_LEVELS = [
+    { id: 1, education_id: 1, name: "Grade 11" },
+    { id: 2, education_id: 1, name: "Grade 12" },
+    { id: 3, education_id: 3, name: "1st Year" },
+    { id: 4, education_id: 3, name: "2nd Year" },
+    { id: 5, education_id: 3, name: "3rd Year" },
+    { id: 6, education_id: 3, name: "4th Year" },
+    { id: 8, education_id: 4, name: "Grade 7" },
+    { id: 9, education_id: 4, name: "Grade 8" },
+    { id: 10, education_id: 4, name: "Grade 9" },
+    { id: 11, education_id: 4, name: "Grade 10" },
+  ];
+
+  function _resolveCatId(val) {
+    if (val == null || val === "") return null;
+    const s = String(val).toLowerCase().trim();
+    if (s === "1" || s.includes("senior")) return 1;
+    if (s === "2" || s.includes("graduate")) return 2;
+    if (s === "3" || s.includes("college level") || s === "college") return 3;
+    if (s === "4" || s.includes("highschool") || s === "high school") return 4;
+    if (s === "5" || s.includes("osy")) return 5;
+    const n = parseInt(val, 10);
+    return !isNaN(n) ? n : null;
+  }
+
+  window._updateEduSubLevelDropdown = async function(catVal, preservedSubVal = "") {
+    if (!eduSubContainer || !eduSubOptionsList) return;
+    const catId = _resolveCatId(catVal);
+    let allDbLevels = await _loadEduLevelsFromDb();
+    if (!allDbLevels || allDbLevels.length === 0) {
+      allDbLevels = DEFAULT_EDU_LEVELS;
+    }
+    
+    // Filter matching education_id
+    const matchingLevels = allDbLevels.filter(lvl => lvl.education_id === catId);
+
+    if (matchingLevels.length > 0) {
+      eduSubContainer.classList.remove("hidden");
+
+      // Mini-Search Visibility Rule: Show ONLY if more than 4 options (e.g. 5+ options)
+      if (eduSubSearchWrap) {
+        if (matchingLevels.length > 4) {
+          eduSubSearchWrap.classList.remove("hidden");
+        } else {
+          eduSubSearchWrap.classList.add("hidden");
+        }
+      }
+
+      renderEduSubOptions(matchingLevels);
+
+      // Restore preserved value
+      const found = matchingLevels.find(l => 
+        String(l.id) === String(preservedSubVal) || 
+        l.name.toLowerCase() === String(preservedSubVal).toLowerCase()
+      );
+
+      if (found) {
+        if (eduSubInput) eduSubInput.value = found.id;
+        if (eduSubSelectedText) eduSubSelectedText.textContent = found.name;
+      } else {
+        if (eduSubInput) eduSubInput.value = "";
+        if (eduSubSelectedText) eduSubSelectedText.textContent = "— Select Level —";
+      }
+    } else {
+      eduSubContainer.classList.add("hidden");
+      if (eduSubInput) eduSubInput.value = "";
+      if (eduSubSelectedText) eduSubSelectedText.textContent = "— Select Level —";
+    }
+  };
+
+  if (eduSubSearchInput && eduSubOptionsList) {
+    eduSubSearchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const items = eduSubOptionsList.querySelectorAll("li");
+      items.forEach(li => {
+        const text = li.textContent.toLowerCase();
+        li.style.display = text.includes(q) ? "" : "none";
+      });
+    });
+  }
+
+  if (eduSubBtn && eduSubMenu) {
+    eduSubBtn.addEventListener("click", () => {
+      const isHidden = eduSubMenu.classList.contains("hidden");
+      eduSubMenu.classList.toggle("hidden", !isHidden);
+      if (isHidden && eduSubSearchInput) {
+        eduSubSearchInput.value = "";
+        if (eduSubOptionsList) eduSubOptionsList.querySelectorAll("li").forEach(li => li.style.display = "");
+        setTimeout(() => eduSubSearchInput.focus(), 50);
       }
     });
 
-    const options = eduMenu.querySelectorAll(".edu-option");
+    document.addEventListener("click", (e) => {
+      if (!eduSubBtn.contains(e.target) && !eduSubMenu.contains(e.target)) {
+        eduSubMenu.classList.add("hidden");
+      }
+    });
+  }
+
+  // Category Dropdown Listener in Form Drawer
+  const mainEduBtn = document.getElementById("btn-education-dropdown");
+  const mainEduMenu = document.getElementById("menu-education-dropdown");
+  const mainEduInput = document.getElementById("bdf-education");
+
+  if (mainEduBtn && mainEduMenu && mainEduInput) {
+    mainEduBtn.addEventListener("click", () => {
+      mainEduMenu.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!mainEduBtn.contains(e.target) && !mainEduMenu.contains(e.target)) {
+        mainEduMenu.classList.add("hidden");
+      }
+    });
+
+    const options = mainEduMenu.querySelectorAll(".edu-option");
     options.forEach(opt => {
       opt.addEventListener("click", () => {
         const val = opt.getAttribute("data-value");
         const htmlContent = opt.innerHTML;
 
-        eduInput.value = val;
+        mainEduInput.value = val;
 
         const selectedContent = document.getElementById("education-selected-content");
         if (selectedContent) {
           selectedContent.innerHTML = htmlContent;
         }
 
-        eduMenu.classList.add("hidden");
+        mainEduMenu.classList.add("hidden");
+        window._updateEduSubLevelDropdown(val);
       });
     });
   }
-  // --- END: Custom Education Dropdown ---
+  // --- END: DB-Driven Education & Sub-Level Dropdown ---
 
   // --- START: Batch Dropdown (DB-driven) ---
   const batchDropdownBtn  = document.getElementById("btn-batch-dropdown");
