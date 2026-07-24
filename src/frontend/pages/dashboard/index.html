@@ -54,11 +54,11 @@
                   <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
               </div>
               <input type="text" id="global-search-input" class="block w-full ps-10 pe-16 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold" placeholder="Search Spes, Total..." required autocomplete="off" />
-              <button type="button" id="btn-voice-search" class="absolute inset-y-0 end-9 flex items-center cursor-pointer group">
-                  <svg class="w-5 h-5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-colors" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 10v2a7 7 0 0 1-14 0v-2m7 9v3m-4 0h8"/>
+              <button type="button" id="btn-clear-global-search" class="group absolute inset-y-0 end-9 hidden cursor-pointer items-center text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500" aria-label="Clear search">
+                  <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
                   </svg>
+                  <span class="pointer-events-none absolute bottom-full end-0 mb-1 whitespace-nowrap bg-red-600 px-2 py-1 text-[0.625rem] font-bold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Clear</span>
               </button>
               <button type="button" id="btn-close-search" class="absolute inset-y-0 end-3 flex items-center cursor-pointer group">
                   <svg class="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>

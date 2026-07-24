@@ -211,7 +211,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     let query = supabase
       .from("staffs")
       .select(`
-        id, full_name, username, email, address, phone,
+        id, full_name, username, email, address, phone, created_at,
         religion, language, blood_type, status, approved,
         archive_at, role_id, office_id, beneficiary_id,
         roles   ( id, name ),
@@ -232,6 +232,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
 
     const list = (data ?? []).map((s) => ({
       id:              s.id,
+      created_at:      s.created_at,
       full_name:       s.full_name,
       username:        s.username,
       email:           s.email,

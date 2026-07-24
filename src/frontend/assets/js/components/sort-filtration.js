@@ -140,9 +140,42 @@ export function setupSortFiltration({
     applySortAndFilter();
   });
 
-  // Setup Search Input Listener
+  // Setup Search Input Listener + reusable clear control
   const searchInput = document.getElementById("staff-search-input");
+  let searchClearButton = null;
+  const syncSearchClearVisibility = () => {
+    if (!searchClearButton || !searchInput) return;
+    const hasValue = searchInput.value.length > 0;
+    searchClearButton.classList.toggle("hidden", !hasValue);
+    searchClearButton.classList.toggle("flex", hasValue);
+  };
   if (searchInput) {
+    const searchWrap = searchInput.parentElement;
+    if (searchWrap) {
+      searchWrap.classList.add("relative");
+      searchInput.classList.remove("pe-3", "pe-4");
+      searchInput.classList.add("pe-10");
+      searchClearButton = searchWrap.querySelector('[data-clear-for="staff-search-input"]');
+      if (!searchClearButton) {
+        searchClearButton = document.createElement("button");
+        searchClearButton.type = "button";
+        searchClearButton.dataset.clearFor = "staff-search-input";
+        searchClearButton.className = "group absolute inset-y-0 end-2 hidden cursor-pointer items-center justify-center px-1 text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500";
+        searchClearButton.setAttribute("aria-label", "Clear search");
+        searchClearButton.innerHTML = `
+          <svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+          <span class="pointer-events-none absolute bottom-full end-0 mb-1 whitespace-nowrap bg-red-600 px-2 py-1 text-[0.625rem] font-bold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Clear</span>
+        `;
+        searchWrap.appendChild(searchClearButton);
+      }
+      searchClearButton.addEventListener("click", () => {
+        searchInput.value = "";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        searchInput.focus();
+      });
+    }
     searchInput.addEventListener("input", (e) => {
       const val = e.target.value.toLowerCase();
       if (val === "") {
@@ -151,7 +184,9 @@ export function setupSortFiltration({
         activeFilters["search"] = val;
       }
       applySortAndFilter();
+      syncSearchClearVisibility();
     });
+    syncSearchClearVisibility();
   }
 
   function applySortAndFilter() {
@@ -238,7 +273,16 @@ export function setupSortFiltration({
     });
 
     // 2. Apply Sorting
-    if (activeSort === "name-asc") {
+    if (activeSort === "none") {
+      processed.sort((a, b) => {
+        const aTime = Date.parse(a.created_at || a.createdAt || "");
+        const bTime = Date.parse(b.created_at || b.createdAt || "");
+        const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+        const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+        if (safeATime !== safeBTime) return safeBTime - safeATime;
+        return (Number(b.id) || 0) - (Number(a.id) || 0);
+      });
+    } else if (activeSort === "name-asc") {
       processed.sort((a, b) => (a.name || a.full_name || "").localeCompare(b.name || b.full_name || ""));
     } else if (activeSort === "name-desc") {
       processed.sort((a, b) => (b.name || b.full_name || "").localeCompare(a.name || a.full_name || ""));
@@ -283,6 +327,7 @@ export function setupSortFiltration({
       // Clear search input
       const searchInput = document.getElementById("staff-search-input");
       if (searchInput) searchInput.value = "";
+      syncSearchClearVisibility();
       
       applySortAndFilter();
     },

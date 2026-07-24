@@ -193,7 +193,24 @@ export function initImplementorsDrawer() {
     document.getElementById("drawer-impl-role").textContent = implementorData.role || "N/A";
     document.getElementById("drawer-impl-id").textContent = implementorData.id ? `DOLE-${implementorData.id.toString().padStart(4, '0')}` : "---";
     const officeStr = implementorData.office || "---";
-    document.getElementById("drawer-impl-office").innerHTML = `<span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">${officeStr}</span>`;
+    const officeSubname = String(implementorData.office_subname || implementorData.address || "").trim();
+    const officeEl = document.getElementById("drawer-impl-office");
+    if (officeEl) {
+      officeEl.replaceChildren();
+      const wrapper = document.createElement("span");
+      wrapper.className = "inline-flex max-w-72 flex-col items-end gap-1 text-right";
+      const badge = document.createElement("span");
+      badge.className = "inline-flex border border-spes-blue/15 bg-spes-blue/10 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-widest text-spes-blue dark:border-spes-yellow/20 dark:bg-spes-yellow/15 dark:text-spes-yellow";
+      badge.textContent = officeStr;
+      wrapper.appendChild(badge);
+      if (officeSubname && officeSubname.toLowerCase() !== officeStr.toLowerCase()) {
+        const subname = document.createElement("span");
+        subname.className = "text-[10px] font-semibold leading-4 text-spes-black/45 dark:text-spes-white/45";
+        subname.textContent = `(${officeSubname})`;
+        wrapper.appendChild(subname);
+      }
+      officeEl.appendChild(wrapper);
+    }
     document.getElementById("drawer-impl-office-location").textContent = implementorData.office_location || "—";
     document.getElementById("drawer-impl-email").textContent = implementorData.email || "---";
     
@@ -306,6 +323,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   const officeSearch = document.getElementById("aif-office-search");
   const officeDropdown = document.getElementById("aif-office-dropdown");
   const officeHiddenInput = document.getElementById("aif-office");
+  const officeMeta = document.getElementById("aif-office-subname");
   const officeNotFound = document.getElementById("aif-office-not-found");
   const officeOptionsContainer = document.getElementById("aif-office-options");
 
@@ -328,8 +346,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     });
 
     // Filter by search query
-    const filteredBySearch = filteredByType.filter(o => 
-      o.name.toLowerCase().includes(query)
+    const filteredBySearch = filteredByType.filter(o =>
+      `${o.name} ${o.location || ""}`.toLowerCase().includes(query)
     );
 
     if (filteredBySearch.length === 0) {
@@ -348,9 +366,19 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
         const li = document.createElement("li");
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "aif-office-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/10 dark:hover:bg-white/5 font-bold text-sm text-left transition-colors duration-150";
-        btn.textContent = o.name;
+        btn.className = "aif-office-option cursor-pointer flex w-full flex-col items-start px-3.5 py-2 text-left transition-colors duration-150 hover:bg-spes-blue/10 dark:hover:bg-white/5";
+        const name = document.createElement("span");
+        name.className = "text-sm font-bold text-spes-black dark:text-spes-white";
+        name.textContent = o.name;
+        btn.appendChild(name);
+        if (o.location) {
+          const location = document.createElement("span");
+          location.className = "mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-spes-black/40 dark:text-spes-white/40";
+          location.textContent = `(${o.location})`;
+          btn.appendChild(location);
+        }
         btn.dataset.id = o.id;
+        btn.dataset.label = o.name;
         li.appendChild(btn);
         officeOptionsContainer.appendChild(li);
       });
@@ -390,8 +418,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     officeOptionsContainer?.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (btn) {
+        const office = allOffices.find(item => String(item.id) === String(btn.dataset.id));
         officeHiddenInput.value = btn.dataset.id;
-        officeSearch.value = btn.textContent;
+        officeSearch.value = btn.dataset.label || office?.name || "";
+        if (officeMeta) officeMeta.textContent = office?.location ? `(${office.location})` : "No office location is stored.";
         officeDropdown.classList.add("hidden");
         officeNotFound?.classList.add("hidden");
       }
@@ -428,6 +458,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
           
           officeHiddenInput.value = res.data.id;
           officeSearch.value = res.data.name;
+          if (officeMeta) officeMeta.textContent = res.data.location ? `(${res.data.location})` : "No office location is stored.";
           
           officeDropdown.classList.add("hidden");
           officeNotFound?.classList.add("hidden");
@@ -544,6 +575,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       if (officeSearch) {
         const office = allOffices.find(o => String(o.id) === String(offId));
         officeSearch.value = office ? office.name : "";
+        if (officeMeta) officeMeta.textContent = office?.location ? `(${office.location})` : "No office location is stored.";
         if (office) {
           setTabActive(office.type === "academic" ? "academic" : "public");
         }
@@ -575,6 +607,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       
       const officeSearch = document.getElementById("aif-office-search");
       if (officeSearch) officeSearch.value = "";
+      if (officeMeta) officeMeta.textContent = "Select an office to view its stored location.";
       setTabActive("public");
       const notFound = document.getElementById("aif-office-not-found");
       if(notFound) notFound.classList.add("hidden");

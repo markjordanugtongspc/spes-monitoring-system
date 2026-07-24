@@ -320,6 +320,21 @@ function _formatOfficeName(officeText) {
 }
 
 // ── Implementor table ─────────────────────────────────────────
+function pinSystemAdministratorFirst(items, shouldPin) {
+  const ordered = [...items];
+  if (!shouldPin) return ordered;
+
+  const adminIndex = ordered.findIndex((item) =>
+    String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
+    String(item.username || "").trim().toLowerCase() === "admin"
+  );
+  const systemAdministrator = adminIndex >= 0 ? ordered.splice(adminIndex, 1)[0] : null;
+  const approved = ordered.filter((item) => item.approved === true);
+  const unapproved = ordered.filter((item) => item.approved !== true);
+
+  return [systemAdministrator, ...approved, ...unapproved].filter(Boolean);
+}
+
 let allImplementors = [];
 let allRolePermissions = {};
 let currentPage = 1;
@@ -348,7 +363,10 @@ async function loadImplementorTable(userRole) {
     originalData:    data,
     defaultFilters:  { archiveStatus: "active" },
     onRender: (filtered) => {
-      allImplementors = filtered;
+      allImplementors = pinSystemAdministratorFirst(
+        filtered,
+        isImplPage && String(userRole || "").toLowerCase() === "admin"
+      );
       currentPage = 1;
 
       // Jump to page if ?id= matches an implementor
@@ -594,8 +612,8 @@ function renderTableRows(implementors, userRole) {
           </div>
         </div>
       </td>
-      <td class="px-6 py-4 text-center">
-        <span class="inline-flex rounded bg-spes-blue/10 px-2.5 py-0.5 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
+      <td class="px-6 py-4 text-center align-top">
+        <span class="inline-flex border border-spes-blue/15 bg-spes-blue/10 px-2.5 py-0.5 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue dark:border-spes-yellow/20 dark:bg-spes-yellow/15 dark:text-spes-yellow whitespace-nowrap">
           ${escHtml(_formatOfficeName(s.office))}
         </span>
       </td>
@@ -1479,7 +1497,7 @@ function initGlobalSearch(user) {
   const form = document.getElementById("global-search-form");
   const input = document.getElementById("global-search-input");
   const closeBtn = document.getElementById("btn-close-search");
-  const voiceBtn = document.getElementById("btn-voice-search");
+  const clearBtn = document.getElementById("btn-clear-global-search");
   const resultsContainer = document.getElementById("global-search-results");
   const searchContainer = document.getElementById("global-search-container");
 
@@ -1492,52 +1510,32 @@ function initGlobalSearch(user) {
 
   let currentApexChart = null;
 
-  // Voice Search (Speech Recognition)
-  if (voiceBtn) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
+  const syncGlobalClearVisibility = () => {
+    if (!clearBtn || !input) return;
+    const hasValue = input.value.length > 0;
+    clearBtn.classList.toggle("hidden", !hasValue);
+    clearBtn.classList.toggle("flex", hasValue);
+  };
 
-      recognition.onstart = () => {
-        voiceBtn.classList.add("text-red-500", "animate-pulse");
-        input.placeholder = "Listening...";
-      };
-
-      recognition.onend = () => {
-        voiceBtn.classList.remove("text-red-500", "animate-pulse");
-        input.placeholder = "Search Spes, Total...";
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        input.value = transcript;
-        performSearch(transcript, user);
-      };
-
-      voiceBtn.addEventListener("click", () => {
-        try {
-          recognition.start();
-        } catch (e) {
-          console.warn("[Voice Search] Already active or failed to start:", e);
-        }
-      });
-    } else {
-      voiceBtn.addEventListener("click", () => {
-        Swal.fire({
-          icon: 'info',
-          title: 'Voice Search Not Supported',
-          text: 'Speech recognition is not supported in this browser. Please type your search.',
-          confirmButtonColor: '#0038A8',
-          customClass: {
-            confirmButton: 'cursor-pointer'
-          }
-        });
-      });
+  const clearGlobalSearch = () => {
+    input.value = "";
+    resultsContainer.classList.add("hidden");
+    resultsContainer.innerHTML = "";
+    searchContainer.classList.remove("max-w-5xl");
+    searchContainer.classList.add("max-w-lg");
+    if (currentApexChart) {
+      currentApexChart.destroy();
+      currentApexChart = null;
     }
-  }
+    syncGlobalClearVisibility();
+  };
+
+  input?.addEventListener("input", syncGlobalClearVisibility);
+  clearBtn?.addEventListener("click", () => {
+    clearGlobalSearch();
+    input.focus();
+  });
+  syncGlobalClearVisibility();
 
   const openSearch = () => {
     overlay.classList.remove("hidden");
@@ -1555,16 +1553,7 @@ function initGlobalSearch(user) {
     document.body.classList.remove("overflow-hidden"); // Restore background scrolling
     setTimeout(() => {
       overlay.classList.add("hidden");
-      input.value = "";
-      resultsContainer.classList.add("hidden");
-      resultsContainer.innerHTML = "";
-      // Reset container size
-      searchContainer.classList.remove("max-w-5xl");
-      searchContainer.classList.add("max-w-lg");
-      if (currentApexChart) {
-        currentApexChart.destroy();
-        currentApexChart = null;
-      }
+      clearGlobalSearch();
     }, 300);
   };
 

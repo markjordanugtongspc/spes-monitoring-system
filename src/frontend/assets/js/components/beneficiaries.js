@@ -562,33 +562,67 @@ export function initBeneficiaries() {
     renderPaginatedTable();
   });
 
-  // ── NEW / SPES BABY status switch (shown only on a specific implementor's roster) ─
-  const statusSwitch    = document.getElementById("status-mode-switch");
-  const statusSwitchCb  = document.getElementById("toggle-status-mode");
-  // Unchecked = NEW, checked = SPES BABY. Filters the roster by return_status.
-  statusSwitchCb?.addEventListener("change", (e) => {
-    activeStatusMode = e.target.checked ? "SPES BABY" : "NEW";
+  // ── NEW / SPES BABY status switch ────────────────────────────
+  const statusSwitch = document.getElementById("status-mode-switch");
+  const statusButtons = [...document.querySelectorAll("[data-status-mode]")];
+
+  function syncStatusButtons() {
+    statusButtons.forEach((button) => {
+      const isActive = button.dataset.statusMode === activeStatusMode;
+      button.setAttribute("aria-pressed", String(isActive));
+      button.classList.toggle("bg-emerald-500", isActive && activeStatusMode === "NEW");
+      button.classList.toggle("bg-red-400", isActive && activeStatusMode === "SPES BABY");
+      button.classList.toggle("bg-white/10", !isActive);
+      button.classList.toggle("text-white", isActive);
+      button.classList.toggle("text-white/70", !isActive);
+    });
+  }
+
+  async function selectStatusMode(mode) {
+    activeStatusMode = mode === "SPES BABY" ? "SPES BABY" : "NEW";
+    syncStatusButtons();
+
+    // Admins land on the implementors list. Selecting a beneficiary status
+    // there opens the overall roster so the control always has an immediate,
+    // visible filtering result.
+    if (isAdmin && viewMode === "implementors") {
+      await switchToBeneficiariesView("ALL SPES", "ALL", "ALL", null);
+      return;
+    }
+
     sortFilterInstance?.setFilter("return_status", activeStatusMode);
     if (viewMode === "beneficiaries" && selectedBatchId === null) renderBatchCards();
+  }
+
+  statusButtons.forEach((button) => {
+    button.addEventListener("click", () => selectStatusMode(button.dataset.statusMode));
   });
+
   function _showStatusSwitch(show) {
     if (!statusSwitch) return;
     statusSwitch.classList.toggle("hidden", !show);
     statusSwitch.classList.toggle("inline-flex", show);
-    if (show) {
-      // Reset to default NEW each time it's revealed
-      activeStatusMode = "NEW";
-      if (statusSwitchCb) statusSwitchCb.checked = false;
+    syncStatusButtons();
+    if (show && viewMode === "beneficiaries") {
       sortFilterInstance?.setFilter("return_status", activeStatusMode);
-    } else {
-      activeStatusMode = "ALL";
-      if (statusSwitchCb) statusSwitchCb.checked = false;
-      sortFilterInstance?.setFilter("return_status", "all");
     }
   }
 
 
   // ── View Switching helpers ───────────────────────────────────
+  function pinSystemAdministratorFirst(items) {
+    const ordered = [...items];
+    const adminIndex = ordered.findIndex((item) =>
+      String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
+      String(item.username || "").trim().toLowerCase() === "admin"
+    );
+    if (adminIndex <= 0) return ordered;
+
+    const [systemAdministrator] = ordered.splice(adminIndex, 1);
+    ordered.unshift(systemAdministrator);
+    return ordered;
+  }
+
   function formatOfficeShort(name) {
     if (!name) return "N/A";
     let s = String(name).toUpperCase();
@@ -757,8 +791,8 @@ export function initBeneficiaries() {
     batchSortPanel?.show();
     setupSortFilter(filteredData);
 
-    // Status switch only for a specific implementor's roster (not the ALL aggregate)
-    _showStatusSwitch(officeLocation !== "ALL");
+    // Keep the status selector available for specific and overall rosters.
+    _showStatusSwitch(true);
   }
 
   function updateDynamicFilterDropdown(data) {
@@ -940,7 +974,7 @@ export function initBeneficiaries() {
     // Hide the whole table-controls-container (no search/filter needed for implementors list)
     document.getElementById("table-controls-container")?.classList.add("hidden");
 
-    // Show Sort Offices panel; hide Sort Batch panel + status switch
+    // Status filters apply only after opening a beneficiary roster.
     officeSortPanel.show();
     batchSortPanel?.hide();
     _showStatusSwitch(false);
@@ -956,7 +990,7 @@ export function initBeneficiaries() {
 
     // Fetch and render implementors
     const staffs = await fetchImplementorList({ forceRefresh: false });
-    const activeStaffs = staffs.filter(s => !s.archive_at);
+    const activeStaffs = pinSystemAdministratorFirst(staffs.filter(s => !s.archive_at));
 
     allImplementors = activeStaffs;
     currentPage = 1;
@@ -1191,7 +1225,7 @@ export function initBeneficiaries() {
       tbody.innerHTML = page.map((s, idx) => {
         const absIdx = start + idx;
         const officeBadge = s.office && s.office !== "N/A"
-          ? `<span class="inline-flex items-center gap-1 rounded bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow" title="${escHtml(s.office)}">${escHtml(formatOfficeShort(s.office))}</span>`
+          ? `<span class="inline-flex items-center border border-spes-blue/15 bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase text-spes-blue dark:border-spes-yellow/20 dark:bg-spes-yellow/10 dark:text-spes-yellow" title="${escHtml(s.office)}">${escHtml(formatOfficeShort(s.office))}</span>`
           : `<span class="text-spes-black/30 dark:text-spes-white/30 italic text-xs">None</span>`;
 
         const isRowAdmin = String(s.role).toLowerCase().includes("admin") || String(s.full_name).toLowerCase().includes("system administrator");
@@ -1208,7 +1242,7 @@ export function initBeneficiaries() {
               ${isRowAdmin ? '<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">Admin</span>' : ''}
             </td>
             <td class="px-6 py-4 text-left whitespace-nowrap">${officeBadge}</td>
-            <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(s.office_location || "N/A")}</td>
+            <td class="px-6 py-4 text-left font-bold text-spes-black/70 dark:text-spes-white/70">${escHtml(s.address || s.office_location || "N/A")}</td>
           </tr>`;
       }).join("");
 
@@ -1647,7 +1681,7 @@ export function initBeneficiaries() {
         originalData: data,
         onRender: (filtered) => {
           if (viewMode === "implementors") {
-            activeImplementors = filtered;
+            activeImplementors = pinSystemAdministratorFirst(filtered);
           } else {
             activeBeneficiaries = filtered;
           }
@@ -1710,7 +1744,11 @@ export function initBeneficiaries() {
   const _bdfIsMobile = () => window.innerWidth < 640;
 
   const _bdfShowError = (msg) => {
-    if (bdfError) { bdfError.textContent = msg; bdfError.classList.remove("hidden"); }
+    if (bdfError) {
+      bdfError.textContent = "";
+      bdfError.classList.add("hidden");
+    }
+    modals.flowbiteToast("Whoops! Something went wrong", msg, "danger");
   };
   const _bdfHideError = () => {
     if (bdfError) { bdfError.textContent = ""; bdfError.classList.add("hidden"); }
@@ -1892,9 +1930,10 @@ export function initBeneficiaries() {
     }
 
     closeBdfDrawer();
-    await modals.success(
-      _bdfEditId ? "Updated!" : "Added!",
-      _bdfEditId ? `${values.full_name}'s record has been updated.` : `${values.full_name} has been added to the directory.`
+    modals.flowbiteToast(
+      _bdfEditId ? "Beneficiary updated" : "Beneficiary added",
+      _bdfEditId ? `${values.full_name}'s record has been updated.` : `${values.full_name} has been added to the directory.`,
+      "success"
     );
     await loadData(true);
   });

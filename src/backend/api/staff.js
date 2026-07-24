@@ -43,7 +43,7 @@ export async function fetchOffices(options = {}) {
 
   const { data, error } = await supabase
     .from("offices")
-    .select("id, name, type")
+    .select("id, name, location, type")
     .is("archived_at", null)
     .order("name");
 

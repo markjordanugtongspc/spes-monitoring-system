@@ -36,19 +36,21 @@
 
       <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
         <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-4">
+          <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <div>
               <h1 class="font-montserrat text-3xl font-black text-spes-white">Beneficiary Directory</h1>
               <p class="mt-1 text-sm text-spes-white/70">Insurance monitoring roster for SPES program beneficiaries.</p>
             </div>
-            <!-- NEW / SPES BABY status switch — hidden by default, shown only when
-                 an admin drills into a specific implementor's roster. Filters by return_status. -->
-            <label for="toggle-status-mode" id="status-mode-switch"
-              class="hidden select-none items-center rounded-md cursor-pointer text-[0.625rem] font-black uppercase tracking-widest shadow-lg overflow-hidden border border-white/20">
-              <input id="toggle-status-mode" type="checkbox" class="hidden peer" />
-              <span class="px-4 py-2 bg-emerald-500 text-white peer-checked:bg-white/10 peer-checked:text-white/70 transition-colors">New</span>
-              <span class="px-4 py-2 bg-white/10 text-white/70 peer-checked:bg-red-400 peer-checked:text-white transition-colors">SPES Baby</span>
-            </label>
+            <!-- NEW / SPES BABY status switch — hidden on the implementors list
+                 and shown only while viewing a beneficiary roster. -->
+            <div id="status-mode-switch"
+              class="hidden shrink-0 select-none items-center overflow-hidden rounded-none border border-white/20 text-[0.625rem] font-black uppercase tracking-widest shadow-lg"
+              role="group" aria-label="Filter beneficiaries by status">
+              <button type="button" data-status-mode="NEW" aria-pressed="true"
+                class="cursor-pointer bg-emerald-500 px-4 py-2 text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white">New</button>
+              <button type="button" data-status-mode="SPES BABY" aria-pressed="false"
+                class="cursor-pointer bg-white/10 px-4 py-2 text-white/70 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-white">SPES Baby</button>
+            </div>
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <button type="button" id="btn-create-batch"
