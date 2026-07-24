@@ -1,4 +1,5 @@
 import "../styles/tailwind.css";
+import "./components/flow-debugger.js";
 import "flowbite";
 import { initLandingActiveNavHighlight } from "./components/animations";
 import { initThemeToggle } from "./components/theme-toggle";

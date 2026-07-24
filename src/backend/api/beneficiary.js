@@ -306,6 +306,145 @@ export async function updateBeneficiary(id, payload) {
   return { success: true, data };
 }
 
+// --- START: BENEFICIARY BULK TRANSFER API ---
+/**
+ * Returns safe, minimal transfer destinations. A beneficiary is assigned to a
+ * staff record, so offices and branches are resolved through that staff member.
+ */
+export async function fetchBeneficiaryTransferDestinations() {
+  const { data, error } = await supabase
+    .from("staffs")
+    .select("id, full_name, office_id, offices!office_id(id, name, location)")
+    .is("archive_at", null)
+    .neq("role_id", 1)
+    .order("full_name", { ascending: true });
+
+  if (error) {
+    if (import.meta.env.DEV) {
+      console.error("[SPES Beneficiary] transfer destinations error:", error.code, error.hint);
+    }
+    return { data: [], error: "Unable to load transfer destinations." };
+  }
+
+  const destinations = (data ?? [])
+    .filter((staff) => staff.office_id && staff.offices)
+    .map((staff) => ({
+      staff_id: staff.id,
+      staff_name: staff.full_name,
+      office_id: staff.office_id,
+      office_name: staff.offices?.name || "Unnamed Office",
+      branch_name: staff.offices?.location || "Unspecified Branch",
+    }));
+
+  return { data: destinations };
+}
+
+/**
+ * Bulk-transfers selected beneficiaries to another return status or destination
+ * staff/office. Non-admin users may mutate only rows from their assigned office.
+ */
+export async function bulkTransferBeneficiaries(ids, {
+  returnStatus = undefined,
+  destinationStaffId = undefined,
+} = {}) {
+  const safeIds = [...new Set(
+    (Array.isArray(ids) ? ids : [])
+      .map((id) => Number.parseInt(id, 10))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  )].slice(0, 500);
+
+  if (!safeIds.length) {
+    return { success: false, error: "Select at least one beneficiary." };
+  }
+
+  let session = {};
+  try {
+    session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  } catch {}
+
+  const isAdmin = String(session.role || "").toLowerCase() === "admin";
+  if (!isAdmin && session.approved !== true) {
+    return { success: false, error: "Your account is not approved for beneficiary transfers." };
+  }
+  if (!isAdmin && !session.office_id) {
+    return { success: false, error: "Your account has no assigned office." };
+  }
+
+  let sourceQuery = supabase
+    .from("beneficiary")
+    .select(isAdmin ? "id, staff_id" : "id, staff_id, staffs!staff_id!inner(office_id)")
+    .in("id", safeIds);
+  if (!isAdmin) sourceQuery = sourceQuery.eq("staffs.office_id", session.office_id);
+
+  const { data: authorizedRows, error: sourceError } = await sourceQuery;
+  if (sourceError) {
+    if (import.meta.env.DEV) {
+      console.error("[SPES Beneficiary] transfer authorization error:", sourceError.code, sourceError.hint);
+    }
+    return { success: false, error: "Could not verify the selected beneficiaries." };
+  }
+  if ((authorizedRows ?? []).length !== safeIds.length) {
+    return { success: false, error: "One or more selected beneficiaries are outside your authorized office." };
+  }
+
+  const updates = { updated_at: new Date().toISOString() };
+  if (returnStatus !== undefined) {
+    const normalizedStatus = String(returnStatus).trim().toUpperCase();
+    if (!["NEW", "SPES BABY"].includes(normalizedStatus)) {
+      return { success: false, error: "Invalid beneficiary transfer status." };
+    }
+    updates.return_status = normalizedStatus;
+  }
+
+  if (destinationStaffId !== undefined) {
+    const safeDestinationId = Number.parseInt(destinationStaffId, 10);
+    if (!Number.isInteger(safeDestinationId) || safeDestinationId < 1) {
+      return { success: false, error: "Invalid transfer destination." };
+    }
+
+    const { data: destination, error: destinationError } = await supabase
+      .from("staffs")
+      .select("id, office_id")
+      .eq("id", safeDestinationId)
+      .is("archive_at", null)
+      .neq("role_id", 1)
+      .maybeSingle();
+
+    if (destinationError || !destination?.office_id) {
+      return { success: false, error: "The selected destination is unavailable." };
+    }
+
+    updates.staff_id = destination.id;
+    // Batches belong to the previous staff/office context and must not leak
+    // across destinations.
+    updates.batch_id = null;
+  }
+
+  if (updates.return_status === undefined && updates.staff_id === undefined) {
+    return { success: false, error: "Choose a status, office, or branch destination." };
+  }
+
+  const { data: updatedRows, error: updateError } = await supabase
+    .from("beneficiary")
+    .update(updates)
+    .in("id", safeIds)
+    .select("id");
+
+  if (updateError) {
+    if (import.meta.env.DEV) {
+      console.error("[SPES Beneficiary] bulk transfer error:", updateError.code, updateError.hint);
+    }
+    return { success: false, error: "The beneficiary transfer could not be completed." };
+  }
+  if ((updatedRows ?? []).length !== safeIds.length) {
+    return { success: false, error: "Some selected beneficiaries were not transferred." };
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true, data: updatedRows, transferred: updatedRows.length };
+}
+// --- END: BENEFICIARY BULK TRANSFER API ---
+
 // ── Archive (soft delete) ──────────────────────────────────────
 /**
  * Soft-deletes a beneficiary by setting archived_at.

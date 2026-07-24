@@ -1,4 +1,5 @@
 import "../styles/tailwind.css";
+import "./components/flow-debugger.js";
 import "flowbite";
 import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
 import { supabase } from "../../../backend/api/supabase.js";

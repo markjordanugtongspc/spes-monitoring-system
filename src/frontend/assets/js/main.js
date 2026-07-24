@@ -1,4 +1,5 @@
 import "../styles/tailwind.css";
+import "./components/flow-debugger.js";
 import "flowbite";
 import { initThemeToggle } from "./components/theme-toggle";
 import { initMobileSplashDrawer } from "./components/drawer";

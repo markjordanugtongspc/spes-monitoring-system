@@ -1,6 +1,6 @@
 import ApexCharts from "apexcharts";
 import { supabase } from "../../../../backend/api/supabase.js";
-import { fetchStaffs } from "../../../../backend/api/staff.js";
+import { fetchGlobalStaffMetricRoster } from "../../../../backend/api/staff.js";
 
 const BRAND_BLUE   = "#0038A8";
 const BRAND_YELLOW = "#FCD116";
@@ -85,12 +85,17 @@ export async function initDashboardCharts() {
   const officeId = session.office_id;
 
   const [staffResult, beneficiaryResult] = await Promise.all([
-    fetchStaffs({ officeId: isAdmin ? null : officeId }),
+    // Card 1 is intentionally global for every authenticated role. The
+    // beneficiary queries below remain RBAC-scoped to the signed-in office.
+    fetchGlobalStaffMetricRoster(),
     _fetchAllBeneficiaryChartRows({ isAdmin, officeId })
   ]);
 
   if (beneficiaryResult.error && import.meta.env.DEV) {
     console.error("[SPES Charts] beneficiary fetch error:", beneficiaryResult.error);
+  }
+  if (staffResult.error && import.meta.env.DEV) {
+    console.error("[SPES Charts] global implementor metric fetch error:", staffResult.error);
   }
 
   const staffs = staffResult.data ?? [];
@@ -105,6 +110,10 @@ export async function initDashboardCharts() {
   _renderEnrollmentByMonth(beneficiaries);
   _setupTrendsSwitcher();
   _setupYearStatusSwitcher();
+
+  return {
+    totalImplementors: staffs.length,
+  };
 }
 
 // NEW / SPES BABY toggle on the "Added SPES per Year" card (default NEW)

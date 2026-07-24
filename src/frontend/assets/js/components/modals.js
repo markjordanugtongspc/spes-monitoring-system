@@ -1,4 +1,5 @@
 import Swal from "sweetalert2";
+import { flowDebug, flowDebugError, flowDebugSuccess } from "./flow-debugger.js";
 
 const getThemeOpts = () => {
   const isDark = document.documentElement.classList.contains("dark");
@@ -11,6 +12,7 @@ const getThemeOpts = () => {
 let toastSequence = 0;
 
 function showFlowbiteToast(title, message, tone = "success") {
+  flowDebug("MODAL", "Opening Flowbite toast", { title, message, tone });
   let container = document.getElementById("spes-flowbite-toast-container");
   if (!container) {
     container = document.createElement("div");
@@ -51,6 +53,7 @@ function showFlowbiteToast(title, message, tone = "success") {
 
   let timer;
   const close = () => {
+    flowDebug("MODAL", "Closing Flowbite toast", { title, tone });
     clearTimeout(timer);
     toast.classList.add("translate-y-2", "opacity-0");
     setTimeout(() => {
@@ -67,6 +70,7 @@ function showFlowbiteToast(title, message, tone = "success") {
 export const modals = {
   flowbiteToast: showFlowbiteToast,
   toast: (title, icon = "success") => {
+    flowDebug("MODAL", "Opening toast", { title, icon, next: "SweetAlert toast lifecycle" });
     const Toast = Swal.mixin({
       toast: true,
       position: "bottom-end",
@@ -85,9 +89,16 @@ export const modals = {
     return Toast.fire({
       icon: icon,
       title: title
+    }).then((result) => {
+      flowDebugSuccess("Toast lifecycle completed", { title, result });
+      return result;
+    }).catch((error) => {
+      flowDebugError("Toast failed", error, { title });
+      throw error;
     });
   },
   success: (title, text) => {
+    flowDebug("MODAL", "Opening success modal", { title, text });
     return Swal.fire({
       icon: "success",
       title: title,
@@ -99,9 +110,13 @@ export const modals = {
         popup: "rounded-2xl border-none shadow-2xl"
       },
       ...getThemeOpts()
+    }).then((result) => {
+      flowDebugSuccess("Success modal completed", { title, result });
+      return result;
     });
   },
   error: (title, text) => {
+    flowDebug("MODAL", "Opening error modal", { title, text });
     return Swal.fire({
       icon: "error",
       title: title,
@@ -115,6 +130,7 @@ export const modals = {
     });
   },
   warning: (title, text) => {
+    flowDebug("MODAL", "Opening warning modal", { title, text });
     return Swal.fire({
       icon: "warning",
       title: title,
@@ -128,6 +144,7 @@ export const modals = {
     });
   },
   loading: (title, text) => {
+    flowDebug("MODAL", "Opening loading modal", { title, text });
     return Swal.fire({
       title: title,
       text: text,
@@ -142,9 +159,17 @@ export const modals = {
     });
   },
   close: () => {
+    flowDebug("MODAL", "Closing active SweetAlert modal");
     Swal.close();
   },
   confirm: (title, text, confirmText = "Confirm", cancelText = "Cancel") => {
+    flowDebug("MODAL", "Opening confirmation modal", {
+      title,
+      text,
+      confirmText,
+      cancelText,
+      next: "wait for confirm or cancel",
+    });
     return Swal.fire({
       icon: "warning",
       title: title,
@@ -160,6 +185,14 @@ export const modals = {
         popup: "rounded-2xl border-none shadow-2xl"
       },
       ...getThemeOpts()
+    }).then((result) => {
+      flowDebug("OUTPUT", "Confirmation modal resolved", {
+        title,
+        isConfirmed: result.isConfirmed,
+        isDismissed: result.isDismissed,
+        dismiss: result.dismiss,
+      });
+      return result;
     });
   }
 };

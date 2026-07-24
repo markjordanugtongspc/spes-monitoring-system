@@ -4,13 +4,17 @@ import {
   applyDrawerAnimationClasses
 } from "./animations";
 import { modals } from "./modals.js";
+import { flowDebug, flowDebugError, flowDebugSuccess } from "./flow-debugger.js";
 
 // --- FUNCTION: MOBILE SPLASH + FLOWBITE DRAWER BRIDGE (START) ---
 export function initMobileSplashDrawer() {
   const splash = document.getElementById("mobile-splash");
   const openButton = document.getElementById("mobile-splash-open-login");
   const drawer = document.getElementById("drawer-top-example");
-  if (!drawer) return;
+  if (!drawer) {
+    flowDebug("DRAWER", "Mobile splash drawer skipped", { reason: "drawer element not present" });
+    return;
+  }
 
   const mobileQuery = window.matchMedia("(max-width: 1023px)");
   applyDrawerAnimationClasses(splash, drawer);
@@ -45,11 +49,13 @@ export function initMobileSplashDrawer() {
 
   openButton?.addEventListener("click", (event) => {
     event.preventDefault();
+    flowDebug("DRAWER", "Opening mobile splash drawer", { next: "Flowbite Drawer.show" });
     if (mobileQuery.matches) hideSplash();
     drawerInstance.show();
   });
 
   const closeDrawer = () => {
+    flowDebug("DRAWER", "Closing mobile splash drawer", { next: "Flowbite Drawer.hide" });
     drawerInstance.hide();
     if (mobileQuery.matches) showSplash();
   };
@@ -113,7 +119,12 @@ export function initImplementorsDrawer() {
   const drawer = document.getElementById("implementors-drawer");
   const closeBtn = document.getElementById("close-impl-drawer");
   
-  if (!drawer || !overlay) return;
+  if (!drawer || !overlay) {
+    flowDebug("DRAWER", "Implementor details drawer skipped", {
+      reason: "drawer or overlay element not present",
+    });
+    return;
+  }
 
   // Pagination Elements
   const prevBtn = document.getElementById("drawer-prev-page");
@@ -171,6 +182,7 @@ export function initImplementorsDrawer() {
   });
 
   const closeDrawer = () => {
+    flowDebug("DRAWER", "Closing implementor details drawer");
     drawer.classList.remove("translate-y-0", "sm:translate-x-0");
     drawer.classList.add("translate-y-full", "sm:translate-x-full");
     overlay.classList.add("hidden");
@@ -184,6 +196,10 @@ export function initImplementorsDrawer() {
   };
 
   const openDrawer = (implementorData) => {
+    flowDebug("DRAWER", "Opening implementor details drawer", {
+      implementorId: implementorData?.id ?? null,
+      next: "populate details and reveal drawer",
+    });
     // Reset to page 1
     currentPage = 1;
     updatePaginationUI();
@@ -296,6 +312,9 @@ export function initImplementorsDrawer() {
     drawer.classList.remove("translate-y-full", "sm:translate-x-full");
     drawer.classList.add("translate-y-0", "sm:translate-x-0");
     document.body.classList.add("overflow-hidden"); // Prevent background scrolling
+    flowDebugSuccess("Implementor details drawer opened", {
+      implementorId: implementorData?.id ?? null,
+    });
   };
 
   // Close events
@@ -317,7 +336,12 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   const closeBtn = document.getElementById("btn-close-add-impl-drawer");
   const submitBtn = document.getElementById("btn-submit-add-impl");
 
-  if (!drawerEl || !overlay || !form) return { open: () => {}, close: () => {} };
+  if (!drawerEl || !overlay || !form) {
+    flowDebug("DRAWER", "Add/Edit Implementor drawer skipped", {
+      reason: "drawer, overlay, or form element not present",
+    });
+    return { open: () => {}, close: () => {} };
+  }
 
   // --- START: Office Combobox Logic ---
   const officeSearch = document.getElementById("aif-office-search");
@@ -542,6 +566,11 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   const _isMobile = () => window.innerWidth < 640;
 
   const openDrawer = async (staffData = null) => {
+    flowDebug("DRAWER", "Opening Add/Edit Implementor drawer", {
+      mode: staffData?.id == null ? "create" : "edit",
+      implementorId: staffData?.id ?? null,
+      next: "load form options and reveal drawer",
+    });
     form.reset();
     _hideError();
     _setLoading(false);
@@ -629,9 +658,16 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       }
     });
     document.body.classList.add("overflow-hidden");
+    flowDebugSuccess("Add/Edit Implementor drawer opened", {
+      mode: currentEditId ? "edit" : "create",
+      implementorId: currentEditId,
+    });
   };
 
   const closeDrawer = () => {
+    flowDebug("DRAWER", "Closing Add/Edit Implementor drawer", {
+      implementorId: currentEditId,
+    });
     drawerEl.setAttribute("aria-hidden", "true");
     if (_isMobile()) {
       drawerEl.classList.remove("translate-y-0");
@@ -740,11 +776,26 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       !form && "#form-batch-drawer"
     ].filter(Boolean);
     console.error(`[SPES Batch Drawer] Cannot initialize. Missing: ${missing.join(", ")}`);
+    flowDebugError("Batch drawer initialization failed", new Error("Required drawer elements are missing"), { missing });
     return { open: () => false, close: () => false, isOpen: () => false };
   }
 
+  // --- START: BATCH DRAWER BODY PORTAL ---
+  // A fixed drawer can still collapse to 0×0 when malformed surrounding HTML
+  // or a hidden/contained ancestor changes the browser's parsed DOM tree.
+  // Portal both layers to <body> so their layout context is always the viewport.
+  if (overlay.parentElement !== document.body || drawerEl.parentElement !== document.body) {
+    document.body.append(overlay, drawerEl);
+    flowDebug("DRAWER", "Batch drawer layers portaled to document.body", {
+      overlayParent: overlay.parentElement?.tagName,
+      drawerParent: drawerEl.parentElement?.tagName,
+    });
+  }
+  // --- END: BATCH DRAWER BODY PORTAL ---
+
   let currentEditId = null;
   let closeTimer = null;
+  let openVerificationTimer = null;
   let _addBatch;
   let _updateBatch;
   const _loadApis = async () => {
@@ -766,17 +817,152 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     errorBanner.classList.add("hidden");
   };
 
-  const _isMobile = () => window.innerWidth < 640;
-  const _setDrawerTransform = (isOpen) => {
-    drawerEl.style.transform = isOpen
-      ? "translate3d(0, 0, 0)"
-      : (_isMobile() ? "translate3d(0, 100%, 0)" : "translate3d(100%, 0, 0)");
+  // --- START: RESPONSIVE BATCH DRAWER VISUAL STATE CONTROLLER ---
+  // Tailwind v4 translate utilities use the CSS `translate` property. Mixing
+  // those classes with an inline `transform` left the drawer off-screen even
+  // when aria-hidden was false. Keep one class-driven source of truth.
+  const _setDrawerVisualState = (isOpen) => {
+    [
+      "transform",
+      "translate",
+      "position",
+      "top",
+      "right",
+      "bottom",
+      "left",
+      "width",
+      "height",
+      "max-height",
+      "z-index",
+    ].forEach((property) => drawerEl.style.removeProperty(property));
+    drawerEl.dataset.drawerState = isOpen ? "open" : "closed";
+
+    drawerEl.classList.toggle("translate-y-0", isOpen);
+    drawerEl.classList.toggle("translate-y-full", !isOpen);
+    drawerEl.classList.toggle("sm:translate-x-0", isOpen);
+    drawerEl.classList.toggle("sm:translate-x-full", !isOpen);
   };
 
+  const _getDrawerVisibilitySnapshot = () => {
+    const rect = drawerEl.getBoundingClientRect();
+    const styles = window.getComputedStyle(drawerEl);
+    const ancestors = [];
+    let ancestor = drawerEl.parentElement;
+    while (ancestor && ancestors.length < 8) {
+      const ancestorStyles = window.getComputedStyle(ancestor);
+      ancestors.push({
+        element: ancestor.tagName.toLowerCase(),
+        id: ancestor.id || undefined,
+        display: ancestorStyles.display,
+        visibility: ancestorStyles.visibility,
+        contentVisibility: ancestorStyles.contentVisibility,
+        contain: ancestorStyles.contain,
+      });
+      ancestor = ancestor.parentElement;
+    }
+    const intersectsViewport =
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.right > 0 &&
+      rect.bottom > 0 &&
+      rect.left < window.innerWidth &&
+      rect.top < window.innerHeight;
+
+    return {
+      visible:
+        styles.display !== "none" &&
+        styles.visibility !== "hidden" &&
+        Number(styles.opacity) > 0 &&
+        intersectsViewport,
+      display: styles.display,
+      visibility: styles.visibility,
+      opacity: styles.opacity,
+      position: styles.position,
+      width: styles.width,
+      height: styles.height,
+      top: styles.top,
+      right: styles.right,
+      bottom: styles.bottom,
+      left: styles.left,
+      contentVisibility: styles.contentVisibility,
+      contain: styles.contain,
+      transform: styles.transform,
+      translate: styles.translate,
+      rect: {
+        top: Math.round(rect.top),
+        right: Math.round(rect.right),
+        bottom: Math.round(rect.bottom),
+        left: Math.round(rect.left),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+      state: drawerEl.dataset.drawerState,
+      classes: drawerEl.className,
+      ancestors,
+    };
+  };
+
+  const _verifyDrawerOpened = () => {
+    const snapshot = _getDrawerVisibilitySnapshot();
+    if (snapshot.visible) {
+      flowDebugSuccess("Batch form drawer is visible in the viewport", {
+        mode: currentEditId ? "edit" : "create",
+        batchId: currentEditId,
+        ...snapshot,
+      });
+      return;
+    }
+
+    flowDebugError(
+      "Batch form drawer was marked open but is not visible",
+      new Error("Drawer failed its viewport visibility assertion."),
+      snapshot
+    );
+
+    // Last-resort recovery for stale/generated CSS or collapsed layout. These
+    // inline properties are removed by _setDrawerVisualState on open/close.
+    drawerEl.classList.remove("hidden");
+    drawerEl.style.setProperty("position", "fixed", "important");
+    drawerEl.style.setProperty("top", "0", "important");
+    drawerEl.style.setProperty("right", "0", "important");
+    drawerEl.style.setProperty("bottom", "auto", "important");
+    drawerEl.style.setProperty("left", "auto", "important");
+    drawerEl.style.setProperty("width", "min(420px, 100vw)", "important");
+    drawerEl.style.setProperty("height", "100dvh", "important");
+    drawerEl.style.setProperty("max-height", "100dvh", "important");
+    drawerEl.style.setProperty("z-index", "140", "important");
+    drawerEl.style.setProperty("transform", "none", "important");
+    drawerEl.style.setProperty("translate", "0 0", "important");
+
+    requestAnimationFrame(() => {
+      const recoveredSnapshot = _getDrawerVisibilitySnapshot();
+      if (recoveredSnapshot.visible) {
+        flowDebugSuccess("Batch form drawer recovered with safe viewport placement", recoveredSnapshot);
+      } else {
+        flowDebugError(
+          "Batch form drawer recovery failed",
+          new Error("Drawer is still outside the viewport after safe placement."),
+          recoveredSnapshot
+        );
+      }
+    });
+  };
+  // --- END: RESPONSIVE BATCH DRAWER VISUAL STATE CONTROLLER ---
+
   const openDrawer = (batch = null) => {
+    flowDebug("DRAWER", "Opening batch form drawer", {
+      mode: batch?.id == null ? "create" : "edit",
+      batchId: batch?.id ?? null,
+      batchNumber: batch?.batchNumber ?? null,
+      next: "populate fields and reveal drawer",
+    });
     if (closeTimer) {
       clearTimeout(closeTimer);
       closeTimer = null;
+    }
+    if (openVerificationTimer) {
+      clearTimeout(openVerificationTimer);
+      openVerificationTimer = null;
     }
     currentEditId = batch?.id ?? null;
     form.reset();
@@ -796,27 +982,44 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
 
     drawerEl.classList.remove("hidden");
     drawerEl.setAttribute("aria-hidden", "false");
+    drawerEl.inert = false;
     overlay.classList.remove("hidden");
     overlay.classList.add("block");
-    _setDrawerTransform(false);
+    _setDrawerVisualState(false);
     drawerEl.offsetHeight;
     requestAnimationFrame(() => {
       overlay.classList.remove("opacity-0");
       overlay.classList.add("opacity-100");
-      _setDrawerTransform(true);
+      _setDrawerVisualState(true);
+      openVerificationTimer = setTimeout(() => {
+        openVerificationTimer = null;
+        _verifyDrawerOpened();
+      }, 340);
     });
     document.body.classList.add("overflow-hidden");
     setTimeout(() => batchNumberInput?.focus(), 300);
+    flowDebug("DRAWER", "Batch form drawer open state applied", {
+      mode: currentEditId ? "edit" : "create",
+      batchId: currentEditId,
+      ariaHidden: drawerEl.getAttribute("aria-hidden"),
+      next: "verify drawer intersects the viewport",
+    });
     return true;
   };
 
   const closeDrawer = ({ immediate = false } = {}) => {
+    flowDebug("DRAWER", "Closing batch form drawer", { immediate, batchId: currentEditId });
     if (closeTimer) {
       clearTimeout(closeTimer);
       closeTimer = null;
     }
+    if (openVerificationTimer) {
+      clearTimeout(openVerificationTimer);
+      openVerificationTimer = null;
+    }
     drawerEl.setAttribute("aria-hidden", "true");
-    _setDrawerTransform(false);
+    drawerEl.inert = true;
+    _setDrawerVisualState(false);
     overlay.classList.remove("opacity-100");
     overlay.classList.add("opacity-0");
 
@@ -843,13 +1046,29 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
 
     const batchNumber = batchNumberInput?.value.trim() ?? "";
     const batchName = batchNameInput?.value.trim() ?? "";
+    flowDebug("FORM", "Batch form submitted", {
+      mode: currentEditId ? "edit" : "create",
+      batchId: currentEditId,
+      batchNumber,
+      batchName,
+      next: currentEditId ? "updateBatch API" : "addBatch API",
+    });
     if (!batchNumber) return _showError("Batch Number is required.");
 
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = "Saving...";
     }
-    await _loadApis();
+    try {
+      await _loadApis();
+    } catch (error) {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = currentEditId ? "Update Batch" : "Save Batch";
+      }
+      flowDebugError("Batch API module failed to load", error);
+      return _showError("Could not load the batch service. Please refresh and try again.");
+    }
 
     let sessionStaffId = null;
     try {
@@ -865,19 +1084,33 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       batchName: batchName || null,
       created_by_staff_id: sessionStaffId
     };
-    const result = currentEditId
-      ? await _updateBatch(currentEditId, payload)
-      : await _addBatch(payload);
+    let result;
+    try {
+      result = currentEditId
+        ? await _updateBatch(currentEditId, payload)
+        : await _addBatch(payload);
+    } catch (error) {
+      flowDebugError("Batch save request threw an error", error, {
+        mode: currentEditId ? "edit" : "create",
+        batchId: currentEditId,
+      });
+      result = { success: false, error: "The batch request failed unexpectedly." };
+    }
 
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = currentEditId ? "Update Batch" : "Save Batch";
     }
     if (!result.success) {
+      flowDebugError("Batch save was rejected", result.error, {
+        mode: currentEditId ? "edit" : "create",
+        batchId: currentEditId,
+      });
       return _showError(result.error || (currentEditId ? "Failed to update batch." : "Failed to create batch."));
     }
 
     const completedMode = currentEditId ? "updated" : "created";
+    flowDebugSuccess(`Batch ${completedMode}`, { batchId: currentEditId ?? result.data?.id, batchNumber });
     closeDrawer();
     import("./modals.js").then(({ modals }) => {
       modals.success(

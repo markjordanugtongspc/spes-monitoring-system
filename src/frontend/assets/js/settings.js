@@ -6,6 +6,7 @@
  * Available to every authenticated role (no permission gate).
  */
 import "../styles/tailwind.css";
+import "./components/flow-debugger.js";
 import "flowbite";
 import { initFlowbite } from "flowbite";
 import { applyPermissions, requireAuth, signOut, getSession } from "./rbac/guard.js";

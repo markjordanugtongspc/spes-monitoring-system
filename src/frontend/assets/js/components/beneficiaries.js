@@ -12,6 +12,8 @@ import {
   updateBeneficiary,
   archiveBeneficiary,
   fetchBatches,
+  fetchBeneficiaryTransferDestinations,
+  bulkTransferBeneficiaries,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { getSession } from "../rbac/guard.js";
@@ -20,6 +22,7 @@ import { setupSortFiltration } from "./sort-filtration.js";
 import { modals } from "./modals.js";
 import { preferenceStorage } from "./storage.js";
 import { initBatchFormDrawer } from "./drawer.js";
+import { flowDebug, flowDebugError, flowDebugSuccess } from "./flow-debugger.js";
 
 const DEFAULT_EDU_LEVELS = [
   { id: 1, education_id: 1, name: "Grade 11" },
@@ -505,9 +508,286 @@ export function initBeneficiaries() {
   let selectedBatchId = null;
   let currentOfficeName = "";
   let activeStatusMode = "NEW";
+  const selectedBeneficiaryIds = new Set();
+
+  // --- START: BENEFICIARY BULK TRANSFER TOOL FUNCTION ---
+  function initBeneficiaryBulkTransferTools() {
+    const toolsWrap = document.getElementById("beneficiary-bulk-tools");
+    const trigger = document.getElementById("btn-beneficiary-bulk-tools");
+    const menu = document.getElementById("beneficiary-bulk-tools-menu");
+    const countEl = document.getElementById("beneficiary-bulk-count");
+    const summaryEl = document.getElementById("beneficiary-bulk-summary");
+    const actionsPanel = document.getElementById("beneficiary-bulk-actions");
+    const destinationsPanel = document.getElementById("beneficiary-transfer-destinations");
+    const destinationList = document.getElementById("beneficiary-transfer-destination-list");
+    const destinationSearch = document.getElementById("beneficiary-transfer-search");
+    const statusBtn = document.getElementById("btn-transfer-beneficiary-status");
+    const statusLabel = document.getElementById("beneficiary-transfer-status-label");
+    const backBtn = document.getElementById("btn-back-transfer-actions");
+
+    if (
+      !toolsWrap ||
+      !trigger ||
+      !menu ||
+      !actionsPanel ||
+      !destinationsPanel ||
+      !destinationList ||
+      !destinationSearch
+    ) {
+      flowDebug("BULK TRANSFER", "Beneficiary transfer tool skipped", {
+        reason: "one or more transfer controls are missing",
+      });
+      return {
+        sync: () => {},
+        clear: () => selectedBeneficiaryIds.clear(),
+      };
+    }
+
+    let destinations = null;
+    let destinationMode = "office";
+    let transferInFlight = false;
+
+    const getSelectedRows = () => allBeneficiaries.filter(
+      (beneficiary) => selectedBeneficiaryIds.has(String(beneficiary.id))
+    );
+
+    const getTargetStatus = () => {
+      const selectedRows = getSelectedRows();
+      const allAreBaby = selectedRows.length > 0 && selectedRows.every(
+        (beneficiary) => String(beneficiary.return_status || "NEW").toUpperCase() === "SPES BABY"
+      );
+      return allAreBaby ? "NEW" : "SPES BABY";
+    };
+
+    const closeMenu = () => {
+      menu.classList.add("hidden");
+      trigger.setAttribute("aria-expanded", "false");
+      actionsPanel.classList.remove("hidden");
+      destinationsPanel.classList.add("hidden");
+    };
+
+    const sync = () => {
+      const visibleCheckboxes = [...document.querySelectorAll(".beneficiary-row-checkbox")];
+      visibleCheckboxes.forEach((checkbox) => {
+        checkbox.checked = selectedBeneficiaryIds.has(String(checkbox.dataset.beneId));
+      });
+
+      const selectAll = document.getElementById("spes-checkbox-all");
+      const selectedVisible = visibleCheckboxes.filter((checkbox) => checkbox.checked).length;
+      if (selectAll) {
+        selectAll.checked = visibleCheckboxes.length > 0 && selectedVisible === visibleCheckboxes.length;
+        selectAll.indeterminate = selectedVisible > 0 && selectedVisible < visibleCheckboxes.length;
+      }
+
+      const count = selectedBeneficiaryIds.size;
+      if (countEl) countEl.textContent = String(count);
+      if (summaryEl) {
+        summaryEl.textContent = `${count} beneficiar${count === 1 ? "y" : "ies"} selected`;
+      }
+      if (statusLabel) statusLabel.textContent = `Transfer to ${getTargetStatus()}`;
+
+      const tableIsVisible =
+        viewMode === "beneficiaries" &&
+        !document.getElementById("implementors-table-wrapper")?.classList.contains("hidden");
+      toolsWrap.classList.toggle("hidden", count === 0 || !tableIsVisible);
+      if (count === 0 || !tableIsVisible) closeMenu();
+    };
+
+    const clear = () => {
+      selectedBeneficiaryIds.clear();
+      sync();
+    };
+
+    const executeTransfer = async ({ title, message, payload }) => {
+      const ids = [...selectedBeneficiaryIds];
+      if (!ids.length || transferInFlight) return;
+
+      const confirmation = await modals.confirm(title, message, "Transfer", "Cancel");
+      if (!confirmation.isConfirmed) return;
+
+      transferInFlight = true;
+      flowDebug("BULK TRANSFER", "Submitting beneficiary transfer", {
+        ids,
+        payload,
+        next: "bulkTransferBeneficiaries",
+      });
+      modals.loading("Transferring Beneficiaries", "Please wait while the selected records are updated...");
+      let result;
+      try {
+        result = await bulkTransferBeneficiaries(ids, payload);
+      } catch (error) {
+        flowDebugError("Beneficiary bulk transfer threw an error", error, { ids, payload });
+        result = { success: false, error: "The transfer request failed unexpectedly." };
+      } finally {
+        transferInFlight = false;
+      }
+      modals.close();
+
+      if (!result.success) {
+        flowDebugError("Beneficiary bulk transfer failed", result.error, { ids, payload });
+        await modals.error("Transfer Failed", result.error);
+        return;
+      }
+
+      flowDebugSuccess("Beneficiary bulk transfer completed", {
+        transferred: result.transferred,
+        payload,
+      });
+      clear();
+      closeMenu();
+      await loadData(true);
+      await batchSortPanel?.rebuild?.();
+      await modals.success(
+        "Transfer Complete",
+        `${result.transferred} beneficiar${result.transferred === 1 ? "y was" : "ies were"} transferred successfully.`
+      );
+    };
+
+    const renderDestinations = () => {
+      const query = destinationSearch.value.trim().toLowerCase();
+      const currentLocation = String(currentOfficeLocation || "").trim().toLowerCase();
+      const currentOffice = String(currentOfficeId || "");
+
+      const filtered = (destinations ?? [])
+        .filter((destination) => {
+          if (destinationMode === "branch") {
+            return String(destination.branch_name || "").trim().toLowerCase() !== currentLocation;
+          }
+          return String(destination.office_id) !== currentOffice;
+        })
+        .filter((destination) => {
+          if (!query) return true;
+          return [
+            destination.office_name,
+            destination.branch_name,
+            destination.staff_name,
+          ].some((value) => String(value || "").toLowerCase().includes(query));
+        })
+        .sort((a, b) => {
+          const aKey = destinationMode === "branch" ? a.branch_name : a.office_name;
+          const bKey = destinationMode === "branch" ? b.branch_name : b.office_name;
+          return String(aKey).localeCompare(String(bKey));
+        });
+
+      if (!filtered.length) {
+        destinationList.innerHTML = `
+          <div class="px-3 py-8 text-center text-xs font-semibold text-spes-black/40 dark:text-white/40">
+            No matching ${destinationMode === "branch" ? "branch" : "office"} destinations.
+          </div>`;
+        return;
+      }
+
+      destinationList.innerHTML = filtered.map((destination) => `
+        <button type="button" data-transfer-staff-id="${destination.staff_id}"
+          class="flex w-full cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-spes-blue/8 dark:hover:bg-white/8">
+          <span class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${destinationMode === "branch" ? "bg-violet-500/10 text-violet-600 dark:text-violet-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"}">
+            <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="${destinationMode === "branch" ? "M12 3v6m0 0H6m6 0h6M6 9v5m12-5v5M3 14h6v6H3v-6Zm12 0h6v6h-6v-6Z" : "M3 21h18M5 21V5l7-3 7 3v16"}" />
+            </svg>
+          </span>
+          <span class="min-w-0">
+            <span class="block truncate text-xs font-black uppercase text-spes-black/80 dark:text-white/80">${escHtml(destinationMode === "branch" ? destination.branch_name : destination.office_name)}</span>
+            <span class="mt-0.5 block truncate text-[0.625rem] font-semibold text-spes-black/45 dark:text-white/45">${escHtml(destinationMode === "branch" ? destination.office_name : destination.branch_name)} · ${escHtml(destination.staff_name)}</span>
+          </span>
+        </button>
+      `).join("");
+    };
+
+    const openDestinationPicker = async (mode) => {
+      destinationMode = mode;
+      actionsPanel.classList.add("hidden");
+      destinationsPanel.classList.remove("hidden");
+      destinationSearch.value = "";
+      destinationSearch.placeholder = mode === "branch"
+        ? "Search branch, office, or implementor..."
+        : "Search office or implementor...";
+      destinationList.innerHTML = `
+        <div class="px-3 py-8 text-center text-xs font-semibold text-spes-black/40 dark:text-white/40">
+          Loading destinations...
+        </div>`;
+
+      if (!destinations) {
+        const result = await fetchBeneficiaryTransferDestinations();
+        if (result.error) {
+          destinationList.innerHTML = `
+            <div class="px-3 py-8 text-center text-xs font-semibold text-red-500">${escHtml(result.error)}</div>`;
+          return;
+        }
+        destinations = result.data;
+      }
+      renderDestinations();
+      destinationSearch.focus();
+    };
+
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = menu.classList.contains("hidden");
+      menu.classList.toggle("hidden", !willOpen);
+      trigger.setAttribute("aria-expanded", String(willOpen));
+      if (willOpen) {
+        actionsPanel.classList.remove("hidden");
+        destinationsPanel.classList.add("hidden");
+      }
+    });
+
+    statusBtn?.addEventListener("click", () => {
+      const targetStatus = getTargetStatus();
+      executeTransfer({
+        title: `Transfer to ${targetStatus}?`,
+        message: `Update ${selectedBeneficiaryIds.size} selected beneficiar${selectedBeneficiaryIds.size === 1 ? "y" : "ies"} to ${targetStatus}?`,
+        payload: { returnStatus: targetStatus },
+      });
+    });
+
+    document.querySelectorAll("[data-transfer-destination-mode]").forEach((button) => {
+      button.addEventListener("click", () => openDestinationPicker(button.dataset.transferDestinationMode));
+    });
+    backBtn?.addEventListener("click", () => {
+      destinationsPanel.classList.add("hidden");
+      actionsPanel.classList.remove("hidden");
+    });
+    destinationSearch.addEventListener("input", renderDestinations);
+    destinationList.addEventListener("click", (event) => {
+      const destinationButton = event.target.closest("[data-transfer-staff-id]");
+      if (!destinationButton) return;
+      const destination = (destinations ?? []).find(
+        (item) => String(item.staff_id) === String(destinationButton.dataset.transferStaffId)
+      );
+      if (!destination) return;
+
+      const destinationLabel = destinationMode === "branch"
+        ? `${destination.branch_name} · ${destination.office_name}`
+        : destination.office_name;
+      executeTransfer({
+        title: `Transfer to ${destinationMode === "branch" ? "Branch" : "Office"}?`,
+        message: `Move ${selectedBeneficiaryIds.size} selected beneficiar${selectedBeneficiaryIds.size === 1 ? "y" : "ies"} to ${destinationLabel}? Their previous batch assignment will be cleared.`,
+        payload: { destinationStaffId: destination.staff_id },
+      });
+    });
+
+    tbody.addEventListener("change", (event) => {
+      const checkbox = event.target.closest(".beneficiary-row-checkbox");
+      if (!checkbox) return;
+      const id = String(checkbox.dataset.beneId);
+      if (checkbox.checked) selectedBeneficiaryIds.add(id);
+      else selectedBeneficiaryIds.delete(id);
+      sync();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!toolsWrap.contains(event.target)) closeMenu();
+    });
+
+    sync();
+    return { sync, clear };
+  }
+  // --- END: BENEFICIARY BULK TRANSFER TOOL FUNCTION ---
+
+  const beneficiaryBulkTransferTools = initBeneficiaryBulkTransferTools();
 
   // ── Batch Sort Panel (admin + officer, beneficiary view) ─────
   const batchSortPanel = initBatchSortPanel((batchId) => {
+    beneficiaryBulkTransferTools.clear();
     if (batchId === null || batchId === "all") {
       selectedBatchId = null;
     } else {
@@ -525,32 +805,45 @@ export function initBeneficiaries() {
   });
   const batchCardsWrap = document.getElementById("batches-kanban-wrapper");
 
-  // Capture both static and dynamically rendered batch actions in one stable
-  // handler. Capture phase prevents card navigation or third-party handlers
-  // from swallowing the drawer action first.
-  document.addEventListener("click", (event) => {
-    const trigger = event.target.closest?.("#btn-create-batch, .btn-edit-batch");
-    if (!trigger) return;
-    if (trigger.id !== "btn-create-batch" && !batchCardsWrap?.contains(trigger)) return;
+  const openBatchForm = (trigger) => {
+    const isEdit = trigger.classList.contains("btn-edit-batch");
+    const batch = isEdit ? {
+      id: trigger.dataset.batchId,
+      batchNumber: trigger.dataset.batchNumber,
+      batchName: trigger.dataset.batchName
+    } : null;
 
+    flowDebug("ACTION", isEdit ? "Edit Batch requested" : "Create Batch requested", {
+      batch,
+      next: "batchFormDrawer.open",
+    });
+
+    try {
+      const opened = batchFormDrawer.open(batch);
+      if (!opened) throw new Error("Batch drawer did not report a successful open.");
+      flowDebugSuccess(isEdit ? "Edit Batch drawer request completed" : "Create Batch drawer request completed", {
+        batchId: batch?.id ?? null,
+      });
+    } catch (error) {
+      flowDebugError("Could not open the batch form drawer", error, { batch });
+      modals.error("Batch Form Error", "The batch form could not be opened. Check the flow debugger for details.");
+    }
+  };
+
+  document.getElementById("btn-create-batch")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-
-    if (trigger.classList.contains("btn-edit-batch")) {
-      batchFormDrawer.open({
-        id: trigger.dataset.batchId,
-        batchNumber: trigger.dataset.batchNumber,
-        batchName: trigger.dataset.batchName
-      });
-    } else {
-      batchFormDrawer.open();
-    }
-  }, true);
+    openBatchForm(event.currentTarget);
+  });
 
   batchCardsWrap?.addEventListener("click", (event) => {
-    if (event.target.closest?.(".btn-edit-batch")) {
+    const editTrigger = event.target instanceof Element
+      ? event.target.closest(".btn-edit-batch")
+      : null;
+    if (editTrigger && batchCardsWrap.contains(editTrigger)) {
       event.preventDefault();
       event.stopPropagation();
+      openBatchForm(editTrigger);
       return;
     }
 
@@ -707,6 +1000,7 @@ export function initBeneficiaries() {
 
   async function switchToBeneficiariesView(officeName, officeLocation, officeId, staffId) {
     if (!isAdmin) return;
+    beneficiaryBulkTransferTools.clear();
     viewMode = "beneficiaries";
     currentOfficeLocation = officeLocation;
     currentOfficeId = officeId;
@@ -936,6 +1230,7 @@ export function initBeneficiaries() {
 
   async function switchToImplementorsView() {
     if (!isAdmin) return;
+    beneficiaryBulkTransferTools.clear();
     viewMode = "implementors";
     currentOfficeLocation = "";
     currentOfficeId = null;
@@ -1193,7 +1488,7 @@ export function initBeneficiaries() {
         headerRow.innerHTML = `
           <th scope="col" class="p-4 text-center w-4">
             <div class="flex items-center justify-center">
-              <input id="staff-checkbox-all" type="checkbox"
+              <input id="spes-checkbox-all" type="checkbox"
                 class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
             </div>
           </th>
@@ -1206,9 +1501,7 @@ export function initBeneficiaries() {
         `;
         if (controlsContainer) controlsContainer.classList.remove("hidden");
         // Wire up check-all listener
-        document.getElementById("staff-checkbox-all")?.addEventListener("change", e => {
-          document.querySelectorAll(".beneficiary-row-checkbox").forEach(cb => cb.checked = e.target.checked);
-        });
+        wireBeneficiarySelectAll();
       }
     }
 
@@ -1371,7 +1664,7 @@ export function initBeneficiaries() {
           const checkboxTd = `
             <td class="p-4 text-center">
               <div class="flex items-center justify-center">
-                <input type="checkbox" data-bene-id="${b.id}" class="beneficiary-row-checkbox h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                <input type="checkbox" data-bene-id="${b.id}" ${selectedBeneficiaryIds.has(String(b.id)) ? "checked" : ""} class="beneficiary-row-checkbox h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
               </div>
             </td>
           `;
@@ -1453,6 +1746,7 @@ export function initBeneficiaries() {
             confirmArchive(bData.id, bData.full_name);
           });
         });
+        beneficiaryBulkTransferTools.sync();
 
         // Pagination info
         const totalEl = document.getElementById("pagination-total");
@@ -1661,9 +1955,23 @@ export function initBeneficiaries() {
   });
 
   // ── Select all ───────────────────────────────────────────────
-  document.getElementById("staff-checkbox-all")?.addEventListener("change", e => {
-    document.querySelectorAll(".beneficiary-row-checkbox").forEach(cb => cb.checked = e.target.checked);
-  });
+  // --- START: BENEFICIARY SELECT-ALL FUNCTION ---
+  function wireBeneficiarySelectAll() {
+    const selectAll = document.getElementById("spes-checkbox-all");
+    if (!selectAll || selectAll.dataset.bulkSelectionWired === "true") return;
+    selectAll.dataset.bulkSelectionWired = "true";
+    selectAll.addEventListener("change", () => {
+      document.querySelectorAll(".beneficiary-row-checkbox").forEach((checkbox) => {
+        checkbox.checked = selectAll.checked;
+        const id = String(checkbox.dataset.beneId);
+        if (selectAll.checked) selectedBeneficiaryIds.add(id);
+        else selectedBeneficiaryIds.delete(id);
+      });
+      beneficiaryBulkTransferTools.sync();
+    });
+  }
+  wireBeneficiarySelectAll();
+  // --- END: BENEFICIARY SELECT-ALL FUNCTION ---
 
   // ── Sort / filter ────────────────────────────────────────────
   function setupSortFilter(data) {
@@ -1971,6 +2279,7 @@ export function initBeneficiaries() {
   // ── Wire Create Batch button ──────────────────────────────────
   document.getElementById("btn-back-to-implementors")?.addEventListener("click", () => {
     if (viewMode === "beneficiaries" && selectedBatchId !== null) {
+      beneficiaryBulkTransferTools.clear();
       selectedBatchId = null;
       currentPage = 1;
       _clearUrlParam("batch");

@@ -22,6 +22,7 @@ import { initImplementorsDrawer, initAddImplementorDrawer } from "./components/d
 import Swal from "sweetalert2";
 import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations.js";
 import { applyTextSize } from "./components/settings.js";
+import { flowDebug, flowDebugError, flowDebugSuccess } from "./components/flow-debugger.js";
 
 // ── DEV: Supabase connection debug ────────────────────────────
 if (import.meta.env.DEV) {
@@ -171,14 +172,23 @@ async function init(user) {
     }
   }
 
-  updateDynamicBadges();
-
   if (path.includes("/dashboard/")) {
     const viewAllLink = document.getElementById("dashboard-view-all-link");
     if (viewAllLink) {
       viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
     }
-    initDashboardCharts();
+    try {
+      const chartMetrics = await initDashboardCharts();
+      updateDynamicBadges(chartMetrics?.totalImplementors);
+      flowDebugSuccess("Dashboard metrics loaded", {
+        totalImplementors: chartMetrics?.totalImplementors ?? 0,
+        implementorScope: "global",
+        remainingDashboardScope: isAdmin ? "global" : "assigned office",
+      });
+    } catch (error) {
+      flowDebugError("Dashboard metrics failed to load", error);
+      updateDynamicBadges();
+    }
     _wireExportStatsButtons();
     _loadTimelineMetrics();
     initQuickAccessCarousel();
@@ -186,6 +196,9 @@ async function init(user) {
     await loadRecentBeneficiaries();
     setupDashboardListToggle(user);
     initQuickAccessStatsToggle();
+  }
+  else {
+    updateDynamicBadges();
   }
   if (path.includes("/beneficiaries/")) initBeneficiaries();
 
@@ -389,16 +402,22 @@ async function loadImplementorTable(userRole) {
 }
 
 // ── Dynamic metric badges ─────────────────────────────────────
-function updateDynamicBadges() {
+function updateDynamicBadges(globalImplementorTotal = null) {
   const staffBadge   = document.getElementById("badge-staff-metric");
   const studentBadge = document.getElementById("badge-student-metric");
 
   if (staffBadge) {
     const active = allImplementors.filter(s => !s.archive_at);
-    const total = active.length || 0;
+    const total = Number.isFinite(globalImplementorTotal)
+      ? globalImplementorTotal
+      : active.length || 0;
     const formattedTotal = Number(total).toLocaleString();
     staffBadge.className = "rounded-full bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow";
     staffBadge.textContent = `${formattedTotal} TOTAL`;
+    flowDebug("OUTPUT", "Total Implementors badge updated", {
+      total,
+      scope: Number.isFinite(globalImplementorTotal) ? "global" : "current RBAC list",
+    });
   }
 }
 

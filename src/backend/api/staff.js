@@ -251,6 +251,32 @@ function _sanitize(p) {
   };
 }
 // ── Fetch ──────────────────────────────────────────────────────
+/**
+ * Fetch the minimal global roster needed by Dashboard Card 1.
+ * This intentionally does not return staff contact/profile fields.
+ */
+export async function fetchGlobalStaffMetricRoster() {
+  const { data, error } = await supabase
+    .from("staffs")
+    .select("id, office_id, offices!office_id(id, name, location)")
+    .is("archive_at", null)
+    .neq("role_id", 1)
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error(
+      "[SPES Staff] fetchGlobalStaffMetricRoster error:",
+      error.code,
+      error.message,
+      error.hint,
+      error.details
+    );
+    return { data: [], error: "Could not load the global implementor metric." };
+  }
+
+  return { data: data ?? [] };
+}
+
 export async function fetchStaffs(options = {}) {
   let query = supabase
     .from("staffs")
