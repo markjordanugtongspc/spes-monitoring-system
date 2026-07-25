@@ -5,6 +5,7 @@
  * Offices and roles lists are cached in sessionStorage.
  */
 import { supabase } from "./supabase.js";
+import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 
 const STAFF_CACHE_KEY = "spes_staffs_v1";
 const OFFICES_CACHE_KEY = "spes_offices_v1";
@@ -113,6 +114,17 @@ export async function fetchRoles(options = {}) {
  */
 export async function addStaff(payload) {
   const clean = _sanitize(payload);
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  if (!_hasStaffMutationPermission(session, "create_users")) {
+    return { success: false, error: "You do not have permission to create implementors." };
+  }
+  if (!access.isAdmin) {
+    if (access.ownOfficeId == null) {
+      return { success: false, error: "Your account has no assigned office." };
+    }
+    clean.office_id = Number(access.ownOfficeId);
+  }
 
   try {
     const raw = localStorage.getItem("spes_session");
@@ -155,7 +167,14 @@ export async function addStaff(payload) {
  * If `payload.password` is empty or omitted, the password is left unchanged.
  */
 export async function updateStaff(id, payload) {
+  const authorization = await _authorizeStaffMutation(id, "edit_users");
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
   const clean = _sanitize(payload);
+  if (!authorization.access.isAdmin) {
+    clean.office_id = Number(authorization.access.ownOfficeId);
+  }
 
   // Only send password if the admin explicitly supplied a new one
   if (!clean.password) delete clean.password;
@@ -182,6 +201,10 @@ export async function updateStaff(id, payload) {
 
 // ── Archive (soft delete) ──────────────────────────────────────
 export async function archiveStaff(id) {
+  const authorization = await _authorizeStaffMutation(id, "delete_users");
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
   const { error } = await supabase
     .from("staffs")
     .update({ archive_at: new Date().toISOString(), status: "OFFLINE" })
@@ -198,6 +221,10 @@ export async function archiveStaff(id) {
 
 // ── Unarchive (restore) ────────────────────────────────────────
 export async function unarchiveStaff(id) {
+  const authorization = await _authorizeStaffMutation(id, "edit_users");
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
   const { error } = await supabase
     .from("staffs")
     .update({ archive_at: null, status: "OFFLINE" })
@@ -215,6 +242,10 @@ export async function unarchiveStaff(id) {
 // ── Bulk approval / disapproval ──────────────────────────────────
 export async function updateStaffApprovalBulk(ids, approved) {
   if (!ids || ids.length === 0) return { success: true };
+  const authorization = await _authorizeStaffMutation(ids, "edit_users");
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
 
   const { data, error } = await supabase
     .from("staffs")
@@ -275,6 +306,44 @@ export async function fetchGlobalStaffMetricRoster() {
   }
 
   return { data: data ?? [] };
+}
+
+function _getStoredSession() {
+  try {
+    return JSON.parse(localStorage.getItem("spes_session") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function _hasStaffMutationPermission(session, permissionColumn) {
+  const access = getOfficeAccessScope(session);
+  return access.isAdmin || (
+    session.approved === true &&
+    Boolean(session.permissions?.[permissionColumn])
+  );
+}
+
+async function _authorizeStaffMutation(ids, permissionColumn) {
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  if (!_hasStaffMutationPermission(session, permissionColumn)) {
+    return { allowed: false, error: "You do not have permission to manage implementors." };
+  }
+  if (access.isAdmin) return { allowed: true, session, access };
+
+  const safeIds = (Array.isArray(ids) ? ids : [ids]).filter((id) => id != null);
+  const { data, error } = await supabase
+    .from("staffs")
+    .select("id, office_id")
+    .in("id", safeIds);
+  if (error || (data ?? []).length !== safeIds.length) {
+    return { allowed: false, error: "The selected implementor records could not be verified." };
+  }
+  if ((data ?? []).some((staff) => !access.canManageOffice(staff.office_id))) {
+    return { allowed: false, error: "Other-office implementors are read-only." };
+  }
+  return { allowed: true, session, access };
 }
 
 export async function fetchStaffs(options = {}) {

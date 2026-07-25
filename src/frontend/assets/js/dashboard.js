@@ -7,10 +7,11 @@ import "../styles/tailwind.css";
 import "flowbite";
 import ApexCharts from "apexcharts";
 import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
+import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { fetchImplementorList, invalidateImplementorCache } from "../../../backend/api/auth.js";
 import { updateStaff, archiveStaff, unarchiveStaff, fetchOffices, fetchRoles, updateStaffApprovalBulk } from "../../../backend/api/staff.js";
-import { fetchAllRolePermissions, upsertRolePermissions } from "../../../backend/api/permissions.js";
+import { fetchStaffPermissions, upsertStaffPermissions } from "../../../backend/api/permissions.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initFlowbite } from "flowbite";
@@ -23,6 +24,29 @@ import Swal from "sweetalert2";
 import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations.js";
 import { applyTextSize } from "./components/settings.js";
 import { flowDebug, flowDebugError, flowDebugSuccess } from "./components/flow-debugger.js";
+
+const ROLE_PERMISSION_DESCRIPTIONS = {
+  "users:view": "View the implementor directory for the user’s assigned office.",
+  "offices:view-other": "View implementors and beneficiaries from other offices in read-only mode.",
+  "analytics:view-global": "View overall dashboard charts across all offices while the gender donut remains limited to the assigned office.",
+  "users:create": "Create new implementor accounts only within the user’s assigned office.",
+  "users:edit": "Edit and approve implementors only within the user’s assigned office.",
+  "users:delete": "Archive implementors only within the user’s assigned office.",
+  "reports:export": "Include other permitted offices in exports; approved users can always export their own office data.",
+};
+
+function setDashboardDocumentTitle(user) {
+  if (!window.location.pathname.includes("/dashboard/")) return;
+
+  const rawRole = String(user?.role_label || user?.role || "Staff")
+    .trim()
+    .replace(/[_-]+/g, " ");
+  const roleLabel = rawRole
+    ? rawRole.replace(/\b\w/g, (character) => character.toUpperCase())
+    : "Staff";
+
+  document.title = `${roleLabel} Dashboard | SPES Portal`;
+}
 
 // ── DEV: Supabase connection debug ────────────────────────────
 if (import.meta.env.DEV) {
@@ -47,6 +71,7 @@ if (import.meta.env.DEV) {
 // ── Boot ──────────────────────────────────────────────────────
 const session = requireAuth();
 if (session) {
+  setDashboardDocumentTitle(session);
   const sidebarContainer = document.getElementById("sidebar-container");
   if (sidebarContainer) {
     loadComponent("sidebar-container", "../../components/sidebar.html").then(() => {
@@ -78,11 +103,10 @@ async function init(user) {
     if (user.role === "officer") user.role_id = 2;
   }
 
-  // Fetch fresh permissions to ensure RBAC is up to date without requiring relog
-  if (user && user.role_id) {
+  // Fetch this staff account's current individual permissions without requiring relog.
+  if (user && user.id) {
     try {
-      const { fetchRolePermissions } = await import("../../../backend/api/permissions.js");
-      const { data: freshPerms } = await fetchRolePermissions(user.role_id, { forceRefresh: true });
+      const { data: freshPerms } = await fetchStaffPermissions(user.id, { forceRefresh: true });
       if (freshPerms) {
         user.permissions = freshPerms;
         localStorage.setItem("spes_session", JSON.stringify(user));
@@ -349,7 +373,8 @@ function pinSystemAdministratorFirst(items, shouldPin) {
 }
 
 let allImplementors = [];
-let allRolePermissions = {};
+let allStaffPermissions = {};
+const selectedPermissionStaffIds = new Set();
 let currentPage = 1;
 const rowsPerPage = (window.location.pathname.includes("/implementors/") || window.location.pathname.includes("/roles/")) ? 10 : 3;
 
@@ -361,10 +386,11 @@ async function loadImplementorTable(userRole) {
   const data = await fetchImplementorList({ forceRefresh: isRolesPage || isImplPage });
   allImplementors = data;
 
-  // For the roles page, also fetch the live permissions map
+  // The implementor query includes each staff account's individual permissions.
   if (isRolesPage) {
-    const { data: permsMap } = await fetchAllRolePermissions({ forceRefresh: true });
-    allRolePermissions = permsMap || {};
+    allStaffPermissions = Object.fromEntries(
+      data.map((staff) => [staff.id, staff.permissions || {}])
+    );
   }
 
   setupSortFiltration({
@@ -398,7 +424,6 @@ async function loadImplementorTable(userRole) {
   renderPaginatedTable(userRole);
   initPaginationEvents(userRole);
 
-  if (isRolesPage) setupPermissionChangeHandlers();
 }
 
 // ── Dynamic metric badges ─────────────────────────────────────
@@ -502,12 +527,12 @@ function renderTableRows(implementors, userRole) {
 
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   const isAdminSession = session.role === "admin";
-  const canEdit = isAdminSession || (session.permissions && session.permissions.edit_users);
+  const access = getOfficeAccessScope(session);
   const isApproved = isAdminSession || session.approved;
 
   if (!isApproved) {
     if (isRolesPage) {
-      tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
     } else {
       tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
     }
@@ -516,13 +541,23 @@ function renderTableRows(implementors, userRole) {
 
   if (isRolesPage) {
     tbody.innerHTML = implementors.map(s => {
-      const rolePerms = allRolePermissions[s.role_id] || {};
+      const staffPerms = allStaffPermissions[s.id] || {};
       const isAdmin   = s.role === "ADMIN";
+      const canSelectPermissions = !isAdmin && s.approved === true;
 
       const hasPerm = (perm) => {
         if (isAdmin) return true;
-        const colMap = { "users:view": "view_users", "users:create": "create_users", "users:edit": "edit_users", "users:delete": "delete_users", "reports:export": "export_reports" };
-        return Boolean(rolePerms[colMap[perm]]);
+        if (!s.approved) return false;
+        const colMap = {
+          "users:view": "view_users",
+          "offices:view-other": "view_other_offices",
+          "analytics:view-global": "view_global_stats",
+          "users:create": "create_users",
+          "users:edit": "edit_users",
+          "users:delete": "delete_users",
+          "reports:export": "export_reports",
+        };
+        return Boolean(staffPerms[colMap[perm]]);
       };
 
       const displayRole = s.role.charAt(0).toUpperCase() + s.role.slice(1).toLowerCase();
@@ -535,7 +570,7 @@ function renderTableRows(implementors, userRole) {
       return `
         <tr class="${rowClass}">
           <td class="p-4 text-center"><div class="flex items-center justify-center">
-            <input type="checkbox" data-row-user-id="${s.id}" class="staff-row-checkbox h-4 w-4 cursor-pointer rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+            <input type="checkbox" data-row-user-id="${s.id}" ${selectedPermissionStaffIds.has(Number(s.id)) ? "checked" : ""} ${canSelectPermissions ? "" : "disabled"} class="staff-row-checkbox h-4 w-4 cursor-pointer rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canSelectPermissions ? "" : "cursor-not-allowed opacity-40"}">
           </div></td>
           <td class="px-6 py-4 text-left text-xs font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${String(s.id).padStart(2, "0")}</td>
           <td class="px-6 py-4 text-left whitespace-nowrap">
@@ -568,13 +603,22 @@ function renderTableRows(implementors, userRole) {
               ${escHtml(_formatOfficeName(s.office))}
             </span>
           </td>
-          ${["users:view","users:create","users:edit","users:delete","reports:export"].map(perm => `
-          <td class="px-6 py-4 text-center">
-            <input type="checkbox" data-user-id="${s.id}" data-role-id="${s.role_id}" data-perm="${perm}" ${hasPerm(perm) ? "checked" : ""} ${isAdmin ? "disabled title='Admin always has this permission'" : ""} class="perm-checkbox h-4 w-4 cursor-pointer rounded-md border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${isAdmin ? "opacity-50 cursor-not-allowed" : ""}">
-          </td>`).join("")}
+          ${["users:view","offices:view-other","analytics:view-global","users:create","users:edit","users:delete","reports:export"].map(perm => {
+            const description = ROLE_PERMISSION_DESCRIPTIONS[perm];
+            return `
+              <td class="px-6 py-4 text-center">
+                <div class="relative group inline-flex items-center justify-center">
+                  <input type="checkbox" data-user-id="${s.id}" data-perm="${perm}" aria-label="${escHtml(description)}" ${hasPerm(perm) ? "checked" : ""} ${canSelectPermissions ? "" : "disabled"} class="perm-checkbox h-4 w-4 cursor-pointer rounded-md border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canSelectPermissions ? "" : "opacity-50 cursor-not-allowed"}">
+                  <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 z-[70] mb-2 w-64 -translate-x-1/2 whitespace-normal break-words rounded-lg border border-white/10 bg-spes-blue px-3 py-2 text-left text-[10px] font-semibold normal-case leading-relaxed tracking-normal text-white opacity-0 shadow-xl transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-spes-dark-primary">
+                    ${escHtml(isAdmin ? `${description} Administrators always have this permission.` : !s.approved ? `${description} Approve this account before assigning optional permissions.` : description)}
+                    <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></span>
+                  </div>
+                </div>
+              </td>`;
+          }).join("")}
           <td class="px-6 py-4 text-center whitespace-nowrap">
             <div class="relative group inline-block">
-              <button data-clear-user-id="${s.id}" data-clear-role-id="${s.role_id}" ${isAdmin ? "disabled" : ""} class="btn-clear-perms cursor-pointer p-1.5 rounded-lg text-spes-red hover:bg-spes-red/10 transition-all flex items-center justify-center ${isAdmin ? "opacity-40 cursor-not-allowed" : ""}" aria-label="Clear Permissions">
+              <button data-clear-user-id="${s.id}" ${canSelectPermissions ? "" : "disabled"} class="btn-clear-perms cursor-pointer p-1.5 rounded-lg text-spes-red hover:bg-spes-red/10 transition-all flex items-center justify-center ${canSelectPermissions ? "" : "opacity-40 cursor-not-allowed"}" aria-label="Clear Permissions">
                 <svg class="h-4.5 w-4.5 shrink-0 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
               <div class="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider text-white shadow-lg pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-spes-dark-primary border border-white/10 backdrop-blur-md">
@@ -594,6 +638,14 @@ function renderTableRows(implementors, userRole) {
   tbody.innerHTML = implementors.map(s => {
     const dataStr   = encodeURIComponent(JSON.stringify(s));
     const isArchived = Boolean(s.archive_at);
+    const canEdit = (
+      isAdminSession ||
+      (Boolean(session.permissions?.edit_users) && access.canManageOffice(s.office_id))
+    );
+    const canDelete = (
+      isAdminSession ||
+      (Boolean(session.permissions?.delete_users) && access.canManageOffice(s.office_id))
+    );
     const isTarget = new URLSearchParams(window.location.search).get("id") === String(s.id);
     const rowBg     = isTarget
       ? "bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse cursor-pointer"
@@ -603,7 +655,7 @@ function renderTableRows(implementors, userRole) {
     return `
       <tr data-impl-info="${dataStr}" class="impl-row border-b border-gray-100 dark:border-white/5 transition-all duration-200 ${rowBg}">
       ${!isDashboardPage ? `<td class="p-4 text-center"><div class="flex items-center justify-center">
-        <input type="checkbox" class="staff-row-checkbox h-4 w-4 cursor-pointer rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow" ${isArchived ? "disabled" : ""}>
+        <input type="checkbox" class="staff-row-checkbox h-4 w-4 rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canDelete ? "cursor-pointer" : "cursor-not-allowed opacity-40"}" ${isArchived || !canDelete ? "disabled" : ""}>
       </div></td>` : ""}
       <td class="px-6 py-4 text-left text-xs font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${String(s.id).padStart(2, "0")}</td>
       <td class="px-6 py-4 text-left">
@@ -673,7 +725,7 @@ function renderTableRows(implementors, userRole) {
                    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></div>
                  </div>
                </div>`
-            : `<span class="text-[0.625rem] text-gray-400 dark:text-white/25">—</span>`)}
+            : `<span class="text-[0.625rem] text-gray-400 dark:text-white/25">${access.canManageOffice(s.office_id) ? "—" : "Read only"}</span>`)}
         </div>
       </td>
     </tr>`;
@@ -1037,130 +1089,200 @@ async function showEditStaffModal(staff) {
 }
 
 // ── Permissions page handlers ─────────────────────────────────
+const PERM_COL_MAP = {
+  "users:view": "view_users",
+  "offices:view-other": "view_other_offices",
+  "analytics:view-global": "view_global_stats",
+  "users:create": "create_users",
+  "users:edit": "edit_users",
+  "users:delete": "delete_users",
+  "reports:export": "export_reports",
+};
+const ALL_PERMISSIONS_GRANTED = Object.fromEntries(
+  Object.values(PERM_COL_MAP).map((column) => [column, true])
+);
+const ALL_PERMISSIONS_REVOKED = Object.fromEntries(
+  Object.values(PERM_COL_MAP).map((column) => [column, false])
+);
+
+function eligiblePermissionStaff() {
+  return allImplementors.filter(
+    (staff) => staff.approved === true && String(staff.role).toUpperCase() !== "ADMIN"
+  );
+}
+
+function updatePermissionSelectionControls() {
+  const eligibleIds = new Set(eligiblePermissionStaff().map((staff) => Number(staff.id)));
+  for (const selectedId of selectedPermissionStaffIds) {
+    if (!eligibleIds.has(selectedId)) selectedPermissionStaffIds.delete(selectedId);
+  }
+
+  const count = selectedPermissionStaffIds.size;
+  const selectAll = document.getElementById("staff-checkbox-all");
+  if (selectAll) {
+    selectAll.disabled = eligibleIds.size === 0;
+    selectAll.checked = eligibleIds.size > 0 && count === eligibleIds.size;
+    selectAll.indeterminate = count > 0 && count < eligibleIds.size;
+  }
+
+  for (const id of ["btn-bulk-grant", "btn-bulk-revoke"]) {
+    const button = document.getElementById(id);
+    if (!button) continue;
+    button.disabled = count === 0;
+    button.classList.toggle("pointer-events-none", count === 0);
+    button.classList.toggle("cursor-not-allowed", count === 0);
+    button.classList.toggle("opacity-40", count === 0);
+    button.classList.toggle("cursor-pointer", count > 0);
+    button.setAttribute("aria-disabled", String(count === 0));
+    button.setAttribute(
+      "aria-label",
+      `${id === "btn-bulk-grant" ? "Grant" : "Revoke"} all optional permissions for ${count} selected staff account${count === 1 ? "" : "s"}`
+    );
+  }
+}
+
+function applyPermissionUpdatesLocally(staffIds, updates) {
+  for (const staffId of staffIds) {
+    allStaffPermissions[staffId] = {
+      ...(allStaffPermissions[staffId] || {}),
+      ...updates,
+    };
+    const implementor = allImplementors.find((staff) => Number(staff.id) === Number(staffId));
+    if (implementor) {
+      implementor.permissions = {
+        ...(implementor.permissions || {}),
+        ...updates,
+      };
+    }
+    document.querySelectorAll(`.perm-checkbox[data-user-id="${staffId}"]`).forEach((checkbox) => {
+      const column = PERM_COL_MAP[checkbox.dataset.perm];
+      if (column in updates) checkbox.checked = Boolean(updates[column]);
+    });
+  }
+}
+
 function setupPermissionChangeHandlers() {
-  const PERM_COL_MAP = {
-    "users:view":    "view_users",
-    "users:create":  "create_users",
-    "users:edit":    "edit_users",
-    "users:delete":  "delete_users",
-    "reports:export":"export_reports"
-  };
+  document.querySelectorAll(".staff-row-checkbox:not([disabled])").forEach((checkbox) => {
+    if (checkbox.dataset.permissionSelectionBound === "true") return;
+    checkbox.dataset.permissionSelectionBound = "true";
+    checkbox.addEventListener("change", () => {
+      const staffId = Number(checkbox.dataset.rowUserId);
+      if (checkbox.checked) selectedPermissionStaffIds.add(staffId);
+      else selectedPermissionStaffIds.delete(staffId);
+      updatePermissionSelectionControls();
+    });
+  });
 
-  document.querySelectorAll(".perm-checkbox:not([disabled])").forEach(cb => {
-    cb.addEventListener("change", async e => {
-      const target   = e.target;
-      const userId   = target.getAttribute("data-user-id");
-      const roleId   = parseInt(target.getAttribute("data-role-id"), 10);
-      const perm     = target.getAttribute("data-perm");
-      const isChecked = target.checked;
-      const col      = PERM_COL_MAP[perm];
+  document.querySelectorAll(".perm-checkbox:not([disabled])").forEach((checkbox) => {
+    checkbox.addEventListener("change", async () => {
+      const staffId = Number(checkbox.dataset.userId);
+      const permission = checkbox.dataset.perm;
+      const column = PERM_COL_MAP[permission];
+      const isChecked = checkbox.checked;
+      if (!staffId || !column) return;
 
-      if (!col || !roleId) return;
-
-      const user = allImplementors.find(u => String(u.id) === String(userId));
-      const result = await upsertRolePermissions(roleId, { [col]: isChecked });
+      checkbox.disabled = true;
+      const result = await upsertStaffPermissions(staffId, { [column]: isChecked });
+      checkbox.disabled = false;
 
       if (result.success) {
-        // Update local cache
-        if (!allRolePermissions[roleId]) allRolePermissions[roleId] = {};
-        allRolePermissions[roleId][col] = isChecked;
-
-        modals.success("Permission Updated", `${isChecked ? "Granted" : "Revoked"} "${perm}" for all ${user?.role || "role"} users.`);
+        applyPermissionUpdatesLocally([staffId], { [column]: isChecked });
+        const staff = allImplementors.find((item) => Number(item.id) === staffId);
+        modals.success(
+          "Permission Updated",
+          `${isChecked ? "Granted" : "Revoked"} "${permission}" for ${staff?.full_name || "the selected staff account"}.`
+        );
       } else {
+        checkbox.checked = !isChecked;
         modals.error("Error", result.error);
-        target.checked = !isChecked; // revert
       }
     });
   });
 
-  document.querySelectorAll(".btn-clear-perms:not([disabled])").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const roleId = parseInt(btn.getAttribute("data-clear-role-id"), 10);
-      if (!roleId) return;
+  document.querySelectorAll(".btn-clear-perms:not([disabled])").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const staffId = Number(button.dataset.clearUserId);
+      const staff = allImplementors.find((item) => Number(item.id) === staffId);
+      if (!staffId || !staff) return;
 
-      const user = allImplementors.find(u => String(u.id) === btn.getAttribute("data-clear-user-id"));
-      const res = await modals.confirm(
+      const confirmation = await modals.confirm(
         "Clear Permissions",
-        `Revoke all permissions for all ${user?.role || "this role"} users?`,
-        "Clear All", "Cancel"
+        `Revoke every optional permission from ${staff.full_name}?`,
+        "Clear All",
+        "Cancel"
       );
-      if (!res.isConfirmed) return;
+      if (!confirmation.isConfirmed) return;
 
       modals.loading("Clearing...", "Please wait...");
-      const result = await upsertRolePermissions(roleId, {
-        view_users: false, create_users: false, edit_users: false,
-        delete_users: false, export_reports: false
-      });
+      const result = await upsertStaffPermissions(staffId, ALL_PERMISSIONS_REVOKED);
       modals.close();
 
       if (result.success) {
-        allRolePermissions[roleId] = { view_users: false, create_users: false, edit_users: false, delete_users: false, export_reports: false };
-        document.querySelectorAll(`.perm-checkbox[data-role-id="${roleId}"]`).forEach(cb => cb.checked = false);
-        modals.success("Permissions Cleared", `All permissions cleared for ${user?.role || "this role"}.`);
+        applyPermissionUpdatesLocally([staffId], ALL_PERMISSIONS_REVOKED);
+        modals.success("Permissions Cleared", `All optional permissions were revoked from ${staff.full_name}.`);
       } else {
         modals.error("Error", result.error);
       }
     });
   });
 
-  // Bulk grant
-  document.getElementById("btn-bulk-grant")?.addEventListener("click", async () => {
-    const checked = [...document.querySelectorAll(".staff-row-checkbox:checked")];
-    if (!checked.length) { modals.warning("No Selection", "Please check one or more implementors first."); return; }
+  const bindBulkAction = (buttonId, grant) => {
+    const button = document.getElementById(buttonId);
+    if (!button || button.dataset.permissionActionBound === "true") return;
+    button.dataset.permissionActionBound = "true";
+    button.addEventListener("click", async () => {
+      const staffIds = [...selectedPermissionStaffIds];
+      if (!staffIds.length) return;
 
-    const roleIds = [...new Set(checked.map(cb => {
-      const uid = cb.getAttribute("data-row-user-id");
-      return allImplementors.find(u => String(u.id) === String(uid))?.role_id;
-    }).filter(Boolean))];
+      const confirmation = await modals.confirm(
+        grant ? "Grant All Permissions" : "Revoke All Permissions",
+        `${grant ? "Grant" : "Revoke"} every optional permission ${grant ? "to" : "from"} ${staffIds.length} selected staff account${staffIds.length === 1 ? "" : "s"}?`,
+        grant ? "Grant All" : "Revoke All",
+        "Cancel"
+      );
+      if (!confirmation.isConfirmed) return;
 
-    modals.loading("Granting...", "Please wait...");
-    const results = await Promise.all(roleIds.map(rid => upsertRolePermissions(rid, {
-      view_users: true, create_users: true, edit_users: true, delete_users: true, export_reports: true
-    })));
-    modals.close();
+      modals.loading(grant ? "Granting..." : "Revoking...", "Please wait...");
+      const updates = grant ? ALL_PERMISSIONS_GRANTED : ALL_PERMISSIONS_REVOKED;
+      const result = await upsertStaffPermissions(staffIds, updates);
+      modals.close();
 
-    if (results.every(r => r.success)) {
-      roleIds.forEach(rid => {
-        allRolePermissions[rid] = { view_users: true, create_users: true, edit_users: true, delete_users: true, export_reports: true };
-        document.querySelectorAll(`.perm-checkbox[data-role-id="${rid}"]`).forEach(cb => cb.checked = true);
-      });
-      modals.success("Permissions Granted", `All permissions granted for selected implementors' roles.`);
-    } else {
-      modals.error("Error", "Some permissions could not be updated.");
-    }
-  });
+      if (result.success) {
+        applyPermissionUpdatesLocally(staffIds, updates);
+        modals.success(
+          grant ? "Permissions Granted" : "Permissions Revoked",
+          `All optional permissions were ${grant ? "granted to" : "revoked from"} only the ${staffIds.length} selected staff account${staffIds.length === 1 ? "" : "s"}.`
+        );
+      } else {
+        modals.error("Error", result.error);
+      }
+    });
+  };
 
-  // Bulk revoke
-  document.getElementById("btn-bulk-revoke")?.addEventListener("click", async () => {
-    const checked = [...document.querySelectorAll(".staff-row-checkbox:checked")];
-    if (!checked.length) { modals.warning("No Selection", "Please check one or more implementors first."); return; }
-
-    const roleIds = [...new Set(checked.map(cb => {
-      const uid = cb.getAttribute("data-row-user-id");
-      return allImplementors.find(u => String(u.id) === String(uid))?.role_id;
-    }).filter(Boolean))];
-
-    modals.loading("Revoking...", "Please wait...");
-    const results = await Promise.all(roleIds.map(rid => upsertRolePermissions(rid, {
-      view_users: false, create_users: false, edit_users: false, delete_users: false, export_reports: false
-    })));
-    modals.close();
-
-    if (results.every(r => r.success)) {
-      roleIds.forEach(rid => {
-        allRolePermissions[rid] = { view_users: false, create_users: false, edit_users: false, delete_users: false, export_reports: false };
-        document.querySelectorAll(`.perm-checkbox[data-role-id="${rid}"]`).forEach(cb => cb.checked = false);
-      });
-      modals.success("Permissions Revoked", `All permissions revoked for selected implementors' roles.`);
-    } else {
-      modals.error("Error", "Some permissions could not be updated.");
-    }
-  });
+  bindBulkAction("btn-bulk-grant", true);
+  bindBulkAction("btn-bulk-revoke", false);
+  updatePermissionSelectionControls();
 }
 
 // ── Misc helpers ──────────────────────────────────────────────
 function onSelectAll(e) {
-  document.querySelectorAll(".staff-row-checkbox").forEach(cb => cb.checked = e.target.checked);
+  if (!window.location.pathname.includes("/roles/")) {
+    document.querySelectorAll(".staff-row-checkbox:not([disabled])").forEach((checkbox) => {
+      checkbox.checked = e.target.checked;
+    });
+    return;
+  }
+
+  const eligible = eligiblePermissionStaff();
+  if (e.target.checked) {
+    eligible.forEach((staff) => selectedPermissionStaffIds.add(Number(staff.id)));
+  } else {
+    eligible.forEach((staff) => selectedPermissionStaffIds.delete(Number(staff.id)));
+  }
+  document.querySelectorAll(".staff-row-checkbox:not([disabled])").forEach((checkbox) => {
+    checkbox.checked = selectedPermissionStaffIds.has(Number(checkbox.dataset.rowUserId));
+  });
+  updatePermissionSelectionControls();
 }
 
 function getStatusColor(status) {
@@ -1287,31 +1409,34 @@ function setupDashboardListToggle(user) {
 // ── Supabase Realtime Permissions Listener ────────────────────────
 function setupRealtimePermissionsListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  if (!session || !session.role_id) return;
+  if (!session || !session.id || session.role === "admin") return;
 
   supabase
-    .channel("custom-filter-permissions-channel")
+    .channel(`staff-permissions-${session.id}`)
     .on(
       "postgres_changes",
       {
         event: "UPDATE",
         schema: "public",
-        table: "permissions",
-        filter: `role_id=eq.${session.role_id}`
+        table: "staffs",
+        filter: `id=eq.${session.id}`
       },
       async (payload) => {
-        if (import.meta.env.DEV) console.log("[SPES Realtime] Permissions updated for our role:", payload);
+        const permissionChanged = Object.values(PERM_COL_MAP).some((field) => {
+          return Boolean(payload.new?.[`perm_${field}`]) !== Boolean(session.permissions?.[field]);
+        });
+        if (!permissionChanged) return;
+        if (import.meta.env.DEV) console.log("[SPES Realtime] Individual permissions updated:", payload);
         
         // Refresh local cache and localStorage
-        const { fetchRolePermissions } = await import("../../../backend/api/permissions.js");
-        const { data: freshPerms } = await fetchRolePermissions(session.role_id, { forceRefresh: true });
+        const { data: freshPerms } = await fetchStaffPermissions(session.id, { forceRefresh: true });
         if (freshPerms) {
           session.permissions = freshPerms;
           localStorage.setItem("spes_session", JSON.stringify(session));
           
           Swal.fire({
             title: "Permissions Updated",
-            text: "Your access permissions have been updated in real-time. Reloading the page...",
+            text: "Your individual access permissions were updated and are being synchronized automatically.",
             icon: "info",
             timer: 3000,
             timerProgressBar: true,
@@ -1330,12 +1455,69 @@ function setupRealtimePermissionsListener() {
     .subscribe();
 }
 
+let approvalTransitionInProgress = false;
+
+function normalizeApproval(value) {
+  return value === true || String(value).toLowerCase() === "true";
+}
+
+function applyRealtimeApprovalState(newApproved, source = "realtime") {
+  if (approvalTransitionInProgress) return;
+
+  const currentSession = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  const wasApproved = normalizeApproval(currentSession.approved);
+  const isApproved = normalizeApproval(newApproved);
+  if (wasApproved === isApproved) return;
+
+  approvalTransitionInProgress = true;
+  currentSession.approved = isApproved;
+  localStorage.setItem("spes_session", JSON.stringify(currentSession));
+
+  if (import.meta.env.DEV) {
+    console.info(`[SPES Approval Sync] Status received via ${source}:`, isApproved);
+  }
+
+  Swal.fire({
+    title: isApproved ? "Account Approved!" : "Account Disapproved",
+    text: isApproved
+      ? "Your account was approved and your dashboard access is being synchronized automatically."
+      : "Your account was disapproved and your dashboard access is being revoked automatically.",
+    icon: isApproved ? "success" : "warning",
+    timer: 2200,
+    timerProgressBar: true,
+    showConfirmButton: false,
+    customClass: {
+      popup: "rounded-2xl border-none shadow-2xl"
+    },
+    background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
+    color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
+  }).then(() => {
+    window.location.reload();
+  });
+}
+
+async function reconcileApprovalState(staffId) {
+  const { data, error } = await supabase
+    .from("staffs")
+    .select("approved")
+    .eq("id", staffId)
+    .maybeSingle();
+
+  if (error) {
+    if (import.meta.env.DEV) {
+      console.warn("[SPES Approval Sync] Reconciliation failed:", error.code);
+    }
+    return;
+  }
+  if (data) applyRealtimeApprovalState(data.approved, "reconciliation");
+}
+
 function setupRealtimeApprovalListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   if (!session || !session.id || session.role === "admin") return;
 
-  supabase
-    .channel("dashboard-approval-channel")
+  const channel = supabase
+    .channel(`dashboard-approval-${session.id}`)
     .on(
       "postgres_changes",
       {
@@ -1345,33 +1527,38 @@ function setupRealtimeApprovalListener() {
         filter: `id=eq.${session.id}`
       },
       (payload) => {
-        const newApproved = payload.new.approved;
-        if (String(session.approved) !== String(newApproved)) {
-          session.approved = newApproved;
-          localStorage.setItem("spes_session", JSON.stringify(session));
-
-          const isApproved = String(newApproved).toLowerCase() === "true";
-          Swal.fire({
-            title: isApproved ? "Account Approved!" : "Account Disapproved",
-            text: isApproved 
-              ? "Your officer account has been approved in real-time. Reloading the page to grant full access..."
-              : "Your officer account has been disapproved. Reloading the page to revoke access...",
-            icon: isApproved ? "success" : "warning",
-            timer: 3500,
-            timerProgressBar: true,
-            showConfirmButton: false,
-            customClass: {
-              popup: "rounded-2xl border-none shadow-2xl"
-            },
-            background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
-            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
-          }).then(() => {
-            window.location.reload();
-          });
-        }
+        applyRealtimeApprovalState(payload.new?.approved, "realtime");
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (import.meta.env.DEV) {
+        console.info("[SPES Approval Sync] Realtime channel:", status);
+      }
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        reconcileApprovalState(session.id);
+      }
+    });
+
+  // Realtime remains the primary path. Reconciliation makes approval changes
+  // self-healing when publication setup, connectivity, or tab suspension
+  // causes a Postgres Changes event to be missed.
+  const reconciliationTimer = window.setInterval(
+    () => reconcileApprovalState(session.id),
+    5000
+  );
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      reconcileApprovalState(session.id);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  window.addEventListener("beforeunload", () => {
+    window.clearInterval(reconciliationTimer);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    supabase.removeChannel(channel);
+  }, { once: true });
 }
 
 function initQuickAccessStatsToggle() {

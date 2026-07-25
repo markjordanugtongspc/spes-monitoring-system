@@ -74,12 +74,12 @@
                 <div id="staff-action-dropdown"
                   class="z-50 hidden w-64 sm:w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
                   <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
-                    <li><a id="btn-bulk-grant" href="#"
-                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
-                        All (Selected)</a></li>
-                    <li><a id="btn-bulk-revoke" href="#"
-                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 text-spes-red/80 hover:bg-spes-red/8 hover:text-spes-red">Revoke
-                        All (Selected)</a></li>
+                    <li><button id="btn-bulk-grant" type="button" disabled
+                        class="inline-flex w-full cursor-not-allowed items-center rounded-md p-2 text-left opacity-40 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue disabled:pointer-events-none dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
+                        All (Selected)</button></li>
+                    <li><button id="btn-bulk-revoke" type="button" disabled
+                        class="inline-flex w-full cursor-not-allowed items-center rounded-md p-2 text-left text-spes-red/80 opacity-40 transition-colors hover:bg-spes-red/8 hover:text-spes-red disabled:pointer-events-none">Revoke
+                        All (Selected)</button></li>
                   </ul>
                 </div>
               </div>
@@ -115,10 +115,12 @@
                     <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Office</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">View Users</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap" title="Read-only access to rosters outside the assigned office">Other Offices</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap" title="Global dashboard analytics; the gender donut remains office-scoped">Global Charts</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Create Users</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Edit Users</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Archive Users</th>
-                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Export Reports</th>
+                    <th scope="col" class="px-6 py-3 text-center whitespace-nowrap" title="Expand exports to other offices the user is permitted to view">Cross-office Export</th>
                     <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Action</th>
                   </tr>
                 </thead>
@@ -132,6 +134,8 @@
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-24"></div>
                     </td>
                     <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
+                    <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
                     <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
                     <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>
                     <td class="px-6 py-4"><div class="h-4 w-4 bg-gray-200 dark:bg-white/10 rounded-md mx-auto"></div></td>

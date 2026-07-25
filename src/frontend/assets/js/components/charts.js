@@ -1,12 +1,20 @@
 import ApexCharts from "apexcharts";
 import { supabase } from "../../../../backend/api/supabase.js";
 import { fetchGlobalStaffMetricRoster } from "../../../../backend/api/staff.js";
+import { getOfficeAccessScope } from "../rbac/scope.js";
 
 const BRAND_BLUE   = "#0038A8";
 const BRAND_YELLOW = "#FCD116";
 const BLUE_SHADES  = ["#0038A8", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#DBEAFE"];
 
 const fmt = (val) => Number(val).toLocaleString();
+const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#039;",
+}[char]));
 
 function _showNoData(el, msg = "No data available") {
   el.innerHTML = `<div class="flex h-full min-h-[160px] items-center justify-center text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">${msg}</div>`;
@@ -50,13 +58,15 @@ function _deriveReturnStatus(beneficiaries) {
 
 const CHART_PAGE_SIZE = 1000;
 
-async function _fetchAllBeneficiaryChartRows({ isAdmin, officeId }) {
-  if (!isAdmin && !officeId) {
+async function _fetchAllBeneficiaryChartRows({ isGlobal, officeId, minimal = false }) {
+  if (!isGlobal && !officeId) {
     return { data: [], error: "No office is assigned to this account." };
   }
 
-  const selectStr = "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status" +
-    (isAdmin ? "" : ", staffs!staff_id!inner(office_id)");
+  const fields = minimal
+    ? "staff_id, gender_id"
+    : "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status";
+  const selectStr = fields + (isGlobal ? "" : ", staffs!staff_id!inner(office_id)");
   const rows = [];
 
   for (let from = 0; ; from += CHART_PAGE_SIZE) {
@@ -64,7 +74,7 @@ async function _fetchAllBeneficiaryChartRows({ isAdmin, officeId }) {
       .from("beneficiary")
       .select(selectStr);
 
-    if (!isAdmin) query = query.eq("staffs.office_id", officeId);
+    if (!isGlobal) query = query.eq("staffs.office_id", officeId);
     query = query
       .order("id", { ascending: true })
       .range(from, from + CHART_PAGE_SIZE - 1);
@@ -81,14 +91,39 @@ async function _fetchAllBeneficiaryChartRows({ isAdmin, officeId }) {
 export async function initDashboardCharts() {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
-  const isAdmin = String(session.role || "").toLowerCase() === "admin";
+  const access = getOfficeAccessScope(session);
   const officeId = session.office_id;
+  const isApproved = access.isAdmin || session.approved === true;
+  const hasRequiredOffice = access.isAdmin || officeId != null;
 
-  const [staffResult, beneficiaryResult] = await Promise.all([
-    // Card 1 is intentionally global for every authenticated role. The
-    // beneficiary queries below remain RBAC-scoped to the signed-in office.
+  if (!isApproved || !hasRequiredOffice) {
+    const unavailableMessage = !isApproved
+      ? "Account approval required"
+      : "No office assigned";
+    ["distribution-chart", "spes-gender-chart", "column-chart", "mini-trends"]
+      .map((id) => document.getElementById(id))
+      .filter(Boolean)
+      .forEach((el) => _showNoData(el, unavailableMessage));
+
+    ["distribution-summary", "gender-roster-summary"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = "";
+      el.classList.add("hidden");
+    });
+    _cachedBeneficiaries = [];
+    return { totalImplementors: 0 };
+  }
+
+  const [staffResult, beneficiaryResult, topOfficeResult] = await Promise.all([
     fetchGlobalStaffMetricRoster(),
-    _fetchAllBeneficiaryChartRows({ isAdmin, officeId })
+    _fetchAllBeneficiaryChartRows({
+      isGlobal: access.canViewGlobalStats,
+      officeId,
+    }),
+    access.canViewGlobalStats
+      ? Promise.resolve(null)
+      : _fetchAllBeneficiaryChartRows({ isGlobal: true, officeId: null, minimal: true }),
   ]);
 
   if (beneficiaryResult.error && import.meta.env.DEV) {
@@ -97,22 +132,36 @@ export async function initDashboardCharts() {
   if (staffResult.error && import.meta.env.DEV) {
     console.error("[SPES Charts] global implementor metric fetch error:", staffResult.error);
   }
+  if (topOfficeResult?.error && import.meta.env.DEV) {
+    console.error("[SPES Charts] top-office metric fetch error:", topOfficeResult.error);
+  }
 
-  const staffs = staffResult.data ?? [];
+  const globalStaffs = staffResult.data ?? [];
   const beneficiaries = beneficiaryResult.data ?? [];
+  // Total Implementors is an approved-user baseline global metric. The
+  // `view_global_stats` permission only expands beneficiary analytics; it
+  // must not narrow this roster card back to the viewer's assigned office.
+  const chartStaffs = globalStaffs;
+  const ownOfficeBeneficiaries = access.canViewGlobalStats && officeId != null
+    ? beneficiaries.filter((beneficiary) => {
+        const staff = globalStaffs.find((item) => String(item.id) === String(beneficiary.staff_id));
+        return String(staff?.office_id) === String(officeId);
+      })
+    : beneficiaries;
+  const topOfficeBeneficiaries = topOfficeResult?.data ?? beneficiaries;
   
   _deriveReturnStatus(beneficiaries);
   _cachedBeneficiaries = beneficiaries;
 
-  _renderImplementorsByOffice(staffs);
-  _renderImplementorStatus(beneficiaries, staffs);
+  _renderImplementorsByOffice(chartStaffs);
+  _renderImplementorStatus(ownOfficeBeneficiaries, topOfficeBeneficiaries, globalStaffs);
   _renderBeneficiariesByYear(beneficiaries);
   _renderEnrollmentByMonth(beneficiaries);
   _setupTrendsSwitcher();
   _setupYearStatusSwitcher();
 
   return {
-    totalImplementors: staffs.length,
+    totalImplementors: chartStaffs.length,
   };
 }
 
@@ -250,10 +299,11 @@ function _renderImplementorsByOffice(staffs) {
 }
 
 // Chart 2 — SPES Beneficiaries Gender Distribution (Male / Female)
-function _renderImplementorStatus(beneficiaries, staffs = []) {
+function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], globalStaffs = []) {
   const el = document.getElementById("spes-gender-chart");
   if (!el) return;
   el.innerHTML = "";
+  _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs);
 
   let male   = 0;
   let female = 0;
@@ -339,38 +389,55 @@ function _renderImplementorStatus(beneficiaries, staffs = []) {
     });
   }
 
+}
+
+function _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs) {
   const summaryEl = document.getElementById("gender-roster-summary");
   if (summaryEl) {
     const officeStats = {};
-    beneficiaries.forEach(b => {
+    topOfficeBeneficiaries.forEach(b => {
       if (b.staff_id) {
-        const staff = staffs.find(s => String(s.id) === String(b.staff_id));
+        const staff = globalStaffs.find(s => String(s.id) === String(b.staff_id));
         const officeName = staff?.offices?.name || "Unknown Office";
         if (!officeStats[officeName]) officeStats[officeName] = { male: 0, female: 0, total: 0 };
-        officeStats[officeName].total++;
         if (b.gender_id === 1) officeStats[officeName].male++;
         else if (b.gender_id === 2) officeStats[officeName].female++;
+        officeStats[officeName].total =
+          officeStats[officeName].male + officeStats[officeName].female;
       }
     });
 
     const sortedOffices = Object.entries(officeStats)
-      .sort((a, b) => b[1].total - a[1].total)
+      .sort((a, b) =>
+        b[1].total - a[1].total ||
+        b[1].female - a[1].female ||
+        b[1].male - a[1].male ||
+        a[0].localeCompare(b[0])
+      )
       .slice(0, 3); // top 3
+    const globalGenderTotal = Object.values(officeStats)
+      .reduce((sum, stats) => sum + stats.total, 0);
 
     if (sortedOffices.length > 0) {
       summaryEl.innerHTML = `
-        <h4 class="text-[10px] font-black uppercase tracking-widest text-spes-black/50 dark:text-white/40 mb-2">Top Offices (Beneficiaries)</h4>
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-spes-black/50 dark:text-white/40 mb-2">Global Top 3 Offices (Male + Female)</h4>
         <div class="flex flex-col gap-2">
-          ${sortedOffices.map(([name, stats]) => `
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-spes-black/70 dark:text-white/60 truncate max-w-[150px]" title="${name}">${name}</span>
-              <div class="flex items-center gap-2 text-[10px] font-black">
-                <span class="text-[#4F91FF]">${stats.male} M</span>
-                <span class="text-gray-300 dark:text-white/10">|</span>
-                <span class="text-[#FF5B9B]">${stats.female} F</span>
+          ${sortedOffices.map(([name, stats]) => {
+            const percentage = globalGenderTotal > 0
+              ? ((stats.total / globalGenderTotal) * 100).toFixed(1)
+              : "0.0";
+            return `
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-spes-black/70 dark:text-white/60 truncate max-w-[150px]" title="${esc(name)}">${esc(name)}</span>
+                <div class="flex items-center gap-2 text-[10px] font-black">
+                  <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">${percentage}%</span>
+                  <span class="text-[#4F91FF]">${stats.male} M</span>
+                  <span class="text-gray-300 dark:text-white/10">|</span>
+                  <span class="text-[#FF5B9B]">${stats.female} F</span>
+                </div>
               </div>
-            </div>
-          `).join("")}
+            `;
+          }).join("")}
         </div>
       `;
       summaryEl.classList.remove("hidden");

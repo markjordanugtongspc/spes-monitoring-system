@@ -41,6 +41,8 @@ const roles = {
       "users:edit",
       "users:delete",
       "users:manage",
+      "offices:view-other",
+      "analytics:view-global",
       "roles:manage",
       "settings:manage",
       "reports:export",

@@ -17,6 +17,7 @@ import {
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { getSession } from "../rbac/guard.js";
+import { getOfficeAccessScope } from "../rbac/scope.js";
 import { supabase } from "../../../../backend/api/supabase.js";
 import { setupSortFiltration } from "./sort-filtration.js";
 import { modals } from "./modals.js";
@@ -279,6 +280,11 @@ function initAnimatedBadgePanel(config) {
       badgesList.appendChild(badge);
     });
 
+    const activeBadge = badgesList.querySelector(
+      `.anim-badge[data-badge-id="${CSS.escape(String(activeId))}"]`
+    ) || allBadge;
+    setActiveBadge(activeBadge);
+
     // Wire badge clicks
     badgesList.querySelectorAll(".anim-badge").forEach(badge => {
       badge.addEventListener("click", () => {
@@ -312,7 +318,7 @@ function initAnimatedBadgePanel(config) {
     config.onOpen?.();
   }
 
-  function closePanel(resetFilter = true) {
+  function closePanel(resetFilter = config.resetFilterOnClose ?? true) {
     const badges = badgesList.querySelectorAll(".anim-badge");
     const total  = badges.length;
 
@@ -333,9 +339,11 @@ function initAnimatedBadgePanel(config) {
     }, total * 35 + 180);
 
     panelOpen = false;
-    activeId  = "all";
     btn.classList.remove("bg-white/25", "ring-2", "ring-white/30");
-    if (resetFilter) config.onFilter(null);
+    if (resetFilter) {
+      activeId = "all";
+      config.onFilter(null);
+    }
     config.onClose?.();
   }
 
@@ -352,6 +360,13 @@ function initAnimatedBadgePanel(config) {
     show()    { panel.classList.remove("hidden"); panel.classList.add("flex"); },
     hide()    { if (panelOpen) closePanel(false); panel.classList.add("hidden"); panel.classList.remove("flex"); },
     rebuild() { if (panelOpen) { closePanel(false); openPanel(); } },
+    setActive(id) {
+      activeId = id == null ? "all" : String(id);
+      const badge = badgesList.querySelector(
+        `.anim-badge[data-badge-id="${CSS.escape(activeId)}"]`
+      );
+      if (badge) setActiveBadge(badge);
+    },
   };
 }
 
@@ -423,6 +438,7 @@ function initBatchSortPanel(onFilter) {
     getId:         (b) => String(b.id),
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
+    resetFilterOnClose: false,
     onOpen:        () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.add("hidden")),
     onClose:       () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.remove("hidden")),
   });
@@ -439,8 +455,10 @@ export function initBeneficiaries() {
   tbody.dataset.beneficiariesInitialized = "true";
 
   const session = getSession();
-  const isAdmin = String(session?.role || "").toLowerCase() === "admin";
-  let viewMode = isAdmin ? "implementors" : "beneficiaries";
+  const access = getOfficeAccessScope(session);
+  const isAdmin = access.isAdmin;
+  const isDirectoryViewer = access.canViewOtherOffices;
+  let viewMode = isDirectoryViewer ? "implementors" : "beneficiaries";
   let officerOffice = null;
 
   // Admin view state
@@ -509,6 +527,17 @@ export function initBeneficiaries() {
   let currentOfficeName = "";
   let activeStatusMode = "NEW";
   const selectedBeneficiaryIds = new Set();
+
+  const canManageCurrentOffice = () => (
+    currentOfficeId !== "ALL" &&
+    access.canManageOffice(currentOfficeId ?? access.ownOfficeId)
+  );
+
+  const canManageBeneficiary = (beneficiary) => (
+    access.canManageOffice(
+      beneficiary?.staffs?.office_id ?? currentOfficeId ?? access.ownOfficeId
+    )
+  );
 
   // --- START: BENEFICIARY BULK TRANSFER TOOL FUNCTION ---
   function initBeneficiaryBulkTransferTools() {
@@ -790,8 +819,10 @@ export function initBeneficiaries() {
     beneficiaryBulkTransferTools.clear();
     if (batchId === null || batchId === "all") {
       selectedBatchId = null;
+      _clearUrlParam("batch");
     } else {
       selectedBatchId = batchId;
+      _setUrlParam("batch", selectedBatchId);
     }
     currentPage = 1;
     renderPaginatedTable();
@@ -806,6 +837,10 @@ export function initBeneficiaries() {
   const batchCardsWrap = document.getElementById("batches-kanban-wrapper");
 
   const openBatchForm = (trigger) => {
+    if (!canManageCurrentOffice()) {
+      modals.warning("Read-only Office", "You can view this office, but only your assigned office can be managed.");
+      return;
+    }
     const isEdit = trigger.classList.contains("btn-edit-batch");
     const batch = isEdit ? {
       id: trigger.dataset.batchId,
@@ -850,6 +885,7 @@ export function initBeneficiaries() {
     const card = event.target.closest?.(".batch-card");
     if (!card || !batchCardsWrap.contains(card)) return;
     selectedBatchId = card.dataset.batchId;
+    batchSortPanel?.setActive?.(selectedBatchId);
     currentPage = 1;
     _setUrlParam("batch", selectedBatchId);
     renderPaginatedTable();
@@ -878,7 +914,7 @@ export function initBeneficiaries() {
     // Admins land on the implementors list. Selecting a beneficiary status
     // there opens the overall roster so the control always has an immediate,
     // visible filtering result.
-    if (isAdmin && viewMode === "implementors") {
+    if (isDirectoryViewer && viewMode === "implementors") {
       await switchToBeneficiariesView("ALL SPES", "ALL", "ALL", null);
       return;
     }
@@ -998,15 +1034,16 @@ export function initBeneficiaries() {
     tbody.innerHTML = rowsHtml;
   }
 
-  async function switchToBeneficiariesView(officeName, officeLocation, officeId, staffId) {
-    if (!isAdmin) return;
+  async function switchToBeneficiariesView(officeName, officeLocation, officeId, staffId, initialBatchId = null) {
+    if (!isDirectoryViewer) return;
     beneficiaryBulkTransferTools.clear();
     viewMode = "beneficiaries";
     currentOfficeLocation = officeLocation;
     currentOfficeId = officeId;
     currentStaffIdView = staffId;
     currentOfficeName = officeName;
-    selectedBatchId = null;
+    selectedBatchId = initialBatchId == null ? null : String(initialBatchId);
+    batchSortPanel?.setActive?.(selectedBatchId);
 
     // Persist to URL — just the office id; location/name resolved from cache on restore
     _setUrlParam("office", officeId ?? officeLocation);
@@ -1034,7 +1071,7 @@ export function initBeneficiaries() {
       addBtn.classList.add("hidden");
     }
     if (createBatchBtn) {
-      if (currentOfficeId && currentOfficeId !== "ALL") {
+      if (canManageCurrentOffice()) {
         createBatchBtn.classList.remove("hidden");
         createBatchBtn.classList.add("inline-flex");
       } else {
@@ -1229,7 +1266,7 @@ export function initBeneficiaries() {
   }
 
   async function switchToImplementorsView() {
-    if (!isAdmin) return;
+    if (!isDirectoryViewer) return;
     beneficiaryBulkTransferTools.clear();
     viewMode = "implementors";
     currentOfficeLocation = "";
@@ -1307,8 +1344,21 @@ export function initBeneficiaries() {
   const addBtn = document.getElementById("btn-add-beneficiary");
 
   // ── Drawer ──────────────────────────────────────────────────
+  const getVisibleBeneficiaries = () => {
+    if (selectedBatchId === null) return activeBeneficiaries;
+    if (selectedBatchId === "unassigned") {
+      return activeBeneficiaries.filter((item) => item.batch_id == null && item.batch?.id == null);
+    }
+    return activeBeneficiaries.filter(
+      (item) => String(item.batch_id ?? item.batch?.id) === String(selectedBatchId)
+    );
+  };
+
   const openDrawer = (b, index) => {
     if (!drawer || !content) return;
+    const drawerList = getVisibleBeneficiaries();
+    const resolvedIndex = drawerList.findIndex((item) => String(item.id) === String(b.id));
+    index = resolvedIndex >= 0 ? resolvedIndex : Math.max(0, index);
 
     // Persist drawer state to URL — short key "b" for beneficiary id
     _setUrlParam("b", b.id);
@@ -1345,7 +1395,7 @@ export function initBeneficiaries() {
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
             Prev
           </button>
-          <button id="btn-drawer-next" ${index === activeBeneficiaries.length - 1 ? 'disabled' : ''} class="${index === activeBeneficiaries.length - 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-spes-blue/90'} inline-flex items-center gap-1 rounded-md bg-spes-blue px-3 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-white shadow-md transition-all">
+          <button id="btn-drawer-next" ${index === drawerList.length - 1 ? 'disabled' : ''} class="${index === drawerList.length - 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-spes-blue/90'} inline-flex items-center gap-1 rounded-md bg-spes-blue px-3 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-white shadow-md transition-all">
             Next
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
           </button>
@@ -1357,7 +1407,7 @@ export function initBeneficiaries() {
           <span class="font-bold text-spes-black/55 dark:text-white/50">Contact No.</span>
           <span class="font-black ${b.contact_number ? "text-indigo-600 dark:text-indigo-400" : "italic text-spes-black/30 dark:text-white/30"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
         </div>
-        ${isAdmin ? `
+        ${isDirectoryViewer ? `
         <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Office</span>
           <span class="font-extrabold text-right text-spes-black dark:text-white max-w-[200px] text-wrap uppercase">
@@ -1411,10 +1461,10 @@ export function initBeneficiaries() {
 
     // Prev / Next within drawer
     document.getElementById("btn-drawer-prev")?.addEventListener("click", () => {
-      if (index > 0) openDrawer(activeBeneficiaries[index - 1], index - 1);
+      if (index > 0) openDrawer(drawerList[index - 1], index - 1);
     });
     document.getElementById("btn-drawer-next")?.addEventListener("click", () => {
-      if (index < activeBeneficiaries.length - 1) openDrawer(activeBeneficiaries[index + 1], index + 1);
+      if (index < drawerList.length - 1) openDrawer(drawerList[index + 1], index + 1);
     });
 
     // Edit
@@ -1485,11 +1535,13 @@ export function initBeneficiaries() {
         if (controlsContainer) controlsContainer.classList.add("hidden");
       } else {
         const showOfficeCol = currentOfficeLocation === "ALL";
+        const canManageRoster = canManageCurrentOffice();
         headerRow.innerHTML = `
           <th scope="col" class="p-4 text-center w-4">
             <div class="flex items-center justify-center">
-              <input id="spes-checkbox-all" type="checkbox"
+              ${canManageRoster ? `<input id="spes-checkbox-all" type="checkbox"
                 class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+              ` : `<span class="text-[0.5625rem] font-black uppercase text-spes-black/35 dark:text-white/35">View</span>`}
             </div>
           </th>
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
@@ -1501,7 +1553,7 @@ export function initBeneficiaries() {
         `;
         if (controlsContainer) controlsContainer.classList.remove("hidden");
         // Wire up check-all listener
-        wireBeneficiarySelectAll();
+        if (canManageRoster) wireBeneficiarySelectAll();
       }
     }
 
@@ -1575,7 +1627,7 @@ export function initBeneficiaries() {
         if (selectedBatchId !== null) {
           backBtn.classList.remove("hidden");
           backBtn.classList.add("inline-flex");
-        } else if (isAdmin) {
+        } else if (isDirectoryViewer) {
           backBtn.classList.remove("hidden");
           backBtn.classList.add("inline-flex");
         } else {
@@ -1610,7 +1662,7 @@ export function initBeneficiaries() {
           addBtn.classList.add("hidden");
         }
         if (createBatchBtn) {
-          if (currentOfficeId && currentOfficeId !== "ALL") {
+          if (canManageCurrentOffice()) {
             createBatchBtn.classList.remove("hidden");
             createBatchBtn.classList.add("inline-flex");
           } else {
@@ -1631,8 +1683,8 @@ export function initBeneficiaries() {
       } else {
         // Show Filtered Beneficiaries Table
         if (addBtn) {
-          addBtn.classList.remove("hidden");
-          addBtn.classList.add("inline-flex");
+          addBtn.classList.toggle("hidden", !canManageCurrentOffice());
+          addBtn.classList.toggle("inline-flex", canManageCurrentOffice());
         }
         if (createBatchBtn) {
           createBatchBtn.classList.add("hidden");
@@ -1661,13 +1713,14 @@ export function initBeneficiaries() {
           const period = formatPeriod(b);
           const isBaby = String(b.return_status || "NEW").toUpperCase() === "SPES BABY";
 
-          const checkboxTd = `
+          const canManageRow = canManageBeneficiary(b);
+          const checkboxTd = canManageRow ? `
             <td class="p-4 text-center">
               <div class="flex items-center justify-center">
                 <input type="checkbox" data-bene-id="${b.id}" ${selectedBeneficiaryIds.has(String(b.id)) ? "checked" : ""} class="beneficiary-row-checkbox h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
               </div>
             </td>
-          `;
+          ` : `<td class="p-4 text-center"><span class="text-[0.5625rem] font-black uppercase text-spes-black/30 dark:text-white/30">View</span></td>`;
 
           const statusBadge = isBaby
             ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-red-600 dark:bg-red-500/20 dark:text-red-400">SPES Baby</span>`
@@ -1683,7 +1736,7 @@ export function initBeneficiaries() {
                </span>`
             : "";
 
-          const actionsTd = `
+          const actionsTd = canManageRow ? `
             <td class="px-6 py-4 text-center whitespace-nowrap">
               <div class="inline-flex items-center gap-1">
                 <button class="btn-edit-bene cursor-pointer p-1 text-spes-blue hover:text-spes-blue/80 dark:text-spes-yellow dark:hover:text-spes-yellow/80" title="Edit">
@@ -1693,6 +1746,10 @@ export function initBeneficiaries() {
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
               </div>
+            </td>
+          ` : `
+            <td class="px-6 py-4 text-center whitespace-nowrap">
+              <span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-black/35 dark:text-white/35">Read only</span>
             </td>
           `;
 
@@ -1824,13 +1881,13 @@ export function initBeneficiaries() {
                 <h3 class="font-montserrat font-black text-base uppercase tracking-wider ${pal.text}">${title}</h3>
                 <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount} of ${BATCH_CAPACITY_TARGET} beneficiaries</p>
               </div>
-            <button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-white/60 shadow-inner transition-all hover:scale-110 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spes-blue active:scale-95 dark:bg-black/20 dark:hover:bg-black/40 dark:focus-visible:outline-spes-yellow pointer-events-auto"
+            ${canManageCurrentOffice() ? `<button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-white/60 shadow-inner transition-all hover:scale-110 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spes-blue active:scale-95 dark:bg-black/20 dark:hover:bg-black/40 dark:focus-visible:outline-spes-yellow pointer-events-auto"
               data-batch-id="${escHtml(String(colId))}" data-batch-number="${escHtml(String(batchNumber || ""))}" data-batch-name="${escHtml(String(batchName || ""))}"
               aria-label="Edit ${escHtml(title)}" title="Edit Batch">
               <svg class="pointer-events-none h-4 w-4 ${pal.text}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-            </button>
+            </button>` : `<span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-black/30 dark:text-white/30">Read only</span>`}
           </div>
           <div class="mt-4 grid grid-cols-3 gap-2" aria-label="${totalCount} total beneficiaries: ${newCount} new and ${spesBabyCount} SPES Baby">
             <div class="rounded-none border border-black/5 bg-white/55 px-2 py-2 text-center shadow-sm dark:border-white/10 dark:bg-black/15">
@@ -2002,7 +2059,7 @@ export function initBeneficiaries() {
 
   // ── Data loading ─────────────────────────────────────────────
   async function loadData(forceRefresh = false) {
-    if (isAdmin && viewMode === "implementors") {
+    if (isDirectoryViewer && viewMode === "implementors") {
       await switchToImplementorsView();
       return;
     }
@@ -2020,7 +2077,7 @@ export function initBeneficiaries() {
     if (session && session.role !== "admin" && officerOffice && officerOffice.location) {
       // Officer's data is already filtered by API
       filteredData = data;
-    } else if (isAdmin && currentOfficeId && currentOfficeId !== "ALL") {
+    } else if (isDirectoryViewer && currentOfficeId && currentOfficeId !== "ALL") {
       filteredData = data.filter(b => b.staffs?.office_id == currentOfficeId);
     }
 
@@ -2032,7 +2089,7 @@ export function initBeneficiaries() {
 
     // Officers see their own office roster directly — show the status switch for them.
     // Admin lands on the implementors list first (handled in the view switchers).
-    if (!isAdmin) _showStatusSwitch(true);
+    if (!isDirectoryViewer) _showStatusSwitch(true);
   }
 
   // ── Add / Edit drawer ────────────────────────────────────────
@@ -2281,11 +2338,12 @@ export function initBeneficiaries() {
     if (viewMode === "beneficiaries" && selectedBatchId !== null) {
       beneficiaryBulkTransferTools.clear();
       selectedBatchId = null;
+      batchSortPanel?.setActive?.(null);
       currentPage = 1;
       _clearUrlParam("batch");
       renderPaginatedTable();
     } else {
-      if (isAdmin) {
+      if (isDirectoryViewer) {
         switchToImplementorsView();
       }
     }
@@ -2638,9 +2696,11 @@ export function initBeneficiaries() {
     const urlOffice = _getUrlParam("office");
     const urlBene   = _getUrlParam("b");
 
-    if (isAdmin && urlOffice) {
+    const urlBatch = _getUrlParam("batch");
+
+    if (isDirectoryViewer && urlOffice) {
       if (urlOffice === "ALL") {
-        await switchToBeneficiariesView("ALL SPES", "ALL", "ALL");
+        await switchToBeneficiariesView("ALL SPES", "ALL", "ALL", null, urlBatch);
       } else {
         // Fetch implementors fresh to get correct office name + location
         const staffs = await fetchImplementorList({ forceRefresh: true });
@@ -2649,12 +2709,7 @@ export function initBeneficiaries() {
           .filter(s => !s.archive_at && s.office_id != null)
           .find(s => String(s.office_id) === String(urlOffice));
         if (match) {
-          await switchToBeneficiariesView(match.office, match.office_location, urlOffice);
-          const urlBatch = _getUrlParam("batch");
-          if (urlBatch) {
-            selectedBatchId = urlBatch;
-            renderPaginatedTable();
-          }
+          await switchToBeneficiariesView(match.office, match.office_location, urlOffice, match.id, urlBatch);
         } else {
           _clearUrlParam("office");
           _clearUrlParam("batch");
@@ -2663,12 +2718,15 @@ export function initBeneficiaries() {
         }
       }
     } else {
+      selectedBatchId = urlBatch ? String(urlBatch) : null;
+      batchSortPanel?.setActive?.(selectedBatchId);
       await loadData();
     }
 
     // ── Restore beneficiary drawer ────────────────────────────────
     if (urlBene) {
-      const idx = activeBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
+      const visibleBeneficiaries = getVisibleBeneficiaries();
+      const idx = visibleBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
       if (idx !== -1) {
         // Go to the correct page
         currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
@@ -2693,10 +2751,10 @@ export function initBeneficiaries() {
             // Wait for 1.5 seconds to let the user see the highlight before opening the drawer
             setTimeout(() => {
               row.classList.remove("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
-              openDrawer(activeBeneficiaries[idx], idx);
+              openDrawer(visibleBeneficiaries[idx], idx);
             }, 1500);
           } else {
-            openDrawer(activeBeneficiaries[idx], idx);
+            openDrawer(visibleBeneficiaries[idx], idx);
           }
         }, 300);
       } else {

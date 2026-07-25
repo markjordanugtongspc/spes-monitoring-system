@@ -6,6 +6,7 @@
  * bcrypt verification on the database side (never client-side).
  */
 import { supabase } from "./supabase.js";
+import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 
 const IMPL_CACHE_KEY = "spes_implementors_v1";
 const IMPL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -59,19 +60,17 @@ export async function loginImplementor(username, password) {
 
     const resolvedRoleId = implementor.role_id ?? implementor.role;
 
-    // Fetch the role's DB permissions to store in the session
-    // so guard.js can check without an additional round-trip.
-    let dbPermissions = null;
-    if (resolvedRoleId) {
-      const { data: perms, error: permsError } = await supabase
-        .from("permissions")
-        .select("view_users, create_users, edit_users, delete_users, export_reports")
-        .eq("role_id", resolvedRoleId)
-        .is("archived_at", null)
-        .maybeSingle();
-
-      if (!permsError) dbPermissions = perms ?? null;
-    }
+    // The secure session endpoint resolves permissions for this individual
+    // staff account. Optional grants no longer inherit from the shared role.
+    const dbPermissions = implementor.permissions || {
+      view_users: false,
+      create_users: false,
+      edit_users: false,
+      delete_users: false,
+      export_reports: false,
+      view_other_offices: false,
+      view_global_stats: false,
+    };
 
     const session = {
       id:          implementor.id,
@@ -160,6 +159,7 @@ export async function registerImplementor(staffData) {
           blood_type: staffData.blood_type || null,
           status: "OFFLINE", // Default status
           role_id: 2, // 2 = Officer role by default
+          approved: false, // New accounts must be explicitly approved
         }
       ])
       .select()
@@ -204,7 +204,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
 
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
-  const isAdmin = session.role === "admin";
+  const access = getOfficeAccessScope(session);
   const officeId = session.office_id;
 
   try {
@@ -214,13 +214,16 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         id, full_name, username, email, address, phone, created_at,
         religion, language, blood_type, status, approved,
         archive_at, role_id, office_id, beneficiary_id,
+        perm_view_users, perm_create_users, perm_edit_users,
+        perm_delete_users, perm_export_reports,
+        perm_view_other_offices, perm_view_global_stats,
         roles   ( id, name ),
         offices ( id, name, location ),
         beneficiary!beneficiary_id(full_name, return_status)
       `)
       .order("id", { ascending: true });
 
-    if (!isAdmin && officeId) {
+    if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);
     }
     const { data, error } = await query;
@@ -249,6 +252,15 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       language:        s.language || "",
       blood_type:      s.blood_type || "",
       approved:        s.approved || false,
+      permissions: {
+        view_users: Boolean(s.perm_view_users),
+        create_users: Boolean(s.perm_create_users),
+        edit_users: Boolean(s.perm_edit_users),
+        delete_users: Boolean(s.perm_delete_users),
+        export_reports: Boolean(s.perm_export_reports),
+        view_other_offices: Boolean(s.perm_view_other_offices),
+        view_global_stats: Boolean(s.perm_view_global_stats),
+      },
     }));
 
     _writeImplCache(list);

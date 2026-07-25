@@ -28,7 +28,11 @@ const DB_PERM_MAP = {
   "users:manage":  (p) => p.create_users || p.edit_users,
   "users:edit":    (p) => p.edit_users,
   "users:delete":  (p) => p.delete_users,
-  "reports:export":(p) => p.export_reports,
+  "offices:view-other": (p) => p.view_other_offices,
+  "analytics:view-global": (p) => p.view_global_stats,
+  // Approved users may export their own office. `export_reports` only expands
+  // that scope when paired with read-only cross-office access.
+  "reports:export":(_p, session) => session?.approved === true,
   "reports:view":  (p) => p.view_users || p.export_reports,
   "beneficiaries:view": () => true,  // officers can always view beneficiaries
 };
@@ -37,9 +41,9 @@ const DB_PERM_MAP = {
  * Check whether the session's DB permissions cover a given permission string.
  * Returns `null` if the permission isn't mapped to a DB column (fall back to RBAC).
  */
-function _checkDbPermission(dbPerms, permission) {
+function _checkDbPermission(dbPerms, permission, session) {
   if (!dbPerms || !(permission in DB_PERM_MAP)) return null;
-  return Boolean(DB_PERM_MAP[permission](dbPerms));
+  return Boolean(DB_PERM_MAP[permission](dbPerms, session));
 }
 
 /**
@@ -51,8 +55,12 @@ async function _hasPermission(userRole, permission, session) {
   // Admin is fully handled by the static RBAC which grants everything
   if (userRole === "admin") return true;
 
+  // Baseline approved access must not disappear when a permissions row is
+  // missing or still using the pre-scope schema.
+  if (permission === "reports:export") return session?.approved === true;
+
   // Check DB-stored permissions for officer / student
-  const dbResult = _checkDbPermission(session?.permissions, permission);
+  const dbResult = _checkDbPermission(session?.permissions, permission, session);
   if (dbResult !== null) return dbResult;
 
   // Fallback to static RBAC config

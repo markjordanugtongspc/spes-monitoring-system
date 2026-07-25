@@ -1,6 +1,7 @@
 import { supabase } from "./supabase.js";
+import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 
-const CACHE_KEY = "spes_beneficiaries_v4";
+const CACHE_KEY = "spes_beneficiaries_v5";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Batch cache ────────────────────────────────────────────────
@@ -114,22 +115,77 @@ export async function updateBatch(id, payload) {
 }
 
 // ── Cache helpers ──────────────────────────────────────────────
-function _readCache() {
+function _readCache(cacheKey = CACHE_KEY) {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(cacheKey);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(CACHE_KEY); return null; }
+    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(cacheKey); return null; }
     return data;
   } catch { return null; }
 }
 
-function _writeCache(data) {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+function _writeCache(data, cacheKey = CACHE_KEY) {
+  try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
 export function invalidateBeneficiaryCache() {
-  try { localStorage.removeItem(CACHE_KEY); } catch {}
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(CACHE_KEY))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {}
+}
+
+function _getStoredSession() {
+  try {
+    return JSON.parse(localStorage.getItem("spes_session") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+async function _authorizeBeneficiaryMutation(beneficiaryId) {
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  if (access.isAdmin) return { allowed: true, session, access };
+  if (session.approved !== true || access.ownOfficeId == null) {
+    return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
+  }
+
+  const { data, error } = await supabase
+    .from("beneficiary")
+    .select("id, staffs!staff_id!inner(office_id)")
+    .eq("id", beneficiaryId)
+    .maybeSingle();
+  if (error || !data) {
+    return { allowed: false, error: "The beneficiary record could not be verified." };
+  }
+  if (!access.canManageOffice(data.staffs?.office_id)) {
+    return { allowed: false, error: "Other-office beneficiaries are read-only." };
+  }
+  return { allowed: true, session, access };
+}
+
+async function _authorizeBeneficiaryStaffTarget(staffId) {
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  if (access.isAdmin) return { allowed: true, session, access };
+  if (session.approved !== true || access.ownOfficeId == null) {
+    return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
+  }
+
+  const targetStaffId = staffId ?? session.id;
+  const { data, error } = await supabase
+    .from("staffs")
+    .select("id, office_id")
+    .eq("id", targetStaffId)
+    .is("archive_at", null)
+    .maybeSingle();
+  if (error || !data || !access.canManageOffice(data.office_id)) {
+    return { allowed: false, error: "Beneficiaries may only be assigned within your own office." };
+  }
+  return { allowed: true, session, access, staffId: data.id };
 }
 
 // ── Read ───────────────────────────────────────────────────────
@@ -145,15 +201,18 @@ function _archiveColMissing() {
 }
 
 export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
+  const sessionStr = localStorage.getItem("spes_session");
+  const session = sessionStr ? JSON.parse(sessionStr) : {};
+  const access = getOfficeAccessScope(session);
+  const officeId = session.office_id;
+  const cacheKey = `${CACHE_KEY}:${access.canViewOtherOffices ? "global" : `office-${officeId ?? "none"}`}`;
+
   if (!forceRefresh) {
-    const cached = _readCache();
+    const cached = _readCache(cacheKey);
     if (cached) return { data: cached, fromCache: true };
   }
 
-  const sessionStr = localStorage.getItem("spes_session");
-  const session = sessionStr ? JSON.parse(sessionStr) : {};
-  const isAdmin = session.role === "admin";
-  const officeId = session.office_id;
+  const isAdmin = access.isAdmin;
   const isApproved = session.approved === true;
 
   // Block unapproved staff
@@ -162,10 +221,10 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   }
 
   let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:education!beneficiary_educ_id_fkey(id, name), education_level:education_levels!beneficiary_education_level_id_fkey(id, name), gender:gender_id(id, name)";
-  if (!isAdmin && officeId) {
+  if (!access.canViewOtherOffices && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
-    // Admin needs this to filter by office later
+    // Cross-office readers need office metadata for local read-only filtering.
     selectStr += ", staffs!staff_id(office_id, full_name)";
   }
 
@@ -174,7 +233,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     .select(selectStr)
     .order("created_at", { ascending: false });
 
-  if (!isAdmin && officeId) {
+  if (!access.canViewOtherOffices && officeId) {
     query = query.eq("staffs.office_id", officeId);
   }
 
@@ -187,7 +246,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
       .from("beneficiary")
       .select(selectStr)
       .order("created_at", { ascending: false });
-    if (!isAdmin && officeId) {
+    if (!access.canViewOtherOffices && officeId) {
       fallbackQuery = fallbackQuery.eq("staffs.office_id", officeId);
     }
     result = await fallbackQuery;
@@ -205,7 +264,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   }
 
   const records = result.data ?? [];
-  _writeCache(records);
+  _writeCache(records, cacheKey);
   return { data: records };
 }
 
@@ -252,6 +311,13 @@ export async function fetchRecentBeneficiaries({ limit = 4 } = {}) {
 }
 export async function addBeneficiary(payload) {
   const clean = _sanitize(payload);
+  const authorization = await _authorizeBeneficiaryStaffTarget(clean.staff_id);
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
+  if (!authorization.access.isAdmin && clean.staff_id == null) {
+    clean.staff_id = authorization.staffId;
+  }
 
   // If staff_id was not explicitly provided, try to assign it based on session (for Officers)
   if (clean.staff_id === undefined) {
@@ -286,7 +352,21 @@ export async function addBeneficiary(payload) {
 
 // ── Update ─────────────────────────────────────────────────────
 export async function updateBeneficiary(id, payload) {
+  const authorization = await _authorizeBeneficiaryMutation(id);
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
   const clean = _sanitize(payload);
+  if (!authorization.access.isAdmin) {
+    if (clean.staff_id == null) {
+      delete clean.staff_id;
+    } else {
+      const targetAuthorization = await _authorizeBeneficiaryStaffTarget(clean.staff_id);
+      if (!targetAuthorization.allowed) {
+        return { success: false, error: targetAuthorization.error };
+      }
+    }
+  }
 
   if (!clean.full_name) return { success: false, error: "Name of Assured is required." };
 
@@ -312,12 +392,18 @@ export async function updateBeneficiary(id, payload) {
  * staff record, so offices and branches are resolved through that staff member.
  */
 export async function fetchBeneficiaryTransferDestinations() {
-  const { data, error } = await supabase
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  let query = supabase
     .from("staffs")
     .select("id, full_name, office_id, offices!office_id(id, name, location)")
     .is("archive_at", null)
     .neq("role_id", 1)
     .order("full_name", { ascending: true });
+  if (!access.isAdmin && access.ownOfficeId != null) {
+    query = query.eq("office_id", access.ownOfficeId);
+  }
+  const { data, error } = await query;
 
   if (error) {
     if (import.meta.env.DEV) {
@@ -413,6 +499,9 @@ export async function bulkTransferBeneficiaries(ids, {
     if (destinationError || !destination?.office_id) {
       return { success: false, error: "The selected destination is unavailable." };
     }
+    if (!isAdmin && String(destination.office_id) !== String(session.office_id)) {
+      return { success: false, error: "Other-office transfer destinations are read-only." };
+    }
 
     updates.staff_id = destination.id;
     // Batches belong to the previous staff/office context and must not leak
@@ -451,6 +540,10 @@ export async function bulkTransferBeneficiaries(ids, {
  * Requires the archived_at column added by migration_beneficiary_archive.sql.
  */
 export async function archiveBeneficiary(id) {
+  const authorization = await _authorizeBeneficiaryMutation(id);
+  if (!authorization.allowed) {
+    return { success: false, error: authorization.error };
+  }
   const { error } = await supabase
     .from("beneficiary")
     .update({ archived_at: new Date().toISOString() })

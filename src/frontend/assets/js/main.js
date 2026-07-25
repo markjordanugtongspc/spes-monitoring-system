@@ -84,22 +84,36 @@ document.addEventListener("DOMContentLoaded", () => {
 // ── Supabase Realtime Permissions Listener ────────────────────────
 function setupRealtimePermissionsListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  if (!session || !session.role_id) return;
+  if (!session || !session.id || session.role === "admin") return;
+  const permissionFields = [
+    "view_users",
+    "create_users",
+    "edit_users",
+    "delete_users",
+    "export_reports",
+    "view_other_offices",
+    "view_global_stats",
+  ];
 
   supabase
-    .channel("global-main-permissions-channel")
+    .channel(`global-staff-permissions-${session.id}`)
     .on(
       "postgres_changes",
       {
         event: "UPDATE",
         schema: "public",
-        table: "permissions",
-        filter: `role_id=eq.${session.role_id}`
+        table: "staffs",
+        filter: `id=eq.${session.id}`
       },
       async (payload) => {
+        const permissionChanged = permissionFields.some((field) => (
+          Boolean(payload.new?.[`perm_${field}`]) !== Boolean(session.permissions?.[field])
+        ));
+        if (!permissionChanged) return;
+
         // Refresh local cache and localStorage
-        const { fetchRolePermissions } = await import("../../../backend/api/permissions.js");
-        const { data: freshPerms } = await fetchRolePermissions(session.role_id, { forceRefresh: true });
+        const { fetchStaffPermissions } = await import("../../../backend/api/permissions.js");
+        const { data: freshPerms } = await fetchStaffPermissions(session.id, { forceRefresh: true });
         if (freshPerms) {
           session.permissions = freshPerms;
           localStorage.setItem("spes_session", JSON.stringify(session));

@@ -2,6 +2,7 @@ import "../styles/tailwind.css";
 import "./components/flow-debugger.js";
 import "flowbite";
 import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
+import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
@@ -73,9 +74,9 @@ async function _boot(user) {
 
   // Refresh permissions + approved status/office info in parallel (independent queries)
   const [permsRes, staffRes] = await Promise.all([
-    user?.role_id
+    user?.id
       ? import("../../../backend/api/permissions.js")
-          .then(({ fetchRolePermissions }) => fetchRolePermissions(user.role_id, { forceRefresh: true }))
+          .then(({ fetchStaffPermissions }) => fetchStaffPermissions(user.id, { forceRefresh: true }))
           .catch(() => null)
       : null,
     user?.id
@@ -120,12 +121,16 @@ async function _boot(user) {
   await applyPermissions(user.role);
   initExportButtonTilt();
 
-  // RBAC: non-admins must be approved AND hold the export_reports permission
+  // Approved users receive baseline export access for their own office.
+  // Cross-office export remains an explicit elevated permission.
   const isAdmin = user.role === "admin";
-  const canExport = isAdmin || (user.approved !== false && Boolean(user.permissions?.export_reports));
+  const canExport = isAdmin || (user.approved === true && user.office_id != null);
   if (!canExport) {
     const { modals } = await import("./components/modals.js");
-    modals.error("Access Denied", "You do not have permission to access Exports & Reports.").then(() => {
+    const denialMessage = user.approved === true && user.office_id == null
+      ? "Your account must be assigned to an office before exporting reports."
+      : "Your account must be approved before accessing Exports & Reports.";
+    modals.error("Access Denied", denialMessage).then(() => {
       window.location.href = "/src/frontend/pages/dashboard/";
     });
     return;
@@ -141,10 +146,14 @@ async function _boot(user) {
 
 // ── Data loading ──────────────────────────────────────────────
 async function _loadData(user) {
-  const isAdmin = user.role === "admin";
-  // Officers with `users:view` may export across offices; everyone else is
-  // scoped to their own office — same rule as the Beneficiaries page.
-  const scopeToOwnOffice = !isAdmin && !Boolean(user.permissions?.view_users);
+  const access = getOfficeAccessScope(user);
+  const isAdmin = access.isAdmin;
+  const canExportOtherOffices =
+    isAdmin ||
+    (access.canViewOtherOffices && Boolean(user.permissions?.export_reports));
+  // Approved users without both elevated permissions remain scoped to their
+  // assigned office for beneficiaries and implementors.
+  const scopeToOwnOffice = !canExportOtherOffices;
 
   // Build beneficiary select — for officers scope via staffs!staff_id inner join
   // so only beneficiaries whose assigned staff belongs to the officer's office are returned.
@@ -362,16 +371,14 @@ function _cellHtml(row, key) {
 
 // ── Configure Drawer ──────────────────────────────────────────
 function _initDrawer(user) {
-  const isAdmin = user.role === "admin";
+  const access = getOfficeAccessScope(user);
+  const isAdmin = access.isAdmin;
 
-  // An officer can view ALL offices in the filter only if they have `users:view` permission.
-  // Without it the export is scoped to their own office and the filter is hidden.
-  const canViewOtherOffices = isAdmin || Boolean(user.permissions?.view_users);
-
-  // Hide Implementors tab for non-admins without users:view
-  if (!isAdmin && !Boolean(user.permissions?.view_users)) {
-    document.getElementById("cfg-tab-implementors")?.classList.add("hidden");
-  }
+  // Cross-office exporting requires both read-only cross-office access and
+  // the dedicated export expansion permission.
+  const canViewOtherOffices =
+    isAdmin ||
+    (access.canViewOtherOffices && Boolean(user.permissions?.export_reports));
 
   // Populate office checkboxes — restricted officers only ever see their own office
   const officeList    = document.getElementById("cfg-office-list");
