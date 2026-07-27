@@ -12,22 +12,27 @@ const IMPL_CACHE_KEY = "spes_implementors_v1";
 const IMPL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Cache helpers ──────────────────────────────────────────────
-function _readImplCache() {
+function _readImplCache(cacheKey = IMPL_CACHE_KEY) {
   try {
-    const raw = sessionStorage.getItem(IMPL_CACHE_KEY);
+    const raw = sessionStorage.getItem(cacheKey);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > IMPL_CACHE_TTL) { sessionStorage.removeItem(IMPL_CACHE_KEY); return null; }
+    if (Date.now() - ts > IMPL_CACHE_TTL) { sessionStorage.removeItem(cacheKey); return null; }
     return data;
   } catch { return null; }
 }
 
-function _writeImplCache(data) {
-  try { sessionStorage.setItem(IMPL_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
+function _writeImplCache(cacheKey, data) {
+  try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
 export function invalidateImplementorCache() {
-  try { sessionStorage.removeItem(IMPL_CACHE_KEY); } catch {}
+  try {
+    for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith(IMPL_CACHE_KEY)) sessionStorage.removeItem(key);
+    }
+  } catch {}
 }
 
 // ── Login ──────────────────────────────────────────────────────
@@ -197,15 +202,16 @@ export async function registerImplementor(staffData) {
  * @returns {Promise<Array>}
  */
 export async function fetchImplementorList({ forceRefresh = false } = {}) {
-  if (!forceRefresh) {
-    const cached = _readImplCache();
-    if (cached && cached.length > 0) return cached;
-  }
-
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
   const access = getOfficeAccessScope(session);
   const officeId = session.office_id;
+  const cacheKey = `${IMPL_CACHE_KEY}:${access.canViewOtherOffices ? "global" : `office-${officeId ?? "none"}`}`;
+
+  if (!forceRefresh) {
+    const cached = _readImplCache(cacheKey);
+    if (cached && cached.length > 0) return cached;
+  }
 
   try {
     let query = supabase
@@ -263,7 +269,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       },
     }));
 
-    _writeImplCache(list);
+    _writeImplCache(cacheKey, list);
     return list;
   } catch (err) {
     if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList catch:", err?.message);

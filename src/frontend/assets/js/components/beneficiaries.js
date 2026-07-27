@@ -16,6 +16,7 @@ import {
   bulkTransferBeneficiaries,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
+import { fetchOffices } from "../../../../backend/api/staff.js";
 import { getSession } from "../rbac/guard.js";
 import { getOfficeAccessScope } from "../rbac/scope.js";
 import { supabase } from "../../../../backend/api/supabase.js";
@@ -56,14 +57,14 @@ function formatEducationDisplay(b) {
 
 // ── Office badge color palette (cycles through offices) ───────────
 const OFFICE_BADGE_PALETTES = [
-  { bg: "bg-sky-500/20",     text: "text-sky-200",     border: "border-sky-400/30",     ring: "ring-sky-400/60",     activeBg: "bg-sky-500/40"     },
-  { bg: "bg-emerald-500/20", text: "text-emerald-200", border: "border-emerald-400/30", ring: "ring-emerald-400/60", activeBg: "bg-emerald-500/40" },
-  { bg: "bg-amber-500/20",   text: "text-amber-200",   border: "border-amber-400/30",   ring: "ring-amber-400/60",   activeBg: "bg-amber-500/40"   },
-  { bg: "bg-fuchsia-500/20", text: "text-fuchsia-200", border: "border-fuchsia-400/30", ring: "ring-fuchsia-400/60", activeBg: "bg-fuchsia-500/40" },
-  { bg: "bg-rose-500/20",    text: "text-rose-200",    border: "border-rose-400/30",    ring: "ring-rose-400/60",    activeBg: "bg-rose-500/40"    },
-  { bg: "bg-violet-500/20",  text: "text-violet-200",  border: "border-violet-400/30",  ring: "ring-violet-400/60",  activeBg: "bg-violet-500/40"  },
-  { bg: "bg-cyan-500/20",    text: "text-cyan-200",    border: "border-cyan-400/30",    ring: "ring-cyan-400/60",    activeBg: "bg-cyan-500/40"    },
-  { bg: "bg-orange-500/20",  text: "text-orange-200",  border: "border-orange-400/30",  ring: "ring-orange-400/60",  activeBg: "bg-orange-500/40"  },
+  { bg: "bg-sky-100 dark:bg-sky-900/80",       text: "text-sky-900 dark:text-sky-100",       border: "border-sky-300 dark:border-sky-500/70",       ring: "ring-sky-500/70" },
+  { bg: "bg-emerald-100 dark:bg-emerald-900/80", text: "text-emerald-900 dark:text-emerald-100", border: "border-emerald-300 dark:border-emerald-500/70", ring: "ring-emerald-500/70" },
+  { bg: "bg-amber-100 dark:bg-amber-900/80",     text: "text-amber-900 dark:text-amber-100",     border: "border-amber-300 dark:border-amber-500/70",     ring: "ring-amber-500/70" },
+  { bg: "bg-fuchsia-100 dark:bg-fuchsia-900/80", text: "text-fuchsia-900 dark:text-fuchsia-100", border: "border-fuchsia-300 dark:border-fuchsia-500/70", ring: "ring-fuchsia-500/70" },
+  { bg: "bg-rose-100 dark:bg-rose-900/80",       text: "text-rose-900 dark:text-rose-100",       border: "border-rose-300 dark:border-rose-500/70",       ring: "ring-rose-500/70" },
+  { bg: "bg-violet-100 dark:bg-violet-900/80",   text: "text-violet-900 dark:text-violet-100",   border: "border-violet-300 dark:border-violet-500/70",   ring: "ring-violet-500/70" },
+  { bg: "bg-cyan-100 dark:bg-cyan-900/80",       text: "text-cyan-900 dark:text-cyan-100",       border: "border-cyan-300 dark:border-cyan-500/70",       ring: "ring-cyan-500/70" },
+  { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70",   ring: "ring-orange-500/70" },
 ];
 
 // ── Constants ─────────────────────────────────────────────────
@@ -107,6 +108,18 @@ function escHtml(str) {
   const div = document.createElement("div");
   div.textContent = str ?? "";
   return div.innerHTML;
+}
+
+function formatOfficeShort(name) {
+  if (!name) return "N/A";
+  const value = String(name).toUpperCase();
+  if (value.includes("CITY GOVERNMENT OF") && value.includes("(LGU)")) {
+    return "LGU - " + value.replace("CITY GOVERNMENT OF ", "").replace(" (LGU)", "").trim();
+  }
+  if (value.includes("MUNICIPALITY OF") && value.includes("(LGU)")) {
+    return "LGU - " + value.replace("MUNICIPALITY OF ", "").replace(" (LGU)", "").trim();
+  }
+  return name;
 }
 
 function _bdfCollect() {
@@ -224,8 +237,8 @@ function initAnimatedBadgePanel(config) {
       b.classList.remove(
         "ring-2", "ring-white/60", "ring-offset-1", "ring-offset-transparent",
         "scale-105", "brightness-125", "shadow-lg",
-        "bg-white", "text-spes-blue",           // "all" active
-        "bg-white/40"                            // item active overlay
+        "bg-spes-yellow", "text-spes-blue", "border-spes-yellow", "border-spes-yellow/70", "ring-spes-yellow/60",
+        "bg-white", "bg-spes-yellow/25"
       );
       // Restore check icon area (remove injected icon)
       const icon = b.querySelector(".badge-check");
@@ -239,10 +252,10 @@ function initAnimatedBadgePanel(config) {
     // Apply active state to selected badge
     const isAll = badge.dataset.badgeId === "all";
     if (isAll) {
-      badge.classList.remove("bg-white/15");
-      badge.classList.add("bg-white", "text-spes-blue", "ring-2", "ring-white/60", "ring-offset-1", "scale-105");
+      badge.classList.remove("bg-white/15", "text-white", "border-white/30");
+      badge.classList.add("bg-spes-yellow", "text-spes-blue", "border-spes-yellow/70", "ring-2", "ring-spes-yellow/60", "ring-offset-1", "scale-105");
     } else {
-      badge.classList.add("ring-2", "ring-white/60", "ring-offset-1", "scale-105", "brightness-125", "shadow-lg", "bg-white/40");
+      badge.classList.add("ring-2", "ring-spes-yellow/80", "ring-offset-1", "scale-105", "shadow-lg", "bg-spes-yellow", "text-spes-blue", "border-spes-yellow");
     }
 
     // Inject checkmark icon
@@ -260,7 +273,7 @@ function initAnimatedBadgePanel(config) {
     allBadge.type = "button";
     allBadge.className =
       "anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 " +
-      "bg-white text-spes-blue border-white/50 ring-2 ring-white/60 ring-offset-1";
+      "bg-spes-yellow text-spes-blue border-spes-yellow/70 ring-2 ring-spes-yellow/60 ring-offset-1";
     allBadge.dataset.badgeId = "all";
     allBadge.dataset.label   = "all";
     // Pre-inject checkmark for default-active state
@@ -274,9 +287,12 @@ function initAnimatedBadgePanel(config) {
       badge.className =
         `anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 ` +
         `${pal.bg} ${pal.text} ${pal.border} hover:brightness-125 hover:scale-105`;
+      const displayLabel = config.getLabel(item);
+      const searchLabel = config.getSearchLabel?.(item) || displayLabel;
       badge.dataset.badgeId = config.getId(item);
-      badge.dataset.label   = config.getLabel(item).toLowerCase();
-      badge.textContent     = config.getLabel(item);
+      badge.dataset.label = `${displayLabel} ${searchLabel}`.toLowerCase();
+      badge.title = config.getTitle?.(item) || searchLabel;
+      badge.textContent = displayLabel;
       badgesList.appendChild(badge);
     });
 
@@ -300,7 +316,7 @@ function initAnimatedBadgePanel(config) {
     buildBadges();
 
     wrap.classList.remove("max-w-0", "opacity-0");
-    wrap.classList.add("max-w-[900px]", "opacity-100");
+    wrap.classList.add("max-w-[calc(100vw-2rem)]", "sm:max-w-[900px]", "opacity-100");
 
     if (searchWrap) {
       setTimeout(() => searchWrap.classList.replace("opacity-0", "opacity-100"), 80);
@@ -314,7 +330,7 @@ function initAnimatedBadgePanel(config) {
     });
 
     panelOpen = true;
-    btn.classList.add("bg-white/25", "ring-2", "ring-white/30");
+    btn.classList.add("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80");
     config.onOpen?.();
   }
 
@@ -333,13 +349,13 @@ function initAnimatedBadgePanel(config) {
 
     setTimeout(() => {
       wrap.classList.add("max-w-0", "opacity-0");
-      wrap.classList.remove("max-w-[900px]", "opacity-100");
+      wrap.classList.remove("max-w-[calc(100vw-2rem)]", "sm:max-w-[900px]", "opacity-100");
       badgesList.innerHTML = "";
       if (searchInput) searchInput.value = "";
     }, total * 35 + 180);
 
     panelOpen = false;
-    btn.classList.remove("bg-white/25", "ring-2", "ring-white/30");
+    btn.classList.remove("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80");
     if (resetFilter) {
       activeId = "all";
       config.onFilter(null);
@@ -352,9 +368,6 @@ function initAnimatedBadgePanel(config) {
     panelOpen ? closePanel() : openPanel();
   });
 
-  document.addEventListener("click", (e) => {
-    if (panelOpen && !panel.contains(e.target)) closePanel();
-  });
 
   return {
     show()    { panel.classList.remove("hidden"); panel.classList.add("flex"); },
@@ -394,11 +407,15 @@ function initOfficeSortPanel(onFilter) {
     allLabel:     "All Offices",
     fetchItems: async () => {
       if (_cached.length) return _cached;
-      const { data, error } = await supabase.from("offices").select("id, name").order("name");
-      if (!error && data) _cached = data;
+      const { data, error } = await fetchOffices({ forceRefresh: false });
+      if (!error && Array.isArray(data)) {
+        _cached = [...data].sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+      }
       return _cached;
     },
-    getLabel:   (o) => o.name,
+    getLabel:   (o) => formatOfficeShort(o.name),
+    getSearchLabel: (o) => o.name,
+    getTitle:   (o) => o.name,
     getId:      (o) => String(o.id),
     getPalette: (_o, i) => OFFICE_BADGE_PALETTES[i % OFFICE_BADGE_PALETTES.length],
     onFilter,
@@ -410,14 +427,14 @@ function initOfficeSortPanel(onFilter) {
 // ── Batch Sort Panel (DB-driven) ──────────────────────────────────
 function initBatchSortPanel(onFilter) {
   const BATCH_PALETTES = [
-    { bg: "bg-rose-500/25",    text: "text-rose-700 dark:text-rose-300",    border: "border-rose-500/40" },
-    { bg: "bg-sky-500/25",     text: "text-sky-700 dark:text-sky-300",       border: "border-sky-500/40" },
-    { bg: "bg-emerald-500/25", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-500/40" },
-    { bg: "bg-amber-500/25",   text: "text-amber-700 dark:text-amber-300",   border: "border-amber-500/40" },
-    { bg: "bg-fuchsia-500/25", text: "text-fuchsia-700 dark:text-fuchsia-300", border: "border-fuchsia-500/40" },
-    { bg: "bg-violet-500/25",  text: "text-violet-700 dark:text-violet-300",  border: "border-violet-500/40" },
-    { bg: "bg-cyan-500/25",    text: "text-cyan-700 dark:text-cyan-300",    border: "border-cyan-500/40" },
-    { bg: "bg-orange-500/25",  text: "text-orange-700 dark:text-orange-300",  border: "border-orange-500/40" },
+    { bg: "bg-rose-100 dark:bg-rose-900/80",       text: "text-rose-900 dark:text-rose-100",       border: "border-rose-300 dark:border-rose-500/70" },
+    { bg: "bg-sky-100 dark:bg-sky-900/80",         text: "text-sky-900 dark:text-sky-100",         border: "border-sky-300 dark:border-sky-500/70" },
+    { bg: "bg-emerald-100 dark:bg-emerald-900/80", text: "text-emerald-900 dark:text-emerald-100", border: "border-emerald-300 dark:border-emerald-500/70" },
+    { bg: "bg-amber-100 dark:bg-amber-900/80",     text: "text-amber-900 dark:text-amber-100",     border: "border-amber-300 dark:border-amber-500/70" },
+    { bg: "bg-fuchsia-100 dark:bg-fuchsia-900/80", text: "text-fuchsia-900 dark:text-fuchsia-100", border: "border-fuchsia-300 dark:border-fuchsia-500/70" },
+    { bg: "bg-violet-100 dark:bg-violet-900/80",   text: "text-violet-900 dark:text-violet-100",   border: "border-violet-300 dark:border-violet-500/70" },
+    { bg: "bg-cyan-100 dark:bg-cyan-900/80",       text: "text-cyan-900 dark:text-cyan-100",       border: "border-cyan-300 dark:border-cyan-500/70" },
+    { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70" },
   ];
 
   const COLLAPSE_IDS = ["sortfilter-wrap", "staff-search-wrap"];
@@ -480,11 +497,10 @@ export function initBeneficiaries() {
 
     if (session && session.role !== "admin" && session.office_id) {
       try {
-        const { data, error } = await supabase
-          .from("offices")
-          .select("name, location")
-          .eq("id", session.office_id)
-          .single();
+        const { data: offices, error } = await fetchOffices({ forceRefresh: false });
+        const data = Array.isArray(offices)
+          ? offices.find((office) => String(office.id) === String(session.office_id))
+          : null;
         if (!error && data) {
           officerOffice = data;
           currentOfficeName = data.name;
@@ -511,10 +527,10 @@ export function initBeneficiaries() {
   };
 
   // ── Office Sort Panel (admin only) ──────────────────────────
-  const officeSortPanel = initOfficeSortPanel((officeName) => {
-    const filtered = officeName
-      ? allImplementors.filter(s => s.office && s.office.trim().toLowerCase() === officeName.trim().toLowerCase())
-      : allImplementors;
+  const officeSortPanel = initOfficeSortPanel((officeId) => {
+    const filtered = officeId == null
+      ? allImplementors
+      : allImplementors.filter((staff) => String(staff.office_id) === String(officeId));
     sortFilterInstance?.updateData(filtered);
   });
 
@@ -526,6 +542,7 @@ export function initBeneficiaries() {
   let selectedBatchId = null;
   let currentOfficeName = "";
   let activeStatusMode = "NEW";
+  let beneficiarySortMode = "none";
   const selectedBeneficiaryIds = new Set();
 
   const canManageCurrentOffice = () => (
@@ -939,30 +956,44 @@ export function initBeneficiaries() {
 
 
   // ── View Switching helpers ───────────────────────────────────
+  function normalizeOfficeName(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/\(lgu\)/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  function isIliganLguOffice(name) {
+    const normalized = normalizeOfficeName(name);
+    return normalized === "lgu iligan" || normalized.includes("city government of iligan");
+  }
+
   function pinSystemAdministratorFirst(items) {
     const ordered = [...items];
-    const adminIndex = ordered.findIndex((item) =>
+    const pinned = [];
+    const pinnedIds = new Set();
+    const takeFirst = (predicate) => {
+      const match = ordered.find((item) => !pinnedIds.has(String(item.id)) && predicate(item));
+      if (match) {
+        pinned.push(match);
+        pinnedIds.add(String(match.id));
+      }
+    };
+
+    takeFirst((item) =>
       String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
       String(item.username || "").trim().toLowerCase() === "admin"
     );
-    if (adminIndex <= 0) return ordered;
+    takeFirst((item) => isIliganLguOffice(item.office));
 
-    const [systemAdministrator] = ordered.splice(adminIndex, 1);
-    ordered.unshift(systemAdministrator);
-    return ordered;
+    return [
+      ...pinned,
+      ...ordered.filter((item) => !pinnedIds.has(String(item.id))),
+    ];
   }
 
-  function formatOfficeShort(name) {
-    if (!name) return "N/A";
-    let s = String(name).toUpperCase();
-    if (s.includes("CITY GOVERNMENT OF") && s.includes("(LGU)")) {
-      return "LGU - " + s.replace("CITY GOVERNMENT OF ", "").replace(" (LGU)", "").trim();
-    }
-    if (s.includes("MUNICIPALITY OF") && s.includes("(LGU)")) {
-      return "LGU - " + s.replace("MUNICIPALITY OF ", "").replace(" (LGU)", "").trim();
-    }
-    return name;
-  }
+
 
   function showTableSkeleton(cols = 6) {
     let rowsHtml = "";
@@ -1546,7 +1577,7 @@ export function initBeneficiaries() {
           </th>
           <th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Name of Assured</th>
           ${showOfficeCol ? `<th scope="col" class="px-6 py-3 text-left whitespace-nowrap">Office</th>` : ""}
-          <th scope="col" class="px-6 py-3 text-left pl-22 whitespace-nowrap">Address</th>
+          <th scope="col" class="px-6 py-3 text-left whitespace-nowrap" aria-sort="${beneficiarySortMode === "phone" ? "ascending" : "none"}">${beneficiarySortMode === "phone" ? `<span class="font-black text-spes-blue underline decoration-spes-blue decoration-2 underline-offset-4 dark:text-spes-yellow dark:decoration-spes-yellow">Phone Number</span>` : "Address"}</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Year Level</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Gender</th>
           <th scope="col" class="px-6 py-3 text-center whitespace-nowrap">Actions</th>
@@ -1727,7 +1758,7 @@ export function initBeneficiaries() {
             : `<span class="ml-2 inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[0.5625rem] font-black uppercase text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`;
 
           const searchQ = (document.getElementById('staff-search-input')?.value || "").trim().toLowerCase();
-          const hasMatchedPhone = searchQ && b.contact_number && b.contact_number.toLowerCase().includes(searchQ);
+          const hasMatchedPhone = searchQ && b.contact_number && String(b.contact_number).toLowerCase().includes(searchQ);
 
           const contactTooltip = hasMatchedPhone
             ? `<span class="ml-2 inline-flex items-center gap-1 rounded bg-spes-blue/10 dark:bg-spes-yellow/10 px-2 py-0.5 text-[0.625rem] font-black uppercase text-spes-blue dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/20">
@@ -1761,7 +1792,7 @@ export function initBeneficiaries() {
                 ${statusBadge}
                 ${contactTooltip}
               </td>
-              <td class="px-6 py-4 text-left text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(b.address || "N/A")}</td>
+              <td class="px-6 py-4 text-left tabular-nums text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(beneficiarySortMode === "phone" ? (b.contact_number || "N/A") : (b.address || "N/A"))}</td>
               <td class="px-6 py-4 text-center whitespace-nowrap">
                 <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
@@ -1841,15 +1872,15 @@ export function initBeneficiaries() {
     });
 
     const BATCH_PALETTES = [
-      { bg: "bg-sky-500/20",     border: "border-sky-500/30",     text: "text-sky-600 dark:text-sky-400" },
-      { bg: "bg-emerald-500/20", border: "border-emerald-500/30", text: "text-emerald-600 dark:text-emerald-400" },
-      { bg: "bg-amber-500/20",   border: "border-amber-500/30",   text: "text-amber-600 dark:text-amber-400" },
-      { bg: "bg-rose-500/20",    border: "border-rose-500/30",    text: "text-rose-600 dark:text-rose-400" },
-      { bg: "bg-fuchsia-500/20", border: "border-fuchsia-500/30", text: "text-fuchsia-600 dark:text-fuchsia-400" },
-      { bg: "bg-violet-500/20",  border: "border-violet-500/30",  text: "text-violet-600 dark:text-violet-400" },
-      { bg: "bg-cyan-500/20",    border: "border-cyan-500/30",    text: "text-cyan-600 dark:text-cyan-400" },
-      { bg: "bg-orange-500/20",  border: "border-orange-500/30",  text: "text-orange-600 dark:text-orange-400" },
-    ];
+    { bg: "bg-rose-100 dark:bg-rose-900/80",       text: "text-rose-900 dark:text-rose-100",       border: "border-rose-300 dark:border-rose-500/70" },
+    { bg: "bg-sky-100 dark:bg-sky-900/80",         text: "text-sky-900 dark:text-sky-100",         border: "border-sky-300 dark:border-sky-500/70" },
+    { bg: "bg-emerald-100 dark:bg-emerald-900/80", text: "text-emerald-900 dark:text-emerald-100", border: "border-emerald-300 dark:border-emerald-500/70" },
+    { bg: "bg-amber-100 dark:bg-amber-900/80",     text: "text-amber-900 dark:text-amber-100",     border: "border-amber-300 dark:border-amber-500/70" },
+    { bg: "bg-fuchsia-100 dark:bg-fuchsia-900/80", text: "text-fuchsia-900 dark:text-fuchsia-100", border: "border-fuchsia-300 dark:border-fuchsia-500/70" },
+    { bg: "bg-violet-100 dark:bg-violet-900/80",   text: "text-violet-900 dark:text-violet-100",   border: "border-violet-300 dark:border-violet-500/70" },
+    { bg: "bg-cyan-100 dark:bg-cyan-900/80",       text: "text-cyan-900 dark:text-cyan-100",       border: "border-cyan-300 dark:border-cyan-500/70" },
+    { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70" },
+  ];
 
     const BATCH_CAPACITY_TARGET = 250;
 
@@ -2044,6 +2075,12 @@ export function initBeneficiaries() {
         tabSortId: "sf-tab-sort",
         tabFilterId: "sf-tab-filter",
         originalData: data,
+        getDefaultFilters: () => viewMode === "beneficiaries"
+          ? { return_status: activeStatusMode }
+          : {},
+        onSortChange: (sortValue) => {
+          beneficiarySortMode = sortValue;
+        },
         onRender: (filtered) => {
           if (viewMode === "implementors") {
             activeImplementors = pinSystemAdministratorFirst(filtered);
@@ -2684,8 +2721,8 @@ export function initBeneficiaries() {
   // ── Bootstrap ────────────────────────────────────────────────
   (async () => {
     try {
-      const { data: officesData } = await supabase.from("offices").select("id, name, location");
-      if (officesData) allOffices = officesData;
+      const { data: officesData } = await fetchOffices({ forceRefresh: false });
+      if (Array.isArray(officesData)) allOffices = officesData;
     } catch (err) {
       console.warn("[SPES] Load offices error:", err);
     }

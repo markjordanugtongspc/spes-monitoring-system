@@ -22,6 +22,9 @@ function readStoredOverride() {
 }
 
 export function isFlowDebugEnabled() {
+  // Disable flow debugger in production to prevent console spam and remove
+  // the `import.meta.env.PROD` guard for this line to restore it when needed.
+  if (import.meta.env.PROD) return false;
   return readStoredOverride() ?? TEMPORARY_FLOW_DEBUG_ENABLED ?? DEFAULT_FLOW_DEBUG_ENABLED;
 }
 

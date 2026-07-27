@@ -15,12 +15,18 @@ export function setupSortFiltration({
   tabFilterId,        // segmented "Filter" tab button
   originalData,
   defaultFilters = {},
-  onRender
+  getDefaultFilters,
+  onRender,
+  onSortChange
 }) {
   let activeSort = "none";
   // Merge caller-supplied defaults (e.g. { archiveStatus: "active" } for implementors,
   // or { status: "active" } for beneficiaries) so archived rows are hidden by default.
-  let activeFilters = { ...defaultFilters };
+  const resolveDefaultFilters = () => ({
+    ...defaultFilters,
+    ...(getDefaultFilters?.() || {}),
+  });
+  let activeFilters = resolveDefaultFilters();
 
   const btnSort        = document.getElementById(btnSortId);
   const dropdownSort   = document.getElementById(dropdownSortId);
@@ -67,18 +73,22 @@ export function setupSortFiltration({
       btnSort.addEventListener("click", (e) => {
         e.stopPropagation();
         const willOpen = panel.classList.contains("hidden");
-        panel.classList.remove("hidden");
-        showSection("sort");
-        if (!willOpen) showSection("sort");
+        panel.classList.toggle("hidden", !willOpen);
+        if (willOpen) showSection("sort");
       });
     }
     btnFilter.addEventListener("click", (e) => {
       e.stopPropagation();
-      panel.classList.remove("hidden");
-      showSection("filter");
+      const willOpen = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden", !willOpen);
+      if (willOpen) showSection("filter");
     });
-    document.addEventListener("click", () => panel.classList.add("hidden"));
     panel.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("click", (e) => {
+      if (!panel.classList.contains("hidden") && !panel.contains(e.target)) {
+        panel.classList.add("hidden");
+      }
+    });
   } else {
     // Legacy two-dropdown mode
     if (btnSort && dropdownSort) {
@@ -93,10 +103,6 @@ export function setupSortFiltration({
       dropdownFilter.classList.toggle("hidden");
       dropdownSort.classList.add("hidden");
     });
-    document.addEventListener("click", () => {
-      if (dropdownSort) dropdownSort.classList.add("hidden");
-      dropdownFilter.classList.add("hidden");
-    });
     if (dropdownSort) dropdownSort.addEventListener("click", (e) => e.stopPropagation());
     dropdownFilter.addEventListener("click", (e) => e.stopPropagation());
   }
@@ -107,6 +113,7 @@ export function setupSortFiltration({
     sortOptions.forEach(opt => {
       opt.addEventListener("click", () => {
         activeSort = opt.getAttribute("data-sort-val");
+        onSortChange?.(activeSort);
 
         // Update checkmarks/active classes
         sortOptions.forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
@@ -189,6 +196,27 @@ export function setupSortFiltration({
     syncSearchClearVisibility();
   }
 
+  const clearAllButton = panel?.querySelector("#sf-clear-all");
+  clearAllButton?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    activeFilters = resolveDefaultFilters();
+    activeSort = "none";
+    dropdownFilter?.querySelectorAll("[data-filter-key]").forEach((option) => option.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+    Object.keys(activeFilters).forEach((key) => {
+      const value = activeFilters[key];
+      dropdownFilter?.querySelector(`[data-filter-key="${key}"][data-filter-val="${value}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    });
+    dropdownFilter?.querySelectorAll('[data-filter-key][data-filter-val="all"]').forEach((option) => {
+      if (!activeFilters[option.getAttribute("data-filter-key")]) option.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    });
+    dropdownSort?.querySelectorAll("[data-sort-val]").forEach((option) => option.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+    dropdownSort?.querySelector(`[data-sort-val="none"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    if (searchInput) searchInput.value = "";
+    syncSearchClearVisibility();
+    onSortChange?.("none");
+    applySortAndFilter();
+  });
+
   function applySortAndFilter() {
     let processed = [...originalData];
 
@@ -202,7 +230,7 @@ export function setupSortFiltration({
           const emailVal  = (item.email || "").toLowerCase();
           const officeVal = (item.office || "").toLowerCase();
           const addrVal   = (item.address || "").toLowerCase();
-          const contactVal= (item.contact_number || "").toLowerCase();
+          const contactVal= String(item.contact_number || "").toLowerCase();
           return (
             nameVal.includes(activeValue) ||
             emailVal.includes(activeValue) ||
@@ -241,18 +269,39 @@ export function setupSortFiltration({
         });
       } else if (key === "education_name") {
         processed = processed.filter(item => {
-          const catName = (item.education?.name || "").toLowerCase().trim();
-          let lvlName = (item.education_level?.name || "").toLowerCase().trim();
-          const prefLvl = (preferenceStorage.getBeneficiaryEduLevel(item.id) || "").toLowerCase().trim();
-          if (!lvlName && prefLvl) lvlName = prefLvl;
+          const normalize = (value) => String(value || "")
+            .toLowerCase()
+            .replace(/\s+/g, " ")
+            .trim();
+          const categoryAliases = {
+            "senior highschool": ["senior highschool", "senior high school", "senior high"],
+            highschool: ["highschool", "high school", "junior highschool", "junior high school"],
+            "college level": ["college level", "college", "tertiary"],
+            "college graduate": ["college graduate", "graduate"],
+            osy: ["osy", "out of school youth"],
+          };
+          const categoryIdByName = {
+            "senior highschool": 1,
+            "highschool": 4,
+            "college level": 3,
+          };
+          const categoryName = normalize(item.education?.name ?? item.education?.[0]?.name);
+          const categoryId = Number(item.educ_id ?? item.education?.id ?? item.education_id);
+          const joinedLevel = normalize(item.education_level?.name ?? item.education_level?.[0]?.name);
+          const fallbackLevel = normalize(
+            preferenceStorage.getBeneficiaryEduLevel(item.id) ||
+            ({ 1: "grade 11", 2: "grade 12", 3: "1st year", 4: "2nd year", 5: "3rd year", 6: "4th year", 8: "grade 7", 9: "grade 8", 10: "grade 9", 11: "grade 10" }[Number(item.education_level_id)] || "")
+          );
+          const levelName = joinedLevel || fallbackLevel;
+          const levelEducationId = Number(item.education_level?.education_id ?? item.education_level?.[0]?.education_id);
+          const target = normalize(activeValue).replace(/\s+college$/, "");
+          const targetAliases = categoryAliases[target] || [target];
+          const categoryMatches = targetAliases.includes(categoryName)
+            || (categoryIdByName[target] != null && categoryId === categoryIdByName[target])
+            || (levelEducationId && categoryIdByName[target] === levelEducationId);
 
-          const cleanLvl = lvlName.replace(/\s+college$/i, "").trim();
-          const target = activeValue.replace(/\s+college$/i, "").trim();
-
-          if (catName === target) return true;
-          if (lvlName === target || cleanLvl === target) return true;
-          if (lvlName.includes(target) || cleanLvl.includes(target)) return true;
-          return false;
+          if (categoryMatches) return true;
+          return levelName === target || levelName.includes(target);
         });
       } else if (key === "gender_name") {
         processed = processed.filter(item => (item.gender?.name || "").toLowerCase() === activeValue);
@@ -290,6 +339,12 @@ export function setupSortFiltration({
       processed.sort((a, b) => (a.id || 0) - (b.id || 0));
     } else if (activeSort === "amount-desc") {
       processed.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+    } else if (activeSort === "phone") {
+      processed = processed.filter((item) => String(item.contact_number || "").trim().length > 0);
+      processed.sort((a, b) => {
+        const phoneCompare = String(a.contact_number || "").localeCompare(String(b.contact_number || ""), undefined, { numeric: true });
+        return phoneCompare || String(a.full_name || a.name || "").localeCompare(String(b.full_name || b.name || ""));
+      });
     }
 
     onRender(processed);
@@ -305,7 +360,7 @@ export function setupSortFiltration({
       applySortAndFilter();
     },
     resetFilters() {
-      activeFilters = { ...defaultFilters };
+      activeFilters = resolveDefaultFilters();
       activeSort = "none";
       
       // Clear visual highlights in filter/sort dropdowns
@@ -319,6 +374,7 @@ export function setupSortFiltration({
         });
       }
       
+      onSortChange?.("none");
       if (dropdownSort) {
         dropdownSort.querySelectorAll("[data-sort-val]").forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
         dropdownSort.querySelector('[data-sort-val="none"]')?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");

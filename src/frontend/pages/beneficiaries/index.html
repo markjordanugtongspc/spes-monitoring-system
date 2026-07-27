@@ -111,7 +111,7 @@
               <div id="sort-offices-panel" class="hidden items-center gap-2 sm:ml-auto relative z-30">
                 <!-- Animated panel: search + office badges — slides right-to-left -->
                 <div id="office-badges-container"
-                  class="flex items-center gap-1.5 overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out">
+                  class="flex min-w-0 items-center gap-1.5 overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out">
                   <!-- Search input (hidden until panel opens) -->
                   <div id="office-search-wrap" class="relative shrink-0 opacity-0 transition-opacity duration-300">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
@@ -120,16 +120,16 @@
                       </svg>
                     </div>
                     <input type="text" id="office-search-input"
-                      class="h-7 w-28 rounded border border-white/20 bg-white/10 pl-7 pr-2 text-[0.625rem] text-white placeholder:text-white/40 focus:border-white/40 focus:bg-white/15 focus:outline-none transition-all"
+                      class="h-8 w-36 rounded border border-white/40 bg-white/15 pl-7 pr-2 text-[0.625rem] text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/20 focus:outline-none transition-all"
                       placeholder="Search offices…" autocomplete="off" />
                   </div>
                   <!-- Badge list: drag-scrollable single row -->
                   <div id="office-badges-list"
-                    class="flex flex-nowrap items-center gap-1.5 overflow-x-auto cursor-grab active:cursor-grabbing select-none"
-                    style="max-width:780px;scrollbar-width:none;-ms-overflow-style:none;"></div>
+                    class="flex min-w-0 max-w-[min(390px,calc(100vw-2rem))] flex-nowrap items-center gap-1.5 overflow-x-auto cursor-grab active:cursor-grabbing select-none sm:max-w-[390px]"
+                    style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                 </div>
                 <button id="btn-sort-offices"
-                  class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
+                  class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue shadow-sm hover:bg-yellow-300 active:scale-95 transition-all shrink-0">
                   <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
@@ -145,11 +145,11 @@
                   <div id="batch-badges-container"
                     class="flex items-center overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out">
                     <div id="batch-badges-list"
-                      class="flex flex-nowrap items-center gap-1.5 overflow-x-auto cursor-grab active:cursor-grabbing select-none"
-                      style="max-width:480px;scrollbar-width:none;-ms-overflow-style:none;"></div>
+                      class="flex max-w-[min(390px,calc(100vw-2rem))] flex-nowrap items-center gap-1.5 overflow-x-auto cursor-grab active:cursor-grabbing select-none sm:max-w-[390px]"
+                      style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                   </div>
                   <button id="btn-sort-batch"
-                    class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-white/25 bg-white/10 px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-white hover:bg-white/20 active:scale-95 transition-all shrink-0">
+                    class="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-[0.625rem] font-black uppercase tracking-widest text-spes-blue shadow-sm hover:bg-yellow-300 active:scale-95 transition-all shrink-0">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -261,6 +261,10 @@
                       <button type="button" id="sf-tab-filter"
                         class="flex-1 cursor-pointer rounded-md px-2 py-1 text-[0.625rem] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">Filter</button>
                     </div>
+                    <button type="button" id="sf-clear-all"
+                      class="mb-1 flex w-full cursor-pointer items-center justify-center rounded-md border border-spes-blue/20 px-2 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-spes-blue transition-colors hover:bg-spes-blue hover:text-white dark:border-spes-yellow/30 dark:text-spes-yellow dark:hover:bg-spes-yellow dark:hover:text-spes-blue">
+                      Clear Sort &amp; Filter
+                    </button>
 
                     <!-- Sort panel -->
                     <div id="dropdown-sort-beneficiary" class="flex flex-col">
@@ -270,6 +274,10 @@
                         class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name (A-Z)</button>
                       <button data-sort-val="name-desc"
                         class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">Name (Z-A)</button>
+                      <button data-sort-val="phone"
+                        class="cursor-pointer flex w-full items-center gap-2 rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left">
+                        Phone Number
+                      </button>
                     </div>
 
                     <!-- Filter panel -->
