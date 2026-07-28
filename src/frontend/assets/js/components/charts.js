@@ -616,11 +616,13 @@ function _renderBeneficiariesByYear(beneficiaries) {
   _xChart.column?.destroy();
   el.innerHTML = "";
 
-  const targetYears = [...new Set(beneficiaries.map((beneficiary) => String(beneficiary.year_period ?? "").trim()).filter((year) => /^\d{4}$/.test(year)))].sort((a, b) => Number(a) - Number(b));
+  const defaultYears = ["2024", "2025", "2026", "2027"];
+  const detectedYears = beneficiaries.map((beneficiary) => String(beneficiary.year_period ?? "").trim()).filter((year) => /^\d{4}$/.test(year));
+  // Keep zero-value year points so the trend remains visible around the active year.
+  const targetYears = [...new Set([...defaultYears, ...detectedYears])].sort((a, b) => Number(a) - Number(b));
   const yearColors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6"];
   const countsByYear = {};
   targetYears.forEach(yr => { countsByYear[yr] = 0; });
-  if (!targetYears.length) return _showNoData(el, "No period data");
 
   // Only count rows matching the active status mode (NEW default, or SPES BABY)
   beneficiaries.forEach(b => {
@@ -734,7 +736,7 @@ function _renderBeneficiariesByYear(beneficiaries) {
       show: true,
       borderColor: "rgba(100, 116, 139, 0.1)",
       strokeDashArray: 4,
-      padding: { left: 2, right: 2, top: -20 },
+      padding: { left: 2, right: 2, top: 10 },
       yaxis: { lines: { show: true } },
       xaxis: { lines: { show: false } }
     },
