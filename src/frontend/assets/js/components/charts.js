@@ -8,6 +8,7 @@ const BRAND_YELLOW = "#FCD116";
 const BLUE_SHADES  = ["#0038A8", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#DBEAFE"];
 
 const fmt = (val) => Number(val).toLocaleString();
+const compactCount = (val) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(Number(val) || 0).toLowerCase();
 const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -37,6 +38,57 @@ let _cachedBeneficiaries = [];
 // Chart 3 toggle — "NEW" (default) or "SPES BABY"
 let _yearStatusMode = "NEW";
 
+const PERIOD_MONTHS = [
+  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+];
+const PERIOD_MONTH_INDEX = Object.fromEntries(PERIOD_MONTHS.map((month, index) => [month, index]));
+let _dashboardDataset = { beneficiaries: [], genderBeneficiaries: [], topOfficeBeneficiaries: [], globalStaffs: [] };
+let _dashboardPeriodFilter = { year: "all", month: "all" };
+
+function _filterByDashboardPeriod(rows) {
+  return rows.filter((row) => {
+    const matchesYear = _dashboardPeriodFilter.year === "all" || String(row.year_period ?? "") === _dashboardPeriodFilter.year;
+    const matchesMonth = _dashboardPeriodFilter.month === "all" || String(row.month_period ?? "").trim().toUpperCase() === _dashboardPeriodFilter.month;
+    return matchesYear && matchesMonth;
+  });
+}
+
+function _getDashboardPeriodOptions(rows) {
+  const years = [...new Set(rows.map((row) => String(row.year_period ?? "").trim()).filter((year) => /^\d{4}$/.test(year)))].sort((a, b) => Number(b) - Number(a));
+  const monthsByYear = {};
+  years.forEach((year) => { monthsByYear[year] = []; });
+  rows.forEach((row) => {
+    const year = String(row.year_period ?? "").trim();
+    const month = String(row.month_period ?? "").trim().toUpperCase();
+    if (monthsByYear[year] && PERIOD_MONTH_INDEX[month] !== undefined && !monthsByYear[year].includes(month)) monthsByYear[year].push(month);
+  });
+  Object.values(monthsByYear).forEach((months) => months.sort((a, b) => PERIOD_MONTH_INDEX[a] - PERIOD_MONTH_INDEX[b]));
+  const months = [...new Set(Object.values(monthsByYear).flat())].sort((a, b) => PERIOD_MONTH_INDEX[a] - PERIOD_MONTH_INDEX[b]);
+  return { years, months, monthsByYear };
+}
+
+function _renderDashboardPeriodData() {
+  const beneficiaries = _filterByDashboardPeriod(_dashboardDataset.beneficiaries);
+  const genderBeneficiaries = _filterByDashboardPeriod(_dashboardDataset.genderBeneficiaries);
+  const topOfficeBeneficiaries = _filterByDashboardPeriod(_dashboardDataset.topOfficeBeneficiaries);
+  _cachedBeneficiaries = beneficiaries;
+  _renderImplementorStatus(genderBeneficiaries, topOfficeBeneficiaries, _dashboardDataset.globalStaffs);
+  _renderBeneficiariesByYear(beneficiaries);
+  _renderEnrollmentByMonth(beneficiaries);
+  return beneficiaries;
+}
+
+export function setDashboardPeriodFilter({ year = "all", month = "all" } = {}) {
+  const normalizedMonth = String(month || "all").trim();
+  _dashboardPeriodFilter = {
+    year: String(year || "all"),
+    month: normalizedMonth.toLowerCase() === "all" ? "all" : normalizedMonth.toUpperCase(),
+  };
+  const beneficiaries = _renderDashboardPeriodData();
+  return { beneficiaries, periods: _getDashboardPeriodOptions(_dashboardDataset.beneficiaries) };
+}
+
 // Fill in return_status when the DB column is absent/null.
 // SPES BABY = same full_name appears in an earlier year_period; else NEW.
 function _deriveReturnStatus(beneficiaries) {
@@ -64,7 +116,7 @@ async function _fetchAllBeneficiaryChartRows({ isGlobal, officeId, minimal = fal
   }
 
   const fields = minimal
-    ? "staff_id, gender_id"
+    ? "staff_id, gender_id, month_period, year_period"
     : "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status";
   const selectStr = fields + (isGlobal ? "" : ", staffs!staff_id!inner(office_id)");
   const rows = [];
@@ -112,7 +164,8 @@ export async function initDashboardCharts() {
       el.classList.add("hidden");
     });
     _cachedBeneficiaries = [];
-    return { totalImplementors: 0 };
+    _dashboardDataset = { beneficiaries: [], genderBeneficiaries: [], topOfficeBeneficiaries: [], globalStaffs: [] };
+    return { totalImplementors: 0, beneficiaries: [], periods: { years: [], months: [], monthsByYear: {} } };
   }
 
   const [staffResult, beneficiaryResult, topOfficeResult] = await Promise.all([
@@ -151,17 +204,24 @@ export async function initDashboardCharts() {
   const topOfficeBeneficiaries = topOfficeResult?.data ?? beneficiaries;
   
   _deriveReturnStatus(beneficiaries);
-  _cachedBeneficiaries = beneficiaries;
+  _dashboardDataset = {
+    beneficiaries,
+    // Admin sees all gender records; every other role's gender card remains
+    // limited to its own office even when global analytics is permitted.
+    genderBeneficiaries: access.isAdmin ? beneficiaries : ownOfficeBeneficiaries,
+    topOfficeBeneficiaries,
+    globalStaffs,
+  };
 
   _renderImplementorsByOffice(chartStaffs);
-  _renderImplementorStatus(ownOfficeBeneficiaries, topOfficeBeneficiaries, globalStaffs);
-  _renderBeneficiariesByYear(beneficiaries);
-  _renderEnrollmentByMonth(beneficiaries);
+  const filteredBeneficiaries = _renderDashboardPeriodData();
   _setupTrendsSwitcher();
   _setupYearStatusSwitcher();
 
   return {
     totalImplementors: chartStaffs.length,
+    beneficiaries: filteredBeneficiaries,
+    periods: _getDashboardPeriodOptions(beneficiaries),
   };
 }
 
@@ -302,6 +362,7 @@ function _renderImplementorsByOffice(staffs) {
 function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], globalStaffs = []) {
   const el = document.getElementById("spes-gender-chart");
   if (!el) return;
+  _xChart.gender?.destroy();
   el.innerHTML = "";
   _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs);
 
@@ -322,24 +383,43 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
   const series = [male, female];
   const total  = series.reduce((a, b) => a + b, 0);
 
-  if (!total) return _showNoData(el, "No beneficiaries found");
+  if (!total) {
+    const studentBadge = document.getElementById("badge-student-metric");
+    if (studentBadge) {
+      studentBadge.innerHTML = `
+        <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-2 py-0.5 text-[#4F91FF]">
+          <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          Male <span class="border-b-2 border-current pb-0.5 leading-none">0</span>
+        </span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-2 py-0.5 text-[#FF5B9B]">
+          <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          Female <span class="border-b-2 border-current pb-0.5 leading-none">0</span>
+        </span>`;
+      studentBadge.className = "mt-1 flex max-w-full flex-wrap items-center justify-center gap-1 rounded-full bg-gray-100 px-1.5 py-1 text-[9px] font-black uppercase dark:bg-white/5 shadow-sm";
+      studentBadge.title = "Male 0 | Female 0";
+    }
+    return _showNoData(el, "No beneficiaries found");
+  }
 
   _xStat.totalBenef = beneficiaries.length;
   _xStat.male   = male;
   _xStat.female = female;
 
-  // Dynamically update the header metric badge with live percentages right next to labels
+  // Show real counts in the header. This keeps the scope explicit: Admin sees
+  // the full permitted roster while staff sees only its assigned-office roster.
   const studentBadge = document.getElementById("badge-student-metric");
   if (studentBadge) {
-    const malePct = Math.round((male / total) * 100) || 0;
-    const femalePct = 100 - malePct;
-    const maleIcon   = `<svg class="inline h-2.5 w-2.5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
-    const femaleIcon = `<svg class="inline h-2.5 w-2.5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
     studentBadge.innerHTML = `
-      <span class="text-[#4F91FF] font-black">${maleIcon} MALE (${malePct}%)</span>
-      <span class="mx-2 text-gray-300 dark:text-gray-600">|</span>
-      <span class="text-[#FF5B9B] font-black">FEMALE (${femalePct}%) ${femaleIcon}</span>`;
-    studentBadge.className = "rounded-full bg-gray-100 px-3 py-1 text-[10px] font-black uppercase dark:bg-white/5 shadow-sm";
+      <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-2 py-0.5 text-[#4F91FF]">
+        <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        Male <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(male)}</span>
+      </span>
+      <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-2 py-0.5 text-[#FF5B9B]">
+        <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        Female <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(female)}</span>
+      </span>`;
+    studentBadge.className = "mt-1 flex max-w-full flex-wrap items-center justify-center gap-1 rounded-full bg-gray-100 px-1.5 py-1 text-[9px] font-black uppercase dark:bg-white/5 shadow-sm";
+    studentBadge.title = `Male ${fmt(male)} | Female ${fmt(female)}`;
   }
 
   const chart = new ApexCharts(el, {
@@ -533,12 +613,14 @@ function _drawGenderConnectorLines(el, series, total) {
 function _renderBeneficiariesByYear(beneficiaries) {
   const el = document.getElementById("column-chart");
   if (!el) return;
+  _xChart.column?.destroy();
   el.innerHTML = "";
 
-  const targetYears  = ["2024", "2025", "2026", "2027"];
-  const yearColors   = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6"];
+  const targetYears = [...new Set(beneficiaries.map((beneficiary) => String(beneficiary.year_period ?? "").trim()).filter((year) => /^\d{4}$/.test(year)))].sort((a, b) => Number(a) - Number(b));
+  const yearColors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6"];
   const countsByYear = {};
   targetYears.forEach(yr => { countsByYear[yr] = 0; });
+  if (!targetYears.length) return _showNoData(el, "No period data");
 
   // Only count rows matching the active status mode (NEW default, or SPES BABY)
   beneficiaries.forEach(b => {
@@ -705,6 +787,7 @@ function _renderBeneficiariesByYear(beneficiaries) {
 function _renderEnrollmentByMonth(beneficiaries) {
   const el = document.getElementById("mini-trends");
   if (!el) return;
+  _xChart.trends?.destroy();
   el.innerHTML = "";
 
   const monthLabels = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];

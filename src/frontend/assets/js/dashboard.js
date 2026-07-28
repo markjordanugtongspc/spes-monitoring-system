@@ -15,7 +15,7 @@ import { fetchStaffPermissions, upsertStaffPermissions } from "../../../backend/
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initFlowbite } from "flowbite";
-import { initDashboardCharts, exportDashboardStats } from "./components/charts.js";
+import { initDashboardCharts, setDashboardPeriodFilter, exportDashboardStats } from "./components/charts.js";
 import { modals } from "./components/modals.js";
 import { initBeneficiaries } from "./components/beneficiaries.js";
 import { setupSortFiltration } from "./components/sort-filtration.js";
@@ -204,6 +204,8 @@ async function init(user) {
     try {
       const chartMetrics = await initDashboardCharts();
       updateDynamicBadges(chartMetrics?.totalImplementors);
+      _loadTimelineMetrics(chartMetrics?.beneficiaries || []);
+      initDashboardPeriodSelector(chartMetrics?.periods);
       flowDebugSuccess("Dashboard metrics loaded", {
         totalImplementors: chartMetrics?.totalImplementors ?? 0,
         implementorScope: "global",
@@ -214,7 +216,6 @@ async function init(user) {
       updateDynamicBadges();
     }
     _wireExportStatsButtons();
-    _loadTimelineMetrics();
     initQuickAccessCarousel();
     initQuickAccessPremiumInteractions();
     await loadRecentBeneficiaries();
@@ -231,7 +232,6 @@ async function init(user) {
 
   document.getElementById("sign-out-btn")?.addEventListener("click", signOut);
   initAutoYear();
-  initYearDropdown();
   initThemeToggle();
   
   // Apply saved global text size scale
@@ -446,55 +446,51 @@ function updateDynamicBadges(globalImplementorTotal = null) {
   }
 }
 
-async function _loadTimelineMetrics() {
+function _loadTimelineMetrics(beneficiaries = []) {
   const totalEl = document.getElementById("metric-total-enrolled");
   const avgEl = document.getElementById("metric-avg-monthly");
   const growthEl = document.getElementById("metric-growth");
-  
   if (!totalEl && !avgEl && !growthEl) return;
 
-  try {
-    const { supabase } = await import("../../../backend/api/supabase.js");
-    const { data, error } = await supabase.from("beneficiary").select("id, relationship, created_at");
-    
-    if (error) throw error;
-    
-    if (data && data.length > 0) {
-      const total = data.length;
-      const monthly = new Array(12).fill(0);
-      data.forEach(b => {
-        const d = b.created_at ? new Date(b.created_at) : null;
-        if (d && !isNaN(d)) monthly[d.getMonth()]++;
-      });
-      const activeMonths = monthly.filter(v => v > 0).length || 1;
-      const avg = Math.round(total / activeMonths);
+  const monthOrder = {
+    JANUARY: 0, FEBRUARY: 1, MARCH: 2, APRIL: 3, MAY: 4, JUNE: 5,
+    JULY: 6, AUGUST: 7, SEPTEMBER: 8, OCTOBER: 9, NOVEMBER: 10, DECEMBER: 11,
+  };
+  const setUnavailable = () => {
+    const empty = '<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>';
+    if (totalEl) totalEl.innerHTML = empty;
+    if (avgEl) avgEl.innerHTML = empty;
+    if (growthEl) growthEl.innerHTML = empty;
+  };
+  if (!Array.isArray(beneficiaries) || beneficiaries.length === 0) {
+    setUnavailable();
+    return;
+  }
 
-      if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-blue dark:text-spes-yellow">${total.toLocaleString()}</p>`;
-      if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-emerald-500">${avg.toLocaleString()}</p>`;
+  const periodCounts = new Map();
+  beneficiaries.forEach((beneficiary) => {
+    const year = String(beneficiary.year_period ?? "").trim();
+    const month = String(beneficiary.month_period ?? "").trim().toUpperCase();
+    if (!/^\d{4}$/.test(year) || monthOrder[month] === undefined) return;
+    const key = `${year}-${String(monthOrder[month] + 1).padStart(2, "0")}`;
+    periodCounts.set(key, (periodCounts.get(key) || 0) + 1);
+  });
 
-      // Real month-over-month growth: compare latest month vs previous month
-      const now = new Date();
-      const curMonthCount  = monthly[now.getMonth()];
-      const prevMonthIdx   = (now.getMonth() - 1 + 12) % 12;
-      const prevMonthCount = monthly[prevMonthIdx];
-      let growthStr = "N/A";
-      if (prevMonthCount > 0) {
-        const pct = Math.round(((curMonthCount - prevMonthCount) / prevMonthCount) * 100);
-        growthStr = `${pct >= 0 ? "+" : ""}${pct}%`;
-      } else if (curMonthCount > 0) {
-        growthStr = "+100%"; // brand new month with data
-      }
-      if (growthEl) growthEl.innerHTML = `<p class="text-lg font-black ${growthStr.startsWith("+") || growthStr === "N/A" ? "text-spes-blue dark:text-spes-yellow" : "text-rose-500"}">${growthStr}</p>`;
-    } else {
-      if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
-      if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
-      if (growthEl) growthEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
-    }
-  } catch (err) {
-    console.error("[SPES] Error loading timeline metrics:", err);
-    if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
-    if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
-    if (growthEl) growthEl.innerHTML = `<p class="text-lg font-black text-spes-black/50 dark:text-spes-white/50">N/A</p>`;
+  const total = beneficiaries.length;
+  const activePeriods = periodCounts.size;
+  const average = activePeriods > 0 ? Math.round(total / activePeriods) : null;
+  const orderedPeriods = [...periodCounts.entries()].sort(([left], [right]) => left.localeCompare(right));
+  const latest = orderedPeriods.at(-1)?.[1];
+  const previous = orderedPeriods.at(-2)?.[1];
+  const growth = previous > 0 ? Math.round(((latest - previous) / previous) * 100) : null;
+
+  if (totalEl) totalEl.innerHTML = `<p class="text-lg font-black text-spes-blue dark:text-spes-yellow">${total.toLocaleString()}</p>`;
+  if (avgEl) avgEl.innerHTML = `<p class="text-lg font-black text-emerald-500">${average == null ? "N/A" : average.toLocaleString()}</p>`;
+  if (growthEl) {
+    const value = growth == null ? "N/A" : `${growth >= 0 ? "+" : ""}${growth}%`;
+    const color = growth == null || growth >= 0 ? "text-spes-blue dark:text-spes-yellow" : "text-rose-500";
+    growthEl.innerHTML = `<p class="text-lg font-black ${color}">${value}</p>`;
+    growthEl.title = previous > 0 ? "Compared with the preceding recorded employment period" : "Growth requires two recorded employment periods";
   }
 }
 
@@ -1304,25 +1300,89 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
-function initYearDropdown() {
-  const btn  = document.getElementById("year-dropdown-btn");
-  const menu = document.getElementById("year-dropdown-menu");
-  const icon = document.getElementById("year-dropdown-icon");
-  if (!btn || !menu) return;
+function initDashboardPeriodSelector(periods = { years: [], months: [], monthsByYear: {} }) {
+  const allButton = document.getElementById("dashboard-period-all");
+  const yearButton = document.getElementById("dashboard-year-dropdown-btn");
+  const monthButton = document.getElementById("dashboard-month-dropdown-btn");
+  const clearButton = document.getElementById("dashboard-period-clear");
+  const yearMenu = document.getElementById("dashboard-year-dropdown-menu");
+  const monthMenu = document.getElementById("dashboard-month-dropdown-menu");
+  const yearOptions = document.getElementById("dashboard-year-options");
+  const monthOptions = document.getElementById("dashboard-month-options");
+  const yearLabel = document.getElementById("dashboard-selected-year");
+  const monthLabel = document.getElementById("dashboard-selected-month");
+  const yearIcon = document.getElementById("dashboard-year-dropdown-icon");
+  const monthIcon = document.getElementById("dashboard-month-dropdown-icon");
+  if (!allButton || !yearButton || !monthButton || !clearButton || !yearMenu || !monthMenu || !yearOptions || !monthOptions) return;
 
-  btn.addEventListener("click", e => {
-    e.stopPropagation();
-    const hidden = menu.classList.contains("hidden");
-    menu.classList.toggle("hidden", !hidden);
-    icon?.classList.toggle("rotate-180", hidden);
-  });
+  let state = { year: "all", month: "all" };
+  const buttonClass = "cursor-pointer block w-full rounded px-3 py-2 text-left text-[10px] font-bold text-white transition-colors hover:bg-white/10";
+  const closeMenus = () => {
+    yearMenu.classList.add("hidden");
+    monthMenu.classList.add("hidden");
+    yearButton.setAttribute("aria-expanded", "false");
+    monthButton.setAttribute("aria-expanded", "false");
+    yearIcon?.classList.remove("rotate-180");
+    monthIcon?.classList.remove("rotate-180");
+  };
+  const availableMonths = () => state.year === "all"
+    ? periods.months
+    : (periods.monthsByYear?.[state.year] || []);
+  const apply = () => {
+    const result = setDashboardPeriodFilter(state);
+    _loadTimelineMetrics(result.beneficiaries);
+    yearLabel.textContent = state.year === "all" ? "All Years" : state.year;
+    monthLabel.textContent = state.month === "all" ? "All Months" : state.month.charAt(0) + state.month.slice(1).toLowerCase();
+    const isAllTime = state.year === "all" && state.month === "all";
+    allButton.classList.toggle("bg-spes-white", isAllTime);
+    allButton.classList.toggle("text-spes-blue", isAllTime);
+    allButton.classList.toggle("text-white", !isAllTime);
+    clearButton.classList.toggle("hidden", isAllTime);
+    clearButton.classList.toggle("flex", !isAllTime);
+    renderOptions();
+    closeMenus();
+  };
+  const renderOptions = () => {
+    const yearChoices = ["all", ...(periods.years || [])];
+    yearOptions.innerHTML = yearChoices.map((year) => `<button type="button" data-dashboard-year="${year}" class="${buttonClass} ${state.year === year ? "bg-white/15 text-spes-yellow" : ""}">${year === "all" ? "All Years" : year}</button>`).join("");
+    const monthChoices = ["all", ...availableMonths()];
+    monthOptions.innerHTML = monthChoices.map((month) => `<button type="button" data-dashboard-month="${month}" class="${buttonClass} ${state.month === month ? "bg-white/15 text-spes-yellow" : ""}">${month === "all" ? "All Months" : month.charAt(0) + month.slice(1).toLowerCase()}</button>`).join("");
+    yearOptions.querySelectorAll("[data-dashboard-year]").forEach((button) => button.addEventListener("click", () => {
+      const selectedYear = button.dataset.dashboardYear || "all";
+      state.year = selectedYear !== "all" && state.year === selectedYear ? "all" : selectedYear;
+      state.month = "all";
+      apply();
+    }));
+    monthOptions.querySelectorAll("[data-dashboard-month]").forEach((button) => button.addEventListener("click", () => {
+      const selectedMonth = button.dataset.dashboardMonth || "all";
+      state.month = selectedMonth !== "all" && state.month === selectedMonth ? "all" : selectedMonth;
+      apply();
+    }));
+  };
 
-  document.addEventListener("click", e => {
-    if (!btn.contains(e.target) && !menu.contains(e.target)) {
-      menu.classList.add("hidden");
-      icon?.classList.remove("rotate-180");
-    }
+  const clearPeriodFilters = () => { state = { year: "all", month: "all" }; apply(); };
+  allButton.addEventListener("click", clearPeriodFilters);
+  clearButton.addEventListener("click", clearPeriodFilters);
+  yearButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = yearMenu.classList.contains("hidden");
+    closeMenus();
+    yearMenu.classList.toggle("hidden", !open);
+    yearButton.setAttribute("aria-expanded", String(open));
+    yearIcon?.classList.toggle("rotate-180", open);
   });
+  monthButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = monthMenu.classList.contains("hidden");
+    closeMenus();
+    monthMenu.classList.toggle("hidden", !open);
+    monthButton.setAttribute("aria-expanded", String(open));
+    monthIcon?.classList.toggle("rotate-180", open);
+  });
+  document.addEventListener("click", (event) => {
+    if (!document.getElementById("dashboard-period-selector")?.contains(event.target)) closeMenus();
+  });
+  renderOptions();
 }
 
 // ── Recent Beneficiaries Loader ─────────────────────────────────
@@ -1702,7 +1762,6 @@ function initGlobalSearch(user) {
   const overlay = document.getElementById("global-search-overlay");
   const form = document.getElementById("global-search-form");
   const input = document.getElementById("global-search-input");
-  const closeBtn = document.getElementById("btn-close-search");
   const clearBtn = document.getElementById("btn-clear-global-search");
   const resultsContainer = document.getElementById("global-search-results");
   const searchContainer = document.getElementById("global-search-container");
@@ -1766,8 +1825,6 @@ function initGlobalSearch(user) {
   searchButtons.forEach(btn => {
     if (btn) btn.addEventListener("click", openSearch);
   });
-
-  closeBtn?.addEventListener("click", closeSearch);
   
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) {
@@ -1807,6 +1864,7 @@ function initGlobalSearch(user) {
   async function performSearch(query, user) {
     const roleId = user.role_id;
     const officeId = user.office_id;
+    const canSearchGlobal = getOfficeAccessScope(user).canViewGlobalStats;
     try {
       resultsContainer.innerHTML = `
         <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -1838,7 +1896,7 @@ function initGlobalSearch(user) {
           education_level_id, educ_id,
           education_level:education_level_id(id, name, education_id),
           education:educ_id(id, name),
-          staffs!staff_id${roleId === 2 ? '!inner' : ''}(office_id, full_name, offices(name))
+          staffs!staff_id${!canSearchGlobal ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
 
@@ -1898,7 +1956,32 @@ function initGlobalSearch(user) {
       };
 
       // ── TOTAL / ALL ──
-      if (qNorm === "TOTAL" || qNorm === "ALL") {
+      // Composite period queries: e.g. "male total in july 2026".
+      // Each detected facet becomes an exact database predicate, so the output
+      // is a real aggregate of the matching beneficiary records.
+      const searchMonths = {
+        JAN: "JANUARY", JANUARY: "JANUARY", FEB: "FEBRUARY", FEBRUARY: "FEBRUARY",
+        MAR: "MARCH", MARCH: "MARCH", APR: "APRIL", APRIL: "APRIL", MAY: "MAY",
+        JUN: "JUNE", JUNE: "JUNE", JUL: "JULY", JULY: "JULY", AUG: "AUGUST", AUGUST: "AUGUST",
+        SEP: "SEPTEMBER", SEPT: "SEPTEMBER", SEPTEMBER: "SEPTEMBER", OCT: "OCTOBER", OCTOBER: "OCTOBER",
+        NOV: "NOVEMBER", NOVEMBER: "NOVEMBER", DEC: "DECEMBER", DECEMBER: "DECEMBER",
+      };
+      const requestedMonth = Object.entries(searchMonths).find(([term]) => new RegExp(`\\b${term}\\b`).test(qNorm))?.[1] || null;
+      const requestedYear = qNorm.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
+      const requestsMale = /\b(?:MALE|LALAKI)\b/.test(qNorm);
+      const requestsFemale = /\b(?:FEMALE|BABAE)\b/.test(qNorm);
+      const hasCompositePeriodQuery = Boolean(requestedMonth || requestedYear || requestsMale || requestsFemale);
+
+      if (hasCompositePeriodQuery) {
+        isKeyword = true;
+        staffSearchQuery = null;
+        if (requestsMale) benQuery = benQuery.eq("gender_id", 1);
+        else if (requestsFemale) benQuery = benQuery.eq("gender_id", 2);
+        if (requestedMonth) benQuery = benQuery.eq("month_period", requestedMonth);
+        if (requestedYear) benQuery = benQuery.eq("year_period", requestedYear);
+
+      // ── TOTAL / ALL ──
+      } else if (qNorm === "TOTAL" || qNorm === "ALL") {
         isKeyword = true;
 
       // ── GENDER ──
@@ -2094,7 +2177,7 @@ function initGlobalSearch(user) {
       // ── Execute Queries ──
       if (isKeyword) {
         if (benQuery) {
-          if (roleId === 2) benQuery = benQuery.eq("staffs.office_id", officeId);
+          if (!canSearchGlobal) benQuery = benQuery.eq("staffs.office_id", officeId);
           const { data, error } = await benQuery.limit(2000);
           if (error) throw error;
           beneficiaries = data || [];
@@ -2105,7 +2188,7 @@ function initGlobalSearch(user) {
           staffResults = data || [];
         }
       } else {
-        if (roleId === 2) {
+        if (!canSearchGlobal) {
           benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
         } else {
           if (officeIds.length > 0) {

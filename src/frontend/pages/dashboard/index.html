@@ -53,17 +53,15 @@
               <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
                   <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
               </div>
-              <input type="text" id="global-search-input" class="block w-full ps-10 pe-16 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold" placeholder="Search Spes, Total..." required autocomplete="off" />
-              <button type="button" id="btn-clear-global-search" class="group absolute inset-y-0 end-9 hidden cursor-pointer items-center text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500" aria-label="Clear search">
-                  <svg class="h-5 w-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
-                  </svg>
-                  <span class="pointer-events-none absolute bottom-full end-0 mb-1 whitespace-nowrap bg-red-600 px-2 py-1 text-[0.625rem] font-bold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Clear</span>
+              <input type="text" id="global-search-input" class="block w-full ps-10 pe-12 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold" placeholder="Search Spes, Total..." required autocomplete="off" />
+              <button type="button" id="btn-clear-global-search" class="group absolute inset-y-0 end-2 hidden w-8 cursor-pointer items-center justify-center text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-500" aria-label="Clear search">
+                  <svg class="h-5 w-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/></svg>
+                  <span role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 z-[80] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-red-600 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wider text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                    Clear
+                    <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-red-600"></span>
+                  </span>
               </button>
-              <button type="button" id="btn-close-search" class="absolute inset-y-0 end-3 flex items-center cursor-pointer group">
-                  <svg class="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-          </div>
+              </div>
           <button type="submit" class="inline-flex items-center text-white bg-spes-blue hover:bg-spes-blue/90 box-border border border-transparent shadow-lg font-black tracking-widest uppercase rounded-lg text-xs px-5 py-3.5 focus:outline-none transition-transform active:scale-95 cursor-pointer">
               <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2.5" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
               Search
@@ -82,7 +80,7 @@
   <!-- Main Content -->
   <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
     <!-- Top Enterprise Banner -->
-    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-8 lg:pb-24 shadow-lg">
+    <header class="relative overflow-visible bg-spes-blue dark:bg-spes-dark-primary p-6 pb-8 lg:pb-24 shadow-lg">
       <!-- Background Image Layer -->
       <div
         class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
@@ -110,41 +108,36 @@
               </svg>
               <span id="real-time-clock" class="tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
             </div>
+            <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
+            <div id="dashboard-period-selector" class="order-1 md:order-2 flex min-w-0 items-center justify-start gap-1 rounded-md p-1 ring-1 ring-white/30 text-[9px] font-bold sm:text-xs">
+              <button id="dashboard-period-all" type="button" class="cursor-pointer shrink-0 rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3">All Time</button>
 
-            <!-- Modernized Filters (Left side on mobile) -->
-            <div
-              class="order-1 md:order-2 inline-flex items-center justify-center rounded-md p-1 ring-1 ring-white/30 text-[9px] sm:text-xs gap-1">
-              <button
-                class="cursor-pointer rounded-sm bg-spes-white px-2 sm:px-4 py-1.5 font-bold text-spes-blue shadow-sm">All
-                Time</button>
-              <button
-                class="cursor-pointer px-2 sm:px-4 py-1.5 font-bold text-white hover:text-spes-yellow transition-colors">2026</button>
-
-              <!-- Compact Year Dropdown -->
-              <div class="relative">
-                <button id="year-dropdown-btn"
-                  class="cursor-pointer flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 font-bold text-white hover:text-spes-yellow transition-colors">
-                  2025
-                  <svg id="year-dropdown-icon" class="h-2 w-2 sm:h-3 sm:w-3 transition-transform duration-200"
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" />
-                  </svg>
+              <div class="relative min-w-0">
+                <button id="dashboard-year-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-1.5 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3">
+                  <span id="dashboard-selected-year" class="truncate">All Years</span>
+                  <svg id="dashboard-year-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
                 </button>
-                <div id="year-dropdown-menu"
-                  class="absolute right-0 top-full z-50 mt-2 hidden w-32 rounded-md border border-white/20 bg-spes-blue p-2 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
-                  <ul class="space-y-1">
-                    <li><a href="#"
-                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2025
-                        Archive</a></li>
-                    <li><a href="#"
-                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2024
-                        Records</a></li>
-                    <li><a href="#"
-                        class="cursor-pointer block rounded px-3 py-1.5 text-[10px] font-bold text-white hover:bg-white/10">2023
-                        History</a></li>
-                  </ul>
+                <div id="dashboard-year-dropdown-menu" class="absolute left-0 top-full z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  <div id="dashboard-year-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>
+
+              <div class="relative min-w-0">
+                <button id="dashboard-month-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-1.5 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3">
+                  <span id="dashboard-selected-month" class="truncate">All Months</span>
+                  <svg id="dashboard-month-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
+                </button>
+                <div id="dashboard-month-dropdown-menu" class="absolute right-0 top-full z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  <div id="dashboard-month-options" class="max-h-56 overflow-y-auto"></div>
+                </div>
+              </div>
+              <button id="dashboard-period-clear" type="button" aria-label="Clear period filters" class="group relative hidden h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/10 hover:text-spes-yellow focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-spes-yellow">
+                <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12" /></svg>
+                <span role="tooltip" class="pointer-events-none absolute top-full left-1/2 z-[80] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white opacity-0 shadow-xl ring-1 ring-white/10 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-spes-dark-primary">
+                  Clear filters
+                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-spes-blue dark:border-b-spes-dark-primary"></span>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -216,7 +209,7 @@
 
         <!-- Card 3: Added SPES per Year -->
         <div class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col">
-          <div class="mb-4 flex items-start justify-between border-b border-gray-100 pb-4 dark:border-white/5">
+          <div class="mb-4 flex items-start justify-between">
             <div class="flex flex-col items-start gap-3">
               <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Added SPES per Year</h3>
               <!-- NEW / SPES BABY toggle (default NEW) -->
@@ -232,7 +225,7 @@
             </div>
           </div>
 
-          <div id="column-chart" class="flex-1 min-h-[160px]">
+          <div id="column-chart" class="flex-1 min-h-[160px] border-t border-gray-100 pt-4 dark:border-white/5">
             <!-- Flowbite Widget Skeleton (Chart) -->
             <div role="status" class="w-full p-4 animate-pulse bg-transparent">
               <div class="flex items-baseline space-x-4 h-24 pt-2">
