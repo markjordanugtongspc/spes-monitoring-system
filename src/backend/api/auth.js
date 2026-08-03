@@ -227,7 +227,8 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         offices ( id, name, location ),
         beneficiary!beneficiary_id(full_name, return_status)
       `)
-      .order("id", { ascending: true });
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: false });
 
     if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);

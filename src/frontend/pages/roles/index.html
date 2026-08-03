@@ -60,11 +60,11 @@
           <div class="overflow-visible">
             <!-- Table Header Bar (Premium Gradient) -->
             <div
-              class="relative z-50 flex flex-col items-start justify-between gap-4 bg-gradient-to-r from-spes-blue to-[#002878] p-4 sm:flex-row sm:items-center border-b border-white/10 rounded-t-xl">
+              class="relative z-50 flex flex-col items-stretch justify-between gap-4 bg-gradient-to-r from-spes-blue to-[#002878] p-4 sm:flex-row sm:items-center border-b border-white/10 rounded-t-xl">
               <!-- Action Dropdown (admin only) -->
-              <div data-permission="users:manage" class="hidden">
-                <button id="staff-action-dropdown-btn" data-dropdown-toggle="staff-action-dropdown"
-                  class="cursor-pointer inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
+              <div data-permission="users:manage" class="relative order-2 hidden w-full sm:order-none sm:w-48">
+                <button id="staff-action-dropdown-btn" data-dropdown-placement="bottom"
+                  class="hidden inline-flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all sm:w-full"
                   type="button">
                   Action
                   <svg class="ms-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,20 +72,20 @@
                   </svg>
                 </button>
                 <div id="staff-action-dropdown"
-                  class="z-50 hidden w-64 sm:w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
-                  <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
+                  class="fixed z-[110] hidden w-48 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  <ul class="p-2 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
                     <li><button id="btn-bulk-grant" type="button" disabled
-                        class="inline-flex w-full cursor-not-allowed items-center rounded-md p-2 text-left opacity-40 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue disabled:pointer-events-none dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
+                        class="inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-md p-2 text-center opacity-40 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue disabled:pointer-events-none dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Grant
                         All (Selected)</button></li>
                     <li><button id="btn-bulk-revoke" type="button" disabled
-                        class="inline-flex w-full cursor-not-allowed items-center rounded-md p-2 text-left text-spes-red/80 opacity-40 transition-colors hover:bg-spes-red/8 hover:text-spes-red disabled:pointer-events-none">Revoke
+                        class="inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-md p-2 text-center text-spes-red/80 opacity-40 transition-colors hover:bg-spes-red/8 hover:text-spes-red disabled:pointer-events-none">Revoke
                         All (Selected)</button></li>
                   </ul>
                 </div>
               </div>
 
               <!-- Search -->
-              <div class="relative w-full sm:max-w-xs">
+              <div class="order-1 relative w-full sm:order-none sm:max-w-xs">
                 <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
                   <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-width="2"
@@ -214,15 +214,13 @@
                   class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
                   class="font-semibold text-spes-black dark:text-spes-white">0</span>
               </span>
-              <ul id="pagination-controls" class="flex w-full sm:w-auto -space-x-px text-sm justify-between sm:justify-start items-center">
-                <li class="flex-1 sm:flex-initial"><button id="prev-page"
-                    class="cursor-pointer w-full text-center rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2.5 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
+              <ul id="pagination-controls" class="grid w-full grid-cols-2 items-start justify-center gap-2 text-sm sm:flex sm:w-auto sm:-space-x-px sm:gap-0">
+                <li class="w-full sm:w-auto"><button id="prev-page"
+                    class="cursor-pointer w-full whitespace-nowrap text-center rounded-lg border sm:rounded-s-lg border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-bold text-rose-700 shadow-sm transition-colors hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-40 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">Previous</button>
                 </li>
-                <li class="flex-none"><button
-                    class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-4 py-2.5 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
-                </li>
-                <li class="flex-1 sm:flex-initial"><button id="next-page"
-                    class="cursor-pointer w-full text-center rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2.5 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
+                <li id="page-indicators-container" class="order-3 col-span-2 flex w-full flex-wrap justify-center -space-x-px sm:order-none sm:col-span-1 sm:w-auto"></li>
+                <li class="w-full sm:w-auto"><button id="next-page"
+                    class="cursor-pointer w-full whitespace-nowrap text-center rounded-lg border sm:rounded-e-lg border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 disabled:pointer-events-none disabled:opacity-40 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">Next</button>
                 </li>
               </ul>
             </nav>

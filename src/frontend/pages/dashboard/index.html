@@ -91,25 +91,25 @@
       </div>
 
       <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
-        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div class="order-2 min-w-0 sm:order-1">
             <h1 class="font-montserrat text-3xl font-black text-spes-white">Dashboard</h1>
             <p class="mt-1 text-sm text-spes-white/70">Welcome back, <span id="header-user-name"
                 class="font-bold">Admin</span></p>
           </div>
 
-          <div class="grid grid-cols-2 items-center gap-3 md:flex md:flex-wrap">
-            <!-- Real-time Clock (Right side on mobile) -->
+          <div class="order-1 flex w-full flex-col items-center gap-2 sm:order-2 sm:w-auto sm:items-end">
+            <!-- Real-time Clock (above the period selector on mobile) -->
             <div
-              class="order-2 md:order-1 flex items-center justify-center gap-1 sm:gap-2 rounded px-2 md:px-4 py-2.5 text-[9px] sm:text-xs font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 text-center">
+              class="flex w-full max-w-md items-center justify-center gap-2 rounded px-3 py-2.5 text-[9px] font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 sm:w-auto sm:min-w-72 sm:text-xs">
               <svg class="h-3 w-3 sm:h-4 sm:w-4 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              <span id="real-time-clock" class="tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
+              <span id="real-time-clock" class="whitespace-nowrap tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
             </div>
             <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
-            <div id="dashboard-period-selector" class="order-1 md:order-2 flex min-w-0 items-center justify-start gap-1 rounded-md p-1 ring-1 ring-white/30 text-[9px] font-bold sm:text-xs">
+            <div id="dashboard-period-selector" class="relative flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md p-1 ring-1 ring-white/30 text-[9px] font-bold sm:w-auto sm:min-w-72 sm:text-xs">
               <button id="dashboard-period-all" type="button" class="cursor-pointer shrink-0 rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3">All Time</button>
 
               <div class="relative min-w-0">

@@ -17,9 +17,11 @@ export function setupSortFiltration({
   defaultFilters = {},
   getDefaultFilters,
   onRender,
+  initialSort = "none",
+  sortComparator,
   onSortChange
 }) {
-  let activeSort = "none";
+  let activeSort = initialSort;
   // Merge caller-supplied defaults (e.g. { archiveStatus: "active" } for implementors,
   // or { status: "active" } for beneficiaries) so archived rows are hidden by default.
   const resolveDefaultFilters = () => ({
@@ -67,6 +69,38 @@ export function setupSortFiltration({
   tabSort?.addEventListener("click",   (e) => { e.stopPropagation(); showSection("sort"); });
   tabFilter?.addEventListener("click", (e) => { e.stopPropagation(); showSection("filter"); });
 
+  const positionFloatingMenu = (menu, trigger) => {
+    if (!menu || !trigger) return;
+    const viewportPadding = 8;
+    const placement = trigger.dataset.dropdownPlacement || "bottom";
+    const [side, align = "start"] = placement.split("-");
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const menuWidth = Math.min(menuRect.width, window.innerWidth - (viewportPadding * 2));
+    const menuHeight = Math.min(menuRect.height, window.innerHeight - (viewportPadding * 2));
+    let left = triggerRect.left;
+    let top = triggerRect.bottom + viewportPadding;
+
+    if (side === "top") top = triggerRect.top - menuHeight - viewportPadding;
+    if (side === "left") {
+      left = triggerRect.left - menuWidth - viewportPadding;
+      top = align === "end" ? triggerRect.bottom - menuHeight : triggerRect.top;
+    }
+    if (side === "right") {
+      left = triggerRect.right + viewportPadding;
+      top = align === "end" ? triggerRect.bottom - menuHeight : triggerRect.top;
+    }
+    if (side === "bottom" && align === "end") left = triggerRect.right - menuWidth;
+
+    Object.assign(menu.style, {
+      position: "fixed",
+      left: `${Math.round(Math.min(Math.max(viewportPadding, left), window.innerWidth - menuWidth - viewportPadding))}px`,
+      top: `${Math.round(Math.min(Math.max(viewportPadding, top), window.innerHeight - menuHeight - viewportPadding))}px`,
+      right: "auto",
+      bottom: "auto",
+      transform: "none",
+    });
+  };
   if (panel) {
     // Shared-panel mode: both triggers open the same panel, pre-selecting a tab.
     if (btnSort) {
@@ -74,14 +108,20 @@ export function setupSortFiltration({
         e.stopPropagation();
         const willOpen = panel.classList.contains("hidden");
         panel.classList.toggle("hidden", !willOpen);
-        if (willOpen) showSection("sort");
+        if (willOpen) {
+          showSection("sort");
+          positionFloatingMenu(panel, btnSort);
+        }
       });
     }
     btnFilter.addEventListener("click", (e) => {
       e.stopPropagation();
       const willOpen = panel.classList.contains("hidden");
       panel.classList.toggle("hidden", !willOpen);
-      if (willOpen) showSection("filter");
+      if (willOpen) {
+        showSection("filter");
+        positionFloatingMenu(panel, btnFilter);
+      }
     });
     panel.addEventListener("click", (e) => e.stopPropagation());
     document.addEventListener("click", (e) => {
@@ -94,22 +134,36 @@ export function setupSortFiltration({
     if (btnSort && dropdownSort) {
       btnSort.addEventListener("click", (e) => {
         e.stopPropagation();
-        dropdownSort.classList.toggle("hidden");
+        const willOpen = dropdownSort.classList.contains("hidden");
+        dropdownSort.classList.toggle("hidden", !willOpen);
         dropdownFilter.classList.add("hidden");
+        if (willOpen) positionFloatingMenu(dropdownSort, btnSort);
       });
     }
     btnFilter.addEventListener("click", (e) => {
       e.stopPropagation();
-      dropdownFilter.classList.toggle("hidden");
+      const willOpen = dropdownFilter.classList.contains("hidden");
+      dropdownFilter.classList.toggle("hidden", !willOpen);
       dropdownSort.classList.add("hidden");
+      if (willOpen) positionFloatingMenu(dropdownFilter, btnFilter);
     });
     if (dropdownSort) dropdownSort.addEventListener("click", (e) => e.stopPropagation());
     dropdownFilter.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("click", (event) => {
+      const insideStaffDropdown = [btnSort, dropdownSort, btnFilter, dropdownFilter].some((element) => element?.contains(event.target));
+      if (!insideStaffDropdown) {
+        dropdownSort?.classList.add("hidden");
+        dropdownFilter.classList.add("hidden");
+      }
+    });
   }
 
   // Setup Sort Logic
   if (dropdownSort) {
     const sortOptions = dropdownSort.querySelectorAll("[data-sort-val]");
+    if (initialSort !== "none") {
+      dropdownSort.querySelector(`[data-sort-val="${initialSort}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    }
     sortOptions.forEach(opt => {
       opt.addEventListener("click", () => {
         activeSort = opt.getAttribute("data-sort-val");
@@ -200,7 +254,7 @@ export function setupSortFiltration({
   clearAllButton?.addEventListener("click", (e) => {
     e.stopPropagation();
     activeFilters = resolveDefaultFilters();
-    activeSort = "none";
+    activeSort = initialSort;
     dropdownFilter?.querySelectorAll("[data-filter-key]").forEach((option) => option.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
     Object.keys(activeFilters).forEach((key) => {
       const value = activeFilters[key];
@@ -210,10 +264,10 @@ export function setupSortFiltration({
       if (!activeFilters[option.getAttribute("data-filter-key")]) option.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
     });
     dropdownSort?.querySelectorAll("[data-sort-val]").forEach((option) => option.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
-    dropdownSort?.querySelector(`[data-sort-val="none"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+    dropdownSort?.querySelector(`[data-sort-val="${initialSort}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
     if (searchInput) searchInput.value = "";
     syncSearchClearVisibility();
-    onSortChange?.("none");
+    onSortChange?.(initialSort);
     applySortAndFilter();
   });
 
@@ -332,9 +386,9 @@ export function setupSortFiltration({
         return (Number(b.id) || 0) - (Number(a.id) || 0);
       });
     } else if (activeSort === "name-asc") {
-      processed.sort((a, b) => (a.name || a.full_name || "").localeCompare(b.name || b.full_name || ""));
+      processed.sort((a, b) => sortComparator ? sortComparator(a, b, activeSort) : (a.name || a.full_name || "").localeCompare(b.name || b.full_name || ""));
     } else if (activeSort === "name-desc") {
-      processed.sort((a, b) => (b.name || b.full_name || "").localeCompare(a.name || a.full_name || ""));
+      processed.sort((a, b) => sortComparator ? sortComparator(a, b, activeSort) : (b.name || b.full_name || "").localeCompare(a.name || a.full_name || ""));
     } else if (activeSort === "id-asc") {
       processed.sort((a, b) => (a.id || 0) - (b.id || 0));
     } else if (activeSort === "amount-desc") {
@@ -361,7 +415,7 @@ export function setupSortFiltration({
     },
     resetFilters() {
       activeFilters = resolveDefaultFilters();
-      activeSort = "none";
+      activeSort = initialSort;
       
       // Clear visual highlights in filter/sort dropdowns
       if (dropdownFilter) {
@@ -374,10 +428,10 @@ export function setupSortFiltration({
         });
       }
       
-      onSortChange?.("none");
+      onSortChange?.(initialSort);
       if (dropdownSort) {
         dropdownSort.querySelectorAll("[data-sort-val]").forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
-        dropdownSort.querySelector('[data-sort-val="none"]')?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+        dropdownSort.querySelector(`[data-sort-val="${initialSort}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
       }
       
       // Clear search input

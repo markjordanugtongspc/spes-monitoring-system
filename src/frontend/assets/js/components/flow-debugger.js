@@ -6,7 +6,7 @@
  * flows are being diagnosed. Set it back to false when debugging is complete.
  */
 const DEFAULT_FLOW_DEBUG_ENABLED = false;
-const TEMPORARY_FLOW_DEBUG_ENABLED = false;
+const TEMPORARY_FLOW_DEBUG_ENABLED = true;
 const STORAGE_KEY = "spes_flow_debug";
 
 let initialized = false;

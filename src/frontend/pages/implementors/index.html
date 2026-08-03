@@ -42,7 +42,7 @@
           </div>
           <div class="flex flex-wrap items-center gap-3">
             <button id="btn-add-implementor" data-permission="users:create"
-              class="hidden cursor-pointer inline-flex items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
+              class="hidden w-full min-w-52 cursor-pointer inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 sm:w-auto text-[11px] font-black uppercase tracking-widest text-white shadow-lg transition-all hover:bg-emerald-600 hover:scale-[1.02] active:scale-95">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" />
               </svg>
@@ -63,19 +63,19 @@
           <div class="overflow-visible">
             <!-- Table Header Bar (Premium Gradient) -->
             <div
-              class="flex flex-col gap-3 bg-gradient-to-r from-spes-blue to-[#002878] p-4 border-b border-white/10 rounded-t-xl overflow-visible sm:flex-row sm:items-center sm:justify-between">
+              class="relative flex flex-col gap-3 bg-gradient-to-r from-spes-blue to-[#002878] p-4 border-b border-white/10 rounded-t-xl overflow-visible sm:flex-row sm:items-center sm:justify-between">
               <!-- Action Dropdown (admin only) -->
-              <div data-permission="users:delete" class="hidden">
-                <button id="staff-action-dropdown-btn" data-dropdown-toggle="staff-action-dropdown"
-                  class="cursor-pointer inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
+              <div data-permission="users:delete" class="relative order-2 hidden w-full sm:order-none sm:w-auto">
+                <button id="staff-action-dropdown-btn" data-dropdown-placement="bottom"
+                  class="hidden flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg sm:w-auto sm:flex-row sm:gap-0 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
                   type="button">
                   Action
-                  <svg class="ms-1.5 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg class="ms-0 h-4 w-4 text-white sm:ms-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
                   </svg>
                 </button>
                 <div id="staff-action-dropdown"
-                  class="z-10 hidden w-44 rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
+                  class="fixed z-[110] hidden w-[min(14rem,calc(100vw-1rem))] rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
                   <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
                     <li><button id="btn-approve-selected-impl"
                         class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Approve Selected</button></li>
@@ -89,10 +89,10 @@
               </div>
 
               <!-- Controls: Sort + Filter (left) | Search (right, grows) -->
-              <div class="flex items-center gap-2 overflow-visible relative z-30">
+              <div class="order-1 flex w-full min-w-0 items-center gap-2 overflow-visible relative z-30 sm:order-none sm:w-auto">
                 <!-- Sort Dropdown Trigger -->
                 <div class="relative shrink-0">
-                  <button id="btn-sort-staff"
+                  <button id="btn-sort-staff" data-dropdown-placement="bottom-end"
                     class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
                     title="Sort">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -101,7 +101,7 @@
                     </svg>
                   </button>
                   <div id="dropdown-sort-staff"
-                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-1.5 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
+                    class="fixed z-[110] hidden w-48 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-y-auto rounded-lg border border-spes-blue/15 bg-spes-white p-1.5 text-xs font-semibold text-spes-black/80 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
                     <button data-sort-val="none"
                       class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 text-left text-spes-blue font-bold">Default</button>
                     <button data-sort-val="name-asc"
@@ -117,8 +117,8 @@
                 </div>
 
                 <!-- Filter Dropdown Trigger -->
-                <div class="relative shrink-0">
-                  <button id="btn-filter-staff"
+                <div class="order-3 relative shrink-0 sm:order-2">
+                  <button id="btn-filter-staff" data-dropdown-placement="bottom-start"
                     class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
                     title="Filter">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,7 +127,7 @@
                     </svg>
                   </button>
                   <div id="dropdown-filter-staff"
-                    class="absolute left-0 top-full z-[100] mt-2 w-48 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
+                    class="absolute left-1/2 top-full z-[100] mt-2 w-[min(14rem,calc(100vw-1rem))] -translate-x-1/2 sm:left-0 sm:w-48 sm:translate-x-0 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary max-h-[calc(100vh-1rem)] overflow-y-auto text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
                     <span
                       class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Role</span>
                     <button data-filter-key="role" data-filter-val="all"
@@ -339,15 +339,13 @@
                   class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
                   class="font-semibold text-spes-black dark:text-spes-white">0</span>
               </span>
-              <ul id="pagination-controls" class="flex -space-x-px text-sm">
-                <li><button id="prev-page"
-                    class="cursor-pointer rounded-s-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Previous</button>
+              <ul id="pagination-controls" class="grid w-full grid-cols-2 items-start justify-center gap-2 text-sm sm:flex sm:w-auto sm:-space-x-px sm:gap-0">
+                <li class="w-full sm:w-auto"><button id="prev-page"
+                    class="cursor-pointer w-full whitespace-nowrap rounded-lg border sm:rounded-s-lg border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 shadow-sm transition-colors hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-40 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">Previous</button>
                 </li>
-                <li><button
-                    class="cursor-pointer border border-spes-blue/15 bg-spes-blue/8 px-3 py-2 text-sm font-medium text-spes-blue dark:border-spes-white/10 dark:bg-spes-white/10 dark:text-spes-yellow">1</button>
-                </li>
-                <li><button id="next-page"
-                    class="cursor-pointer rounded-e-lg border border-spes-blue/15 bg-spes-white px-3 py-2 text-sm font-medium text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/10 dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Next</button>
+                <li id="page-indicators-container" class="order-3 col-span-2 flex w-full flex-wrap justify-center -space-x-px sm:order-none sm:col-span-1 sm:w-auto"></li>
+                <li class="w-full sm:w-auto"><button id="next-page"
+                    class="cursor-pointer w-full whitespace-nowrap rounded-lg border sm:rounded-e-lg border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 disabled:pointer-events-none disabled:opacity-40 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">Next</button>
                 </li>
               </ul>
             </nav>
@@ -734,13 +732,13 @@
 
     <!-- Sticky Footer -->
     <div
-      class="shrink-0 flex items-center justify-end gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+      class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 sm:flex sm:items-center sm:justify-end dark:border-spes-white/10 dark:bg-spes-dark-secondary">
       <button type="button" id="btn-cancel-add-impl"
-        class="cursor-pointer rounded-lg border border-spes-blue/20 px-5 py-2.5 text-sm font-semibold text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-white transition">
+        class="cursor-pointer w-full rounded-lg border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-700 dark:border-red-400/30 dark:text-red-300 dark:hover:bg-red-400/10 dark:hover:text-red-200 sm:w-auto">
         Cancel
       </button>
       <button type="submit" form="form-add-implementor" id="btn-submit-add-impl"
-        class="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-spes-blue px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-spes-blue/90 active:scale-95 disabled:opacity-60 disabled:pointer-events-none transition dark:bg-spes-yellow dark:text-spes-dark-secondary dark:hover:bg-spes-yellow/90">
+        class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-lg bg-spes-blue px-6 py-2.5 text-sm font-bold text-white shadow transition hover:bg-spes-blue/90 active:scale-95 disabled:pointer-events-none disabled:opacity-60 dark:bg-spes-yellow dark:text-spes-dark-secondary dark:hover:bg-spes-yellow/90 sm:w-auto">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
         </svg>

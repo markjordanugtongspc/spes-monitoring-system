@@ -16,7 +16,7 @@ import {
   bulkTransferBeneficiaries,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
-import { fetchOffices } from "../../../../backend/api/staff.js";
+import { fetchOffices, fetchGlobalStaffMetricRoster } from "../../../../backend/api/staff.js";
 import { getSession } from "../rbac/guard.js";
 import { getOfficeAccessScope } from "../rbac/scope.js";
 import { supabase } from "../../../../backend/api/supabase.js";
@@ -272,7 +272,7 @@ function initAnimatedBadgePanel(config) {
     const allBadge = document.createElement("button");
     allBadge.type = "button";
     allBadge.className =
-      "anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 " +
+      "anim-badge snap-start cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 " +
       "bg-spes-yellow text-spes-blue border-spes-yellow/70 ring-2 ring-spes-yellow/60 ring-offset-1";
     allBadge.dataset.badgeId = "all";
     allBadge.dataset.label   = "all";
@@ -285,7 +285,7 @@ function initAnimatedBadgePanel(config) {
       const badge = document.createElement("button");
       badge.type  = "button";
       badge.className =
-        `anim-badge cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 ` +
+        `anim-badge snap-start cursor-pointer shrink-0 inline-flex items-center gap-1.5 rounded border px-2.5 py-1 text-[0.5625rem] font-black uppercase tracking-wider transition-all duration-200 opacity-0 scale-75 ` +
         `${pal.bg} ${pal.text} ${pal.border} hover:brightness-125 hover:scale-105`;
       const displayLabel = config.getLabel(item);
       const searchLabel = config.getSearchLabel?.(item) || displayLabel;
@@ -367,6 +367,9 @@ function initAnimatedBadgePanel(config) {
     e.stopPropagation();
     panelOpen ? closePanel() : openPanel();
   });
+  document.addEventListener("click", (event) => {
+    if (panelOpen && !panel.contains(event.target)) closePanel();
+  });
 
 
   return {
@@ -437,7 +440,7 @@ function initBatchSortPanel(onFilter) {
     { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70" },
   ];
 
-  const COLLAPSE_IDS = ["sortfilter-wrap", "staff-search-wrap"];
+  const COLLAPSE_IDS = [];
 
   const inner = initAnimatedBadgePanel({
     panelId:       "sort-batch-panel",
@@ -456,8 +459,8 @@ function initBatchSortPanel(onFilter) {
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
     resetFilterOnClose: false,
-    onOpen:        () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.add("hidden")),
-    onClose:       () => COLLAPSE_IDS.forEach(id => document.getElementById(id)?.classList.remove("hidden")),
+    onOpen:        () => {},
+    onClose:       () => {},
   });
 
   addDragScroll(document.getElementById("batch-badges-list"));
@@ -485,6 +488,75 @@ export function initBeneficiaries() {
   let currentOfficeId = null;
   let currentStaffIdView = null;
   let allOffices = [];
+  let globalImplementorMetric = null;
+
+  function getActiveBeneficiaryRecords(records = []) {
+    return (records || []).filter((beneficiary) => !beneficiary.archived_at);
+  }
+
+  function renderOverallSpesSummary(records = [], { isGlobal = false, implementorCount = null } = {}) {
+    const summaryShell = document.getElementById("global-spes-total-summary");
+    const summaryContent = document.getElementById("overall-spes-total-summary");
+    if (!summaryShell || !summaryContent) return;
+
+    const activeRecords = getActiveBeneficiaryRecords(records);
+    const totalNew = activeRecords.filter((beneficiary) =>
+      String(beneficiary.return_status || "").trim().toUpperCase() === "NEW"
+    ).length;
+    const totalSpesBaby = activeRecords.filter((beneficiary) =>
+      String(beneficiary.return_status || "").trim().toUpperCase() === "SPES BABY"
+    ).length;
+    const formatCount = (count) => new Intl.NumberFormat("en-US").format(count);
+    const scopeLabel = isGlobal ? "Global Total of SPES" : "Total of SPES";
+    const implementorsMarkup = isGlobal && implementorCount != null
+      ? `
+          <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
+          <p class="text-[0.625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">
+            Implementors <span class="ml-1 tabular-nums">${formatCount(implementorCount)}</span>
+          </p>`
+      : "";
+
+    summaryContent.innerHTML = `
+      <div class="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border border-slate-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-white/10 dark:bg-white/5">
+        <p class="font-montserrat text-xs font-black uppercase tracking-wider text-slate-700 dark:text-white/90">
+          ${scopeLabel}: <span class="ml-1 text-base tabular-nums text-slate-950 dark:text-white">${formatCount(activeRecords.length)}</span>
+        </p>
+        <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
+        <p class="text-[0.625rem] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+          New <span class="ml-1 tabular-nums">${formatCount(totalNew)}</span>
+        </p>
+        ${implementorsMarkup}
+        <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
+        <p class="text-[0.625rem] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
+          SPES Baby <span class="ml-1 tabular-nums">${formatCount(totalSpesBaby)}</span>
+        </p>
+      </div>
+    `;
+    summaryShell.classList.remove("hidden");
+  }
+
+  async function refreshGlobalSpesSummary(records = null) {
+    const beneficiaryResult = records
+      ? { data: records }
+      : await fetchBeneficiaries({ forceRefresh: false });
+    const staffResult = await fetchGlobalStaffMetricRoster();
+    globalImplementorMetric = Array.isArray(staffResult.data) ? staffResult.data.length : 0;
+
+    if (beneficiaryResult.error) {
+      flowDebugError("Global summary failed to load beneficiaries", beneficiaryResult.error);
+      return;
+    }
+    renderOverallSpesSummary(beneficiaryResult.data || [], {
+      isGlobal: true,
+      implementorCount: globalImplementorMetric,
+    });
+    flowDebugSuccess("Global beneficiary summary rendered", {
+      beneficiaryCount: getActiveBeneficiaryRecords(beneficiaryResult.data || []).length,
+      implementorCount: globalImplementorMetric,
+      adminExcluded: true,
+    });
+  }
+
 
   const loadOfficerOffice = async () => {
     if (isAdmin) {
@@ -1138,6 +1210,11 @@ export function initBeneficiaries() {
       : data;
 
     allBeneficiaries = filteredData;
+    if (currentOfficeId === "ALL") {
+      await refreshGlobalSpesSummary(filteredData);
+    } else {
+      renderOverallSpesSummary(filteredData);
+    }
     currentPage = 1;
 
     updateDynamicFilterDropdown(filteredData);
@@ -1366,6 +1443,7 @@ export function initBeneficiaries() {
       }
     }
     setupSortFilter(activeStaffs);
+    await refreshGlobalSpesSummary();
   }
 
   // Drawer DOM
@@ -1851,10 +1929,6 @@ export function initBeneficiaries() {
 
   async function renderBatchCards() {
     const kanbanWrap = document.getElementById("batches-kanban-wrapper");
-    const globalTotalSummary = document.getElementById("global-spes-total-summary");
-    if (!kanbanWrap) return;
-    const shouldShowGlobalTotal = isAdmin && currentOfficeId === "ALL";
-    globalTotalSummary?.classList.toggle("hidden", !shouldShowGlobalTotal);
     kanbanWrap.innerHTML = "";
     kanbanWrap.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 pb-2 select-none items-start";
 
@@ -1886,9 +1960,10 @@ export function initBeneficiaries() {
     { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70" },
   ];
 
-    const BATCH_CAPACITY_TARGET = 250;
+    const getBatchCapacity = (batchNumber) => [1, 2, 3].includes(Number(batchNumber)) ? 2000 : 350;
 
     const createCard = (title, items, colId, pal, isUnassigned = false, batchNumber = "", batchName = "") => {
+      const capacityTarget = getBatchCapacity(batchNumber);
       const totalCount = items.length;
       const newCount = items.filter(item =>
         String(item.return_status || "").trim().toUpperCase() === "NEW"
@@ -1896,7 +1971,7 @@ export function initBeneficiaries() {
       const spesBabyCount = items.filter(item =>
         String(item.return_status || "").trim().toUpperCase() === "SPES BABY"
       ).length;
-      const percentage = Math.min(100, Math.round((totalCount / BATCH_CAPACITY_TARGET) * 100));
+      const percentage = Math.min(100, Math.round((totalCount / capacityTarget) * 100));
       let progColor = "bg-emerald-500";
       if (percentage > 33 && percentage <= 66) progColor = "bg-orange-500";
       if (percentage > 66) progColor = "bg-red-500";
@@ -1914,7 +1989,7 @@ export function initBeneficiaries() {
             <div class="flex items-start justify-between">
               <div class="space-y-1">
                 <h3 class="font-montserrat font-black text-base uppercase tracking-wider ${pal.text}">${title}</h3>
-                <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount} of ${BATCH_CAPACITY_TARGET} beneficiaries</p>
+                <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount.toLocaleString()} of ${capacityTarget.toLocaleString()} beneficiaries</p>
               </div>
             ${canManageCurrentOffice() ? `<button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-white/60 shadow-inner transition-all hover:scale-110 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spes-blue active:scale-95 dark:bg-black/20 dark:hover:bg-black/40 dark:focus-visible:outline-spes-yellow pointer-events-auto"
               data-batch-id="${escHtml(String(colId))}" data-batch-number="${escHtml(String(batchNumber || ""))}" data-batch-name="${escHtml(String(batchName || ""))}"
@@ -1944,7 +2019,7 @@ export function initBeneficiaries() {
             </div>
             <div class="flex justify-between items-center text-[0.625rem] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
               <span>Batch capacity</span>
-              <span>${percentage}% of ${BATCH_CAPACITY_TARGET}</span>
+              <span>${percentage}% of ${capacityTarget.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -1963,37 +2038,14 @@ export function initBeneficiaries() {
 
     kanbanWrap.innerHTML = cardsHtml;
 
-    if (shouldShowGlobalTotal && globalTotalSummary) {
-      const totalSpes = allBeneficiaries.length;
-      const totalNew = allBeneficiaries.filter((beneficiary) =>
-        String(beneficiary.return_status || "").trim().toUpperCase() === "NEW"
-      ).length;
-      const totalSpesBaby = allBeneficiaries.filter((beneficiary) =>
-        String(beneficiary.return_status || "").trim().toUpperCase() === "SPES BABY"
-      ).length;
-
-      const formatCount = (count) => new Intl.NumberFormat("en-US").format(count);
-      const formattedTotal = formatCount(totalSpes);
-      const formattedNew = formatCount(totalNew);
-      const formattedSpesBaby = formatCount(totalSpesBaby);
-
-      globalTotalSummary.innerHTML = `
-        <div class="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border border-slate-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-white/10 dark:bg-white/5">
-          <p class="font-montserrat text-xs font-black uppercase tracking-wider text-slate-700 dark:text-white/90">
-            Total of SPES: <span class="ml-1 text-base tabular-nums text-slate-950 dark:text-white">${formattedTotal}</span>
-          </p>
-          <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
-          <p class="text-[0.625rem] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-            New <span class="ml-1 tabular-nums">${formattedNew}</span>
-          </p>
-          <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
-          <p class="text-[0.625rem] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
-            SPES Baby <span class="ml-1 tabular-nums">${formattedSpesBaby}</span>
-          </p>
-        </div>
-      `;
+    if (currentOfficeId === "ALL" && globalImplementorMetric == null) {
+      await refreshGlobalSpesSummary(allBeneficiaries);
+    } else {
+      renderOverallSpesSummary(allBeneficiaries, {
+        isGlobal: currentOfficeId === "ALL",
+        implementorCount: currentOfficeId === "ALL" ? globalImplementorMetric : null,
+      });
     }
-
 
   }
 
@@ -2154,6 +2206,7 @@ export function initBeneficiaries() {
     }
 
     allBeneficiaries = filteredData;
+    renderOverallSpesSummary(filteredData);
     // Show controls container
     document.getElementById("table-controls-container")?.classList.remove("hidden");
 
@@ -2886,4 +2939,3 @@ export async function calculateTotalBeneficiariesByImplementor(officeId) {
   }
 }
 // --- END: Calculate Total Added Beneficiaries ---
-

@@ -50,24 +50,74 @@ function setDashboardDocumentTitle(user) {
 
 // ── DEV: Supabase connection debug ────────────────────────────
 if (import.meta.env.DEV) {
-  const _url  = import.meta.env.VITE_SUPABASE_URL;
-  const _key  = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  const _page = window.location.pathname.split("/").filter(Boolean).at(-2) ?? "unknown";
-  console.groupCollapsed(`[SPES Debug] Supabase — ${_page}`);
-  console.log("URL  :", _url  ? `${_url.slice(0, 30)}…` : "⚠ MISSING");
-  console.log("KEY  :", _key  ? `${_key.slice(0, 12)}…`  : "⚠ MISSING");
-  console.log("Client:", supabase ? "✓ created" : "✗ null");
-  supabase.from("staffs").select("id", { count: "exact" }).then(({ count, error }) => {
-    if (error) console.warn("[SPES Debug] staffs ping error:", error.code, error.hint);
-    else console.log("[SPES Debug] staffs ping OK — row count:", count);
-  });
-  supabase.from("beneficiary").select("id", { count: "exact" }).then(({ count, error }) => {
-    if (error) console.warn("[SPES Debug] beneficiary ping error:", error.code, error.hint);
-    else console.log("[SPES Debug] beneficiary ping OK — row count:", count);
-  });
-  console.groupEnd();
-}
+  const debugUrl = import.meta.env.VITE_SUPABASE_URL;
+  const debugKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const debugPage = window.location.pathname.split("/").filter(Boolean).at(-2) ?? "unknown";
+  const debugStartedAt = performance.now();
 
+  console.group(`[SPES Debug] Supabase — ${debugPage}`);
+  console.log("[config] Environment:", import.meta.env.MODE);
+  console.log("[config] Page:", debugPage);
+  console.log("[config] Route:", window.location.pathname);
+  console.log("[config] URL:", debugUrl ? `${debugUrl.slice(0, 30)}…` : "⚠ MISSING");
+  console.log("[config] Key:", debugKey ? `${debugKey.slice(0, 12)}…` : "⚠ MISSING");
+  console.log("[client] Supabase client:", supabase ? "✓ created" : "✗ null");
+  console.log("[workflow] Boot sequence:", [
+    "create Supabase client",
+    "ping staffs and beneficiary tables",
+    "authenticate session",
+    "load permissions and page data",
+    "render the current page",
+  ]);
+
+  const runDebugPing = async (table, label) => {
+    const startedAt = performance.now();
+    console.group(`[query] ${label}`);
+    console.log("function:", "supabase.from().select()", "table:", table);
+    console.log("request:", { table, select: "id", count: "exact" });
+    try {
+      const response = await supabase.from(table).select("id", { count: "exact" });
+      const durationMs = Math.round(performance.now() - startedAt);
+      if (response.error) {
+        console.error("result: ERROR", {
+          table,
+          durationMs,
+          error: response.error,
+        });
+      } else {
+        console.log("result: OK", {
+          table,
+          rowCount: response.count,
+          durationMs,
+          dataRowsReturned: response.data?.length ?? 0,
+        });
+      }
+      console.groupEnd();
+      return { table, ...response, durationMs };
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - startedAt);
+      console.error("result: EXCEPTION", { table, durationMs, error });
+      console.groupEnd();
+      return { table, error, durationMs };
+    }
+  };
+
+  Promise.all([
+    runDebugPing("staffs", "Staffs table health check"),
+    runDebugPing("beneficiary", "Beneficiary table health check"),
+  ]).then((results) => {
+    console.log("[workflow] Supabase debug completed", {
+      totalDurationMs: Math.round(performance.now() - debugStartedAt),
+      results: results.map(({ table, count, error, durationMs }) => ({
+        table,
+        rowCount: count,
+        status: error ? "error" : "ok",
+        durationMs,
+      })),
+    });
+    console.groupEnd();
+  });
+}
 // ── Boot ──────────────────────────────────────────────────────
 const session = requireAuth();
 if (session) {
@@ -163,6 +213,7 @@ async function init(user) {
   if (nameEl) nameEl.textContent = user.full_name || "Admin";
 
   await loadImplementorTable(user.role);
+  initStaffActionDropdown();
   initGlobalSearch(user);
 
   if (path.includes("/implementors/")) {
@@ -357,35 +408,94 @@ function _formatOfficeName(officeText) {
 }
 
 // ── Implementor table ─────────────────────────────────────────
-function pinSystemAdministratorFirst(items, shouldPin) {
+function isLguIliganOffice(officeName) {
+  const normalized = String(officeName || "").toLowerCase().replace(/\(lgu\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  return normalized === "lgu iligan" || normalized.includes("city government of iligan");
+}
+
+function isIliganLguOffice(officeName) {
+  return isLguIliganOffice(officeName) || String(officeName || "").trim().toLowerCase() === "lace" || String(officeName || "").trim().toLowerCase().includes("lace iligan");
+}
+
+function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lguOfficeIds = null) {
   const ordered = [...items];
   if (!shouldPin) return ordered;
 
-  const adminIndex = ordered.findIndex((item) =>
-    String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
-    String(item.username || "").trim().toLowerCase() === "admin"
-  );
-  const systemAdministrator = adminIndex >= 0 ? ordered.splice(adminIndex, 1)[0] : null;
+  const pinned = [];
+  const pinnedIds = new Set();
+  const takeFirst = (predicate) => {
+    const index = ordered.findIndex((item) => !pinnedIds.has(String(item.id)) && predicate(item));
+    if (index >= 0) {
+      const [item] = ordered.splice(index, 1);
+      pinned.push(item);
+      pinnedIds.add(String(item.id));
+    }
+  };
+
+  takeFirst((item) => String(item.full_name || "").trim().toLowerCase() === "system administrator" || String(item.username || "").trim().toLowerCase() === "admin");
+  takeFirst((item) => lguOfficeIds instanceof Set
+    ? lguOfficeIds.has(String(item.office_id)) || isLguIliganOffice(item.office)
+    : isIliganLguOffice(item.office));
+
+  if (!groupApproval) return [...pinned, ...ordered];
   const approved = ordered.filter((item) => item.approved === true);
   const unapproved = ordered.filter((item) => item.approved !== true);
-
-  return [systemAdministrator, ...approved, ...unapproved].filter(Boolean);
+  return [...pinned, ...approved, ...unapproved];
 }
-
 let allImplementors = [];
 let allStaffPermissions = {};
 const selectedPermissionStaffIds = new Set();
 let currentPage = 1;
-const rowsPerPage = (window.location.pathname.includes("/implementors/") || window.location.pathname.includes("/roles/")) ? 10 : 3;
+const rowsPerPage = (window.location.pathname.includes("/implementors/") || window.location.pathname.includes("/roles/")) ? 5 : 3;
 
 async function loadImplementorTable(userRole) {
   const isRolesPage = window.location.pathname.includes("/roles/");
   const isImplPage = window.location.pathname.includes("/implementors/");
 
+  flowDebug("FLOW", "loadImplementorTable started", {
+    function: "loadImplementorTable",
+    page: isRolesPage ? "roles" : (isImplPage ? "implementors" : "dashboard"),
+    userRole: String(userRole || "unknown"),
+    rowsPerPage,
+  });
+
   // Fetch implementors from DB. Force refresh if on management pages to avoid caching delays.
   const data = await fetchImplementorList({ forceRefresh: isRolesPage || isImplPage });
-  allImplementors = data;
+  let rolesLguOfficeIds = null;
+  if (isRolesPage) {
+    const { data: offices = [] } = await fetchOffices({ forceRefresh: true });
+    rolesLguOfficeIds = new Set(
+      (offices || [])
+        .filter((office) => isLguIliganOffice(office.name))
+        .map((office) => String(office.id))
+    );
+  }
 
+  const compareStaffNames = (a, b) => String(a.full_name || "").localeCompare(
+    String(b.full_name || ""),
+    undefined,
+    { sensitivity: "base" }
+  );
+  const defaultStaffData = isRolesPage
+    ? [...data].sort(compareStaffNames)
+    : data;
+
+  // Roles has no filter trigger, so its sort-filtration setup can return early.
+  // Prepare the complete ordered list here so pinned rows are paginated correctly.
+  allImplementors = isRolesPage
+    ? pinSystemAdministratorFirst(defaultStaffData, true, false, rolesLguOfficeIds)
+    : data;
+
+  flowDebug("DATA", "Implementor list prepared", {
+    function: "loadImplementorTable",
+    fetchedCount: data.length,
+    lguOfficeIds: rolesLguOfficeIds ? [...rolesLguOfficeIds] : [],
+    firstRows: allImplementors.slice(0, rowsPerPage).map((staff) => ({
+      id: staff.id,
+      name: staff.full_name,
+      office: staff.office,
+    })),
+  });
   // The implementor query includes each staff account's individual permissions.
   if (isRolesPage) {
     allStaffPermissions = Object.fromEntries(
@@ -399,12 +509,22 @@ async function loadImplementorTable(userRole) {
     dropdownSortId:  "dropdown-sort-staff",
     btnFilterId:     "btn-filter-staff",
     dropdownFilterId:"dropdown-filter-staff",
-    originalData:    data,
+    originalData:    defaultStaffData,
     defaultFilters:  { archiveStatus: "active" },
+    initialSort: isRolesPage ? "name-asc" : "none",
+    sortComparator: (a, b, sort) => {
+      if (sort !== "name-asc" && sort !== "name-desc") return 0;
+      const aValue = isRolesPage ? String(a.full_name || "") : String(a.office || "");
+      const bValue = isRolesPage ? String(b.full_name || "") : String(b.office || "");
+      const result = aValue.localeCompare(bValue, undefined, { sensitivity: "base" });
+      return sort === "name-desc" ? -result : result;
+    },
     onRender: (filtered) => {
       allImplementors = pinSystemAdministratorFirst(
         filtered,
-        isImplPage && String(userRole || "").toLowerCase() === "admin"
+        isImplPage || isRolesPage,
+        isImplPage && String(userRole || "").toLowerCase() === "admin",
+        rolesLguOfficeIds
       );
       currentPage = 1;
 
@@ -494,24 +614,147 @@ function _loadTimelineMetrics(beneficiaries = []) {
   }
 }
 
-function renderPaginatedTable(userRole) {
-  const start    = (currentPage - 1) * rowsPerPage;
-  const end      = start + rowsPerPage;
-  const paged    = allImplementors.slice(start, end);
-  const totalEl  = document.getElementById("pagination-total") || document.getElementById("pagination-total-dashboard");
-  const rangeEl  = document.getElementById("pagination-range");
-  if (totalEl) totalEl.textContent = allImplementors.length;
-  if (rangeEl) rangeEl.textContent = `${start + 1}-${Math.min(end, allImplementors.length)}`;
+function updateStaffPageIndicators(totalCount) {
+  const indicatorsEl = document.getElementById("page-indicators-container");
+  if (!indicatorsEl) return;
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+  const pageNumbers = totalPages <= 7
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : [1, 2, Math.max(3, currentPage - 1), currentPage, Math.min(totalPages, currentPage + 1), totalPages];
+  const pages = [...new Set(pageNumbers.filter((page) => page >= 1 && page <= totalPages))];
+  const inputIndex = totalPages > 1 ? Math.floor(pages.length / 2) : -1;
+  let html = "";
+  pages.forEach((page, index) => {
+    if (index === inputIndex) {
+      html += `<li class="flex items-center border border-spes-blue/15 bg-spes-white dark:border-white/10 dark:bg-spes-dark-primary">
+        <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="" placeholder="..." aria-label="Jump to page"
+          class="w-16 bg-transparent px-2 py-2 text-center text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          style="-moz-appearance: textfield" title="Type a page number and press Enter">
+      </li>`;
+    }
+    const active = page === currentPage
+      ? "bg-spes-blue/10 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-black"
+      : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-white/8 dark:hover:text-spes-yellow";
+    html += `<li><button type="button" class="page-btn cursor-pointer border border-spes-blue/15 px-3 py-2 text-sm font-medium transition-colors ${active}" data-page="${page}" aria-label="Go to page ${page}">${page}</button></li>`;
+  });
+  indicatorsEl.innerHTML = html;
+  indicatorsEl.querySelectorAll(".page-btn").forEach((button) => button.addEventListener("click", () => {
+    currentPage = Number(button.dataset.page) || 1;
+    renderPaginatedTable(window._spesDashboardRole || "officer");
+  }));
+  const jumpInput = document.getElementById("staff-page-jump");
+  const jump = () => {
+    const requested = Number.parseInt(jumpInput?.value, 10);
+    if (!Number.isFinite(requested)) return;
+    currentPage = Math.min(totalPages, Math.max(1, requested));
+    renderPaginatedTable(window._spesDashboardRole || "officer");
+  };
+  jumpInput?.addEventListener("change", jump);
+  jumpInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") jump(); });
+}
+
+function syncStaffActionDropdown() {
+  const actionButton = document.getElementById("staff-action-dropdown-btn");
+  if (!actionButton) return;
+  const hasSelection = selectedPermissionStaffIds.size > 0 || document.querySelector(".staff-row-checkbox:checked") !== null;
+  const isMobile = window.matchMedia("(max-width: 639px)").matches;
+  actionButton.classList.toggle("hidden", isMobile && !hasSelection);
+  actionButton.setAttribute("aria-hidden", String(isMobile && !hasSelection));
+  if (isMobile && !hasSelection) document.getElementById("staff-action-dropdown")?.classList.add("hidden");
+}
+
+function initStaffActionDropdown() {
+  const actionButton = document.getElementById("staff-action-dropdown-btn");
+  const actionMenu = document.getElementById("staff-action-dropdown");
+  if (!actionButton || !actionMenu || actionButton.dataset.outsideCloseBound === "true") return;
+  actionButton.dataset.outsideCloseBound = "true";
+  actionButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const willOpen = actionMenu.classList.contains("hidden");
+    actionMenu.classList.toggle("hidden", !willOpen);
+    if (willOpen) positionStaffActionMenu(actionMenu, actionButton);
+  });
+  document.addEventListener("click", (event) => {
+    if (!actionButton.contains(event.target) && !actionMenu.contains(event.target)) actionMenu.classList.add("hidden");
+  });
+  window.addEventListener("resize", syncStaffActionDropdown);
+  syncStaffActionDropdown();
+}
+
+function positionStaffActionMenu(menu, trigger) {
+  const viewportPadding = 8;
+  const placement = trigger.dataset.dropdownPlacement || "bottom";
+  const [side, align = "start"] = placement.split("-");
+  const triggerRect = trigger.getBoundingClientRect();
+  const isMobile = window.matchMedia("(max-width: 639px)").matches;
+  menu.style.width = isMobile ? `${Math.round(triggerRect.width)}px` : "";
+  const menuRect = menu.getBoundingClientRect();
+  const menuWidth = Math.min(menuRect.width, window.innerWidth - (viewportPadding * 2));
+  const menuHeight = Math.min(menuRect.height, window.innerHeight - (viewportPadding * 2));
+  let left = triggerRect.left;
+  let top = triggerRect.bottom + viewportPadding;
+
+  if (side === "top") top = triggerRect.top - menuHeight - viewportPadding;
+  if (side === "left") {
+    left = triggerRect.left - menuWidth - viewportPadding;
+    top = align === "end" ? triggerRect.bottom - menuHeight : triggerRect.top;
+  }
+  if (side === "right") {
+    left = triggerRect.right + viewportPadding;
+    top = align === "end" ? triggerRect.bottom - menuHeight : triggerRect.top;
+  }
+  if (side === "bottom" && align === "end") left = triggerRect.right - menuWidth;
+
+  Object.assign(menu.style, {
+    position: "fixed",
+    left: `${Math.round(Math.min(Math.max(viewportPadding, left), window.innerWidth - menuWidth - viewportPadding))}px`,
+    top: `${Math.round(Math.min(Math.max(viewportPadding, top), window.innerHeight - menuHeight - viewportPadding))}px`,
+    right: "auto",
+    bottom: "auto",
+    transform: "none",
+  });
+}function renderPaginatedTable(userRole) {
+  const total = allImplementors.length;
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
+  currentPage = Math.min(totalPages, Math.max(1, currentPage));
+  const start = total === 0 ? 0 : (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+  const paged = allImplementors.slice(start, end);
+  const totalEl = document.getElementById("pagination-total") || document.getElementById("pagination-total-dashboard");
+  const rangeEl = document.getElementById("pagination-range");
+  if (totalEl) totalEl.textContent = total;
+  if (rangeEl) rangeEl.textContent = total === 0 ? "0" : `${start + 1}-${Math.min(end, total)}`;
+  document.getElementById("prev-page")?.toggleAttribute("disabled", currentPage <= 1 || total === 0);
+  document.getElementById("next-page")?.toggleAttribute("disabled", currentPage >= totalPages || total === 0);
+  flowDebug("PAGINATION", "Rendering staff page", {
+    function: "renderPaginatedTable",
+    currentPage,
+    totalPages,
+    rowsPerPage,
+    range: total === 0 ? "0" : `${start + 1}-${Math.min(end, total)}`,
+    rowIds: paged.map((staff) => staff.id),
+    rowNames: paged.map((staff) => staff.full_name),
+  });
   renderTableRows(paged, userRole);
+  updateStaffPageIndicators(total);
 }
 
 function initPaginationEvents(userRole) {
-  document.getElementById("prev-page")?.addEventListener("click", () => {
-    if (currentPage > 1) { currentPage--; renderPaginatedTable(userRole); }
-  });
-  document.getElementById("next-page")?.addEventListener("click", () => {
-    if (currentPage < Math.ceil(allImplementors.length / rowsPerPage)) { currentPage++; renderPaginatedTable(userRole); }
-  });
+  const previousButton = document.getElementById("prev-page");
+  const nextButton = document.getElementById("next-page");
+  if (previousButton && previousButton.dataset.paginationBound !== "true") {
+    previousButton.dataset.paginationBound = "true";
+    previousButton.addEventListener("click", () => {
+      if (currentPage > 1) { currentPage--; renderPaginatedTable(userRole); }
+    });
+  }
+  if (nextButton && nextButton.dataset.paginationBound !== "true") {
+    nextButton.dataset.paginationBound = "true";
+    nextButton.addEventListener("click", () => {
+      if (currentPage < Math.ceil(allImplementors.length / rowsPerPage)) { currentPage++; renderPaginatedTable(userRole); }
+    });
+  }
 }
 
 function renderTableRows(implementors, userRole) {
@@ -651,7 +894,7 @@ function renderTableRows(implementors, userRole) {
     return `
       <tr data-impl-info="${dataStr}" class="impl-row border-b border-gray-100 dark:border-white/5 transition-all duration-200 ${rowBg}">
       ${!isDashboardPage ? `<td class="p-4 text-center"><div class="flex items-center justify-center">
-        <input type="checkbox" class="staff-row-checkbox h-4 w-4 rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canDelete ? "cursor-pointer" : "cursor-not-allowed opacity-40"}" ${isArchived || !canDelete ? "disabled" : ""}>
+        <input type="checkbox" data-row-user-id="${s.id}" class="staff-row-checkbox h-4 w-4 rounded-full border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canDelete ? "cursor-pointer" : "cursor-not-allowed opacity-40"}" ${isArchived || !canDelete ? "disabled" : ""}>
       </div></td>` : ""}
       <td class="px-6 py-4 text-left text-xs font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${String(s.id).padStart(2, "0")}</td>
       <td class="px-6 py-4 text-left">
@@ -788,6 +1031,13 @@ function renderTableRows(implementors, userRole) {
       }
     });
   });
+  document.querySelectorAll(".staff-row-checkbox").forEach((checkbox) => {
+    if (checkbox.dataset.actionVisibilityBound === "true") return;
+    checkbox.dataset.actionVisibilityBound = "true";
+    checkbox.addEventListener("change", syncStaffActionDropdown);
+  });
+  syncStaffActionDropdown();
+
 }
 
 // ── Staff CRUD helpers ────────────────────────────────────────
@@ -1266,6 +1516,7 @@ function onSelectAll(e) {
     document.querySelectorAll(".staff-row-checkbox:not([disabled])").forEach((checkbox) => {
       checkbox.checked = e.target.checked;
     });
+    syncStaffActionDropdown();
     return;
   }
 
@@ -1279,6 +1530,7 @@ function onSelectAll(e) {
     checkbox.checked = selectedPermissionStaffIds.has(Number(checkbox.dataset.rowUserId));
   });
   updatePermissionSelectionControls();
+  syncStaffActionDropdown();
 }
 
 function getStatusColor(status) {
@@ -1325,6 +1577,17 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
     yearIcon?.classList.remove("rotate-180");
     monthIcon?.classList.remove("rotate-180");
   };
+  const positionPeriodMenu = (menu, button) => {
+    menu.classList.remove("left-0", "right-0", "left-1/2", "-translate-x-1/2", "top-full", "bottom-full", "mt-2", "mb-2");
+    const rect = button.getBoundingClientRect();
+    const estimatedHeight = Math.min(260, Math.max(120, menu.scrollHeight || 220));
+    const estimatedWidth = Math.min(240, window.innerWidth - 16);
+    if (rect.left + estimatedWidth > window.innerWidth - 8) menu.classList.add("right-0");
+    else if (rect.left < 8) menu.classList.add("left-0");
+    else menu.classList.add("left-1/2", "-translate-x-1/2");
+    if (window.innerHeight - rect.bottom < estimatedHeight + 12 && rect.top > estimatedHeight + 12) menu.classList.add("bottom-full", "mb-2");
+    else menu.classList.add("top-full", "mt-2");
+  };
   const availableMonths = () => state.year === "all"
     ? periods.months
     : (periods.monthsByYear?.[state.year] || []);
@@ -1367,6 +1630,7 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
     event.stopPropagation();
     const open = yearMenu.classList.contains("hidden");
     closeMenus();
+    if (open) positionPeriodMenu(yearMenu, yearButton);
     yearMenu.classList.toggle("hidden", !open);
     yearButton.setAttribute("aria-expanded", String(open));
     yearIcon?.classList.toggle("rotate-180", open);
@@ -1375,6 +1639,7 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
     event.stopPropagation();
     const open = monthMenu.classList.contains("hidden");
     closeMenus();
+    if (open) positionPeriodMenu(monthMenu, monthButton);
     monthMenu.classList.toggle("hidden", !open);
     monthButton.setAttribute("aria-expanded", String(open));
     monthIcon?.classList.toggle("rotate-180", open);
