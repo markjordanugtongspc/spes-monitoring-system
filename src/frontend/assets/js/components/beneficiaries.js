@@ -1726,6 +1726,7 @@ export function initBeneficiaries() {
           sortBatchPanel.classList.remove("flex");
         }
         if (kanbanWrap) kanbanWrap.classList.add("hidden");
+        document.getElementById("global-spes-total-summary")?.classList.add("hidden");
         if (tableWrap) tableWrap.classList.remove("hidden");
         if (paginationControls) paginationControls.classList.remove("hidden");
 
@@ -1850,9 +1851,12 @@ export function initBeneficiaries() {
 
   async function renderBatchCards() {
     const kanbanWrap = document.getElementById("batches-kanban-wrapper");
+    const globalTotalSummary = document.getElementById("global-spes-total-summary");
     if (!kanbanWrap) return;
+    const shouldShowGlobalTotal = isAdmin && currentOfficeId === "ALL";
+    globalTotalSummary?.classList.toggle("hidden", !shouldShowGlobalTotal);
     kanbanWrap.innerHTML = "";
-    kanbanWrap.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 select-none min-h-[300px] items-start";
+    kanbanWrap.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 pb-2 select-none items-start";
 
     // Fetch batches to know the columns
     const { data: batchesData } = await fetchBatches({ forceRefresh: false });
@@ -1958,6 +1962,37 @@ export function initBeneficiaries() {
     });
 
     kanbanWrap.innerHTML = cardsHtml;
+
+    if (shouldShowGlobalTotal && globalTotalSummary) {
+      const totalSpes = allBeneficiaries.length;
+      const totalNew = allBeneficiaries.filter((beneficiary) =>
+        String(beneficiary.return_status || "").trim().toUpperCase() === "NEW"
+      ).length;
+      const totalSpesBaby = allBeneficiaries.filter((beneficiary) =>
+        String(beneficiary.return_status || "").trim().toUpperCase() === "SPES BABY"
+      ).length;
+
+      const formatCount = (count) => new Intl.NumberFormat("en-US").format(count);
+      const formattedTotal = formatCount(totalSpes);
+      const formattedNew = formatCount(totalNew);
+      const formattedSpesBaby = formatCount(totalSpesBaby);
+
+      globalTotalSummary.innerHTML = `
+        <div class="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border border-slate-200 bg-white px-4 py-2.5 text-center shadow-sm dark:border-white/10 dark:bg-white/5">
+          <p class="font-montserrat text-xs font-black uppercase tracking-wider text-slate-700 dark:text-white/90">
+            Total of SPES: <span class="ml-1 text-base tabular-nums text-slate-950 dark:text-white">${formattedTotal}</span>
+          </p>
+          <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
+          <p class="text-[0.625rem] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+            New <span class="ml-1 tabular-nums">${formattedNew}</span>
+          </p>
+          <span class="text-slate-300 dark:text-white/25" aria-hidden="true">|</span>
+          <p class="text-[0.625rem] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
+            SPES Baby <span class="ml-1 tabular-nums">${formattedSpesBaby}</span>
+          </p>
+        </div>
+      `;
+    }
 
 
   }
