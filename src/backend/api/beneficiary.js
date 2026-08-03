@@ -1,7 +1,7 @@
 import { supabase } from "./supabase.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 
-const CACHE_KEY = "spes_beneficiaries_v5";
+const CACHE_KEY = "spes_beneficiaries_v6";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // ── Batch cache ────────────────────────────────────────────────
@@ -200,6 +200,35 @@ function _archiveColMissing() {
   return sessionStorage.getItem(ARCHIVE_COL_FLAG) === "1";
 }
 
+// PostgREST commonly limits a single response to 1,000 rows. Keep the UI's
+// global Admin roster complete by walking deterministic pages until exhausted.
+const BENEFICIARY_PAGE_SIZE = 1000;
+
+async function _fetchBeneficiaryPages(selectStr, officeId, canViewOtherOffices) {
+  const records = [];
+
+  for (let page = 0; ; page += 1) {
+    let query = supabase
+      .from("beneficiary")
+      .select(selectStr)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
+      .range(page * BENEFICIARY_PAGE_SIZE, ((page + 1) * BENEFICIARY_PAGE_SIZE) - 1);
+
+    if (!canViewOtherOffices && officeId) {
+      query = query.eq("staffs.office_id", officeId);
+    }
+
+    const result = await query;
+    if (result.error) return result;
+
+    const pageData = Array.isArray(result.data) ? result.data : [];
+    records.push(...pageData);
+    if (pageData.length < BENEFICIARY_PAGE_SIZE) break;
+  }
+
+  return { data: records, error: null };
+}
 export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
@@ -228,30 +257,21 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     selectStr += ", staffs!staff_id(office_id, full_name)";
   }
 
-  let query = supabase
-    .from("beneficiary")
-    .select(selectStr)
-    .order("created_at", { ascending: false });
+  let result = await _fetchBeneficiaryPages(
+    selectStr,
+    officeId,
+    access.canViewOtherOffices
+  );
 
-  if (!access.canViewOtherOffices && officeId) {
-    query = query.eq("staffs.office_id", officeId);
-  }
-
-  let result = await query;
-
-  // Column doesn't exist yet (migration not run) — cache the flag and retry without filter
+  // Preserve schema compatibility if a deployment reports a missing column.
   if (result.error?.code === "42703") {
     sessionStorage.setItem(ARCHIVE_COL_FLAG, "1");
-    let fallbackQuery = supabase
-      .from("beneficiary")
-      .select(selectStr)
-      .order("created_at", { ascending: false });
-    if (!access.canViewOtherOffices && officeId) {
-      fallbackQuery = fallbackQuery.eq("staffs.office_id", officeId);
-    }
-    result = await fallbackQuery;
+    result = await _fetchBeneficiaryPages(
+      selectStr,
+      officeId,
+      access.canViewOtherOffices
+    );
   }
-
   // Derive return_status client-side as a fallback if the DB column is missing/null.
   // SPES BABY = same full_name appears in an earlier year_period (returnee); else NEW.
   if (!result.error && Array.isArray(result.data)) {

@@ -8,7 +8,7 @@
 
 // --- START: OFFICE ACCESS SCOPE FUNCTION ---
 export function getOfficeAccessScope(session = {}) {
-  const isAdmin = String(session?.role || "").trim().toLowerCase() === "admin";
+  const isAdmin = String(session?.role || "").trim().toLowerCase() === "admin" || Number(session?.role_id) === 1;
   const permissions = session?.permissions || {};
   const ownOfficeId = session?.office_id ?? null;
 
