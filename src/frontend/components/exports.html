@@ -12,10 +12,16 @@
 <!-- ══════════════════════════════════════════════════════════
      PRINT AREA — Hidden in browser, visible only when printing
      ══════════════════════════════════════════════════════════ -->
-<div id="print-area" aria-hidden="true">
+<div id="print-area" aria-hidden="true" class="flex w-full justify-center">
   <!-- Dynamically injected by exports.js _printReport() -->
   <!--
     Injected structure:
+    When one or two columns are configured, the generated report table is
+    centered in its available width so compact exports do not hug the left edge.
+    Records missing any configured column value render below the complete table
+    in the live preview as a lower-priority Missing Data section. XLSX keeps the
+    complete and incomplete sections separate with their own selected-column
+    headers, count summaries, footers, and group sorting.
     ┌──────────────────────────────────────────────────────┐
     │  [Watermark: c_spes.png at 4% opacity, fixed]        │
     │                                                      │
@@ -29,9 +35,9 @@
     │  └────────────────────────────────────────────────┘  │
     │                                                      │
     │  ┌── TABLE ───────────────────────────────────────┐  │
-    │  │  [OFFICE: ...] header row                      │  │
-    │  │  ID NO. | NAME | AGE | OFFICE | STATUS | ...   │  │
-    │  │  data rows grouped by office                   │  │
+    │  │  COMPLETE DATA        │ MISSING DATA (RIGHT)   │  │
+    │  │  group-sorted rows    │ same configured cols   │  │
+    │  │  selected col order   │ group order preserved  │  │
     │  └────────────────────────────────────────────────┘  │
     │                                                      │
     │  ┌── SIGNATURES ──────────────────────────────────┐  │

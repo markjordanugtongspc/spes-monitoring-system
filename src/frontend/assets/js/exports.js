@@ -45,6 +45,7 @@ let _allImplementors  = [];
 let _allOffices       = [];
 let _filteredData     = [];
 let _appVersion       = "0.2.0";
+const EXPORT_PAGE_SIZE = 1000;
 
 const _cfg = {
   reportType:   "beneficiaries",
@@ -118,12 +119,12 @@ async function _boot(user) {
     if (verEl) verEl.textContent = v;
   }
 
-  await applyPermissions(user.role);
+  await applyPermissions(String(user.role || "").trim().toLowerCase());
   initExportButtonTilt();
 
   // Approved users receive baseline export access for their own office.
   // Cross-office export remains an explicit elevated permission.
-  const isAdmin = user.role === "admin";
+  const isAdmin = getOfficeAccessScope(user).isAdmin;
   const canExport = isAdmin || (user.approved === true && user.office_id != null);
   if (!canExport) {
     const { modals } = await import("./components/modals.js");
@@ -166,25 +167,41 @@ async function _loadData(user) {
     benefSelectStr += ", staffs!staff_id(office_id, full_name)";
   }
 
-  // All three datasets are independent — fetch them in parallel
-  let benefQuery = supabase
-    .from("beneficiary")
-    .select(benefSelectStr)
-    .order("id", { ascending: true });
+  // All three datasets are independent; fetch them in parallel. Each query
+  // is rebuilt per page because Supabase query builders are immutable.
+  const fetchBeneficiaryPage = (from, to) => {
+    let query = supabase
+      .from("beneficiary")
+      .select(benefSelectStr)
+      .order("id", { ascending: true })
+      .range(from, to);
 
-  // Server-side office scope for officers (mirrors beneficiary.js fetchBeneficiaries logic)
-  if (!isAdmin && scopeToOwnOffice && user.office_id) {
-    benefQuery = benefQuery.eq("staffs.office_id", user.office_id);
-  }
+    // Server-side office scope prevents a restricted user's first 1,000
+    // global rows from hiding in-scope rows that occur later in the table.
+    if (!isAdmin && scopeToOwnOffice && user.office_id) {
+      query = query.eq("staffs.office_id", user.office_id);
+    }
+    return query;
+  };
 
-  const [officesRes, benefRes, staffsRes] = await Promise.all([
-    fetchOffices(),
-    benefQuery.then(r => r, e => ({ data: null, error: e })),
-    supabase
+  const fetchImplementorPage = (from, to) => {
+    let query = supabase
       .from("staffs")
       .select("id, full_name, email, phone, address, status, role_id, office_id, approved, archive_at, offices(name), roles(name)")
       .order("id", { ascending: true })
-      .then(r => r, e => ({ data: null, error: e })),
+      .range(from, to);
+
+    // Apply the same scope at the database boundary for implementors.
+    if (scopeToOwnOffice && user.office_id != null) {
+      query = query.eq("office_id", user.office_id);
+    }
+    return query;
+  };
+
+  const [officesRes, benefRes, staffsRes] = await Promise.all([
+    fetchOffices(),
+    _fetchAllExportRows(fetchBeneficiaryPage),
+    _fetchAllExportRows(fetchImplementorPage),
   ]);
 
   _allOffices = officesRes.data ?? [];
@@ -238,6 +255,22 @@ async function _loadData(user) {
       _group:     s.offices?.name ?? "Unknown",
     }));
   }
+}
+
+async function _fetchAllExportRows(buildQuery) {
+  const rows = [];
+
+  for (let from = 0; ; from += EXPORT_PAGE_SIZE) {
+    const result = await buildQuery(from, from + EXPORT_PAGE_SIZE - 1);
+    if (result.error) return { data: null, error: result.error };
+
+    const page = Array.isArray(result.data) ? result.data : [];
+    rows.push(...page);
+
+    if (page.length < EXPORT_PAGE_SIZE) break;
+  }
+
+  return { data: rows, error: null };
 }
 
 function _eduLabel(id) {
@@ -305,9 +338,49 @@ function _applyFilters() {
 }
 
 // ── Preview table renderer ────────────────────────────────────
+function _getConfiguredExportColumns() {
+  const definitions = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
+  return _cfg.columns
+    .map(key => definitions.find(column => column.key === key))
+    .filter(Boolean);
+}
+
+function _isBlankExportValue(value) {
+  if (value === null || value === undefined) return true;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "" || normalized === "n/a" || normalized === "na"
+    || normalized === "none" || normalized === "-" || normalized === "—";
+}
+
+function _splitExportRows(rows, cols) {
+  const completeRows = [];
+  const incompleteRows = [];
+
+  rows.forEach(row => {
+    const isIncomplete = cols.length > 0
+      && cols.some(column => _isBlankExportValue(row[column.key]));
+    (isIncomplete ? incompleteRows : completeRows).push(row);
+  });
+
+  return { completeRows, incompleteRows };
+}
+
+function _getExportGroups(rows) {
+  const groups = {};
+  rows.forEach(row => {
+    const key = row._group || "Unknown";
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(row);
+  });
+  return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+}
+
 function _renderPreviewTable() {
-  const colDefs = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
-  const cols    = colDefs.filter(c => _cfg.columns.includes(c.key));
+  const cols = _getConfiguredExportColumns();
+  const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
+  const hasIncompleteRows = incompleteRows.length > 0;
+
+  if (!hasIncompleteRows) _renderIncompletePreview([], cols);
 
   const thead = document.getElementById("preview-thead");
   if (thead) {
@@ -325,17 +398,15 @@ function _renderPreviewTable() {
   }
 
   // Group rows — beneficiaries → by year period; implementors → by office
+  if (completeRows.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='" + cols.length + "' class='text-center py-12 text-sm text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider'>No complete records for the selected columns.</td></tr>";
+    _renderIncompletePreview(incompleteRows, cols);
+    return;
+  }
+
   const isBenef    = _cfg.reportType === "beneficiaries";
   const groupLabel = (key) => isBenef ? `PERIOD: ${key}` : `OFFICE: ${key}`;
-  const groups = {};
-  _filteredData.forEach(r => {
-    const k = r._group || "Unknown";
-    if (!groups[k]) groups[k] = [];
-    groups[k].push(r);
-  });
-
-  tbody.innerHTML = Object.entries(groups)
-    .sort(([a], [b]) => a.localeCompare(b))
+  tbody.innerHTML = _getExportGroups(completeRows)
     .map(([key, rows]) => {
       const groupRow = `<tr class="bg-blue-50/50 dark:bg-white/[0.03]">
         <td colspan="${cols.length}" class="px-4 py-2 text-[9.5px] font-black uppercase tracking-[0.25em] text-spes-blue/70 dark:text-spes-yellow/60">
@@ -348,6 +419,37 @@ function _renderPreviewTable() {
         </tr>`).join("");
       return groupRow + dataRows;
     }).join("");
+  _renderIncompletePreview(incompleteRows, cols);
+}
+
+function _renderIncompletePreview(rows, cols) {
+  const shell = document.getElementById("preview-incomplete-shell");
+  const thead = document.getElementById("preview-incomplete-thead");
+  const tbody = document.getElementById("preview-incomplete-tbody");
+  const count = document.getElementById("preview-incomplete-count");
+  if (!shell || !thead || !tbody) return;
+
+  if (rows.length === 0) {
+    shell.classList.add("hidden");
+    tbody.innerHTML = "";
+    return;
+  }
+
+  shell.classList.remove("hidden");
+  if (count) count.textContent = rows.length.toLocaleString();
+  thead.innerHTML = "<tr>" + cols.map(column => "<th class='px-3 py-2 text-center text-[9px] font-black uppercase tracking-wider text-white whitespace-nowrap'>" + column.label + "</th>").join('') + "</tr>";
+  const isBenef = _cfg.reportType === "beneficiaries";
+  const groupLabel = (key) => isBenef ? "PERIOD: " + key : "OFFICE: " + key;
+  tbody.innerHTML = _getExportGroups(rows).map(([key, groupRows]) => {
+    const group = "<tr class='bg-amber-50 dark:bg-amber-900/20'><td colspan='" + cols.length + "' class='px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300'>" + groupLabel(_esc(key)) + "</td></tr>";
+    const data = groupRows.map((row, index) => {
+      const rowClass = index % 2 === 0 ? "bg-white dark:bg-spes-dark-primary" : "bg-gray-50/50 dark:bg-white/[0.025]";
+      return "<tr class='" + rowClass + " border-b border-gray-100 dark:border-white/5'>" +
+        cols.map(column => "<td class='px-3 py-2 text-[10px] " + (column.key === "full_name" ? "text-left font-extrabold" : "text-center") + " whitespace-nowrap'>" + _cellHtml(row, column.key) + "</td>").join('') +
+        "</tr>";
+    }).join('');
+    return group + data;
+  }).join('');
 }
 
 function _cellHtml(row, key) {
@@ -676,9 +778,119 @@ const _XL = {
   active:     "FF059669",
 };
 
+function _writeIncompleteExcelSidePanel(ws, rows, cols, isBenef, lastCol, colLetter, headerMeta = {}) {
+  const sideStart = lastCol + 3;
+  const sideEnd = sideStart + cols.length - 1;
+  const sideStartLetter = colLetter(sideStart);
+  const sideEndLetter = colLetter(sideEnd);
+
+  ws.mergeCells(sideStartLetter + "1:" + sideEndLetter + "1");
+  const sideR1 = ws.getRow(1).getCell(sideStart);
+  sideR1.value = headerMeta.orgTitle || "DEPARTMENT OF LABOR AND EMPLOYMENT";
+  sideR1.font = { name: "Calibri", size: 15, bold: true, color: { argb: _XL.white } };
+  sideR1.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  sideR1.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.blue } };
+
+  ws.mergeCells(sideStartLetter + "2:" + sideEndLetter + "2");
+  const sideR2 = ws.getRow(2).getCell(sideStart);
+  sideR2.value = headerMeta.reportTitle || (isBenef ? "SPES Beneficiaries Monitoring Report" : "SPES Implementors Roster Report");
+  sideR2.font = { name: "Calibri", size: 11, bold: true, color: { argb: _XL.red } };
+  sideR2.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+
+  ws.mergeCells(sideStartLetter + "3:" + sideEndLetter + "3");
+  const sideR3 = ws.getRow(3).getCell(sideStart);
+  sideR3.value = headerMeta.dateLine || "Generated:";
+  sideR3.font = { name: "Calibri", size: 9, italic: true, color: { argb: _XL.muted } };
+  sideR3.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+
+  ws.mergeCells(sideStartLetter + "4:" + sideEndLetter + "4");
+  const sideR4 = ws.getRow(4).getCell(sideStart);
+  sideR4.value = headerMeta.summaryLine || ("INCOMPLETE: " + rows.length.toLocaleString());
+  sideR4.font = { name: "Calibri", size: 8, bold: true, color: { argb: _XL.blueDark } };
+  sideR4.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  ws.getRow(4).height = 30;
+
+  ws.mergeCells(sideStartLetter + "5:" + sideEndLetter + "5");
+  const title = ws.getRow(5).getCell(sideStart);
+  title.value = "INCOMPLETE / MISSING DATA (" + rows.length.toLocaleString() + ")";
+  title.font = { name: "Calibri", size: 9, bold: true, color: { argb: _XL.white } };
+  title.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.archived } };
+  title.alignment = { vertical: "middle", horizontal: "center" };
+
+  const header = ws.getRow(6);
+  cols.forEach((column, index) => {
+    const cell = header.getCell(sideStart + index);
+    cell.value = column.label.toUpperCase();
+    cell.font = { name: "Calibri", size: 9, bold: true, color: { argb: _XL.white } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.blueDark } };
+    cell.alignment = { vertical: "middle", horizontal: column.key === "full_name" ? "left" : "center" };
+  });
+
+  let rowIndex = 7;
+  let zebra = 0;
+  _getExportGroups(rows).forEach(([key, groupRows]) => {
+    ws.mergeCells(sideStartLetter + rowIndex + ":" + sideEndLetter + rowIndex);
+    const groupCell = ws.getRow(rowIndex).getCell(sideStart);
+    groupCell.value = (isBenef ? "PERIOD: " : "OFFICE: ") + key;
+    groupCell.font = { name: "Calibri", size: 8, bold: true, color: { argb: _XL.archived } };
+    groupCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF7ED" } };
+    groupCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    rowIndex++;
+
+    groupRows.forEach(rowData => {
+      const row = ws.getRow(rowIndex);
+      const tint = (zebra++ % 2 === 1);
+      cols.forEach((column, index) => {
+        const cell = row.getCell(sideStart + index);
+        const raw = rowData[column.key];
+        const isMissing = _isBlankExportValue(raw);
+        const value = isMissing ? "—" : String(raw);
+        cell.value = column.key === "full_name" ? value.toUpperCase() : value;
+        cell.font = {
+          name: "Calibri",
+          size: 9,
+          color: { argb: isMissing ? _XL.archived : _XL.ink },
+          bold: column.key === "full_name" || isMissing,
+        };
+        cell.alignment = { vertical: "middle", horizontal: column.key === "full_name" ? "left" : "center" };
+        if (isMissing) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF7ED" } };
+        } else if (tint) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.zebra } };
+        }
+        cell.border = { bottom: { style: "hair", color: { argb: _XL.faint } } };
+      });
+      row.height = 16;
+      rowIndex++;
+    });
+  });
+
+  ws.mergeCells(sideStartLetter + rowIndex + ":" + sideEndLetter + rowIndex);
+  const footer = ws.getRow(rowIndex).getCell(sideStart);
+  footer.value = "INCOMPLETE: " + rows.length.toLocaleString() + "  •  © " + new Date().getFullYear() + " SPES Portal System V" + _appVersion + "  •  Developed by Mark Jordan Ugtong  •  Exclusive Property of DOLE Iligan City";
+  footer.font = { name: "Calibri", size: 8, color: { argb: _XL.muted } };
+  footer.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  footer.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
+  ws.getRow(rowIndex).height = 28;
+  rowIndex++;
+
+  cols.forEach((column, index) => {
+    let max = column.label.length + 2;
+    rows.forEach(row => {
+      const value = row[column.key];
+      if (!_isBlankExportValue(value)) max = Math.max(max, String(value).length);
+    });
+    ws.getColumn(sideStart + index).width = Math.min(Math.max(max + 2, 12), 42);
+  });
+  ws.getColumn(lastCol + 1).width = 3;
+  ws.getColumn(lastCol + 2).width = 3;
+
+  return { nextRow: rowIndex, sideEnd, footerRow: rowIndex - 1 };
+}
+
 async function _exportExcel(btn) {
-  const colDefs = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
-  const cols    = colDefs.filter(c => _cfg.columns.includes(c.key));
+  const cols = _getConfiguredExportColumns();
+  const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
   if (cols.length === 0) return;
 
   const isBenef = _cfg.reportType === "beneficiaries";
@@ -731,6 +943,12 @@ async function _exportExcel(btn) {
 
     const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
     const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const dateLine = "Generated: " + dateStr + " " + timeStr;
+    const summaryLine = parts.concat([
+      "TOTAL OUTPUTS: " + _filteredData.length.toLocaleString(),
+      "COMPLETED: " + completeRows.length.toLocaleString(),
+      "INCOMPLETE: " + incompleteRows.length.toLocaleString(),
+    ]).join("   " + String.fromCharCode(8226) + "   ");
 
     // ── Row 1: Org title band ────────────────────────────────────
     ws.mergeCells(span);
@@ -753,14 +971,14 @@ async function _exportExcel(btn) {
     // ── Row 3: Generated date + record count ─────────────────────
     ws.mergeCells(`A3:${colLetter(lastCol)}3`);
     const r3 = ws.getCell("A3");
-    r3.value = `Generated: ${dateStr} ${timeStr}    •    ${_filteredData.length.toLocaleString()} Record${_filteredData.length !== 1 ? "s" : ""}`;
+    r3.value = dateLine;
     r3.font  = { name: "Calibri", size: 9, italic: true, color: { argb: _XL.muted } };
     r3.alignment = { vertical: "middle", horizontal: "center" };
 
     // ── Row 4: Filter summary ────────────────────────────────────
     ws.mergeCells(`A4:${colLetter(lastCol)}4`);
     const r4 = ws.getCell("A4");
-    r4.value = parts.join("   •   ");
+    r4.value = summaryLine;
     r4.font  = { name: "Calibri", size: 9, bold: true, color: { argb: _XL.blueDark } };
     r4.alignment = { vertical: "middle", horizontal: "center" };
     ws.getRow(4).height = 16;
@@ -786,18 +1004,22 @@ async function _exportExcel(btn) {
     ws.autoFilter = { from: { row: 5, column: 1 }, to: { row: 5, column: lastCol } };
 
     // ── Data rows — grouped by period (benef) / office (impl) ────
-    const groups = {};
-    _filteredData.forEach(r => {
-      const k = r._group || "Unknown";
-      (groups[k] ||= []).push(r);
-    });
-
     let rowIdx = 6;
     let zebra  = 0;
     const groupLabel = (key) => isBenef ? `PERIOD: ${key}` : `OFFICE: ${key}`;
 
-    Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b))
+    if (completeRows.length === 0) {
+      ws.mergeCells(`A${rowIdx}:${colLetter(lastCol)}${rowIdx}`);
+      const emptyCell = ws.getCell(`A${rowIdx}`);
+      emptyCell.value = "NO COMPLETE RECORDS FOR THE SELECTED COLUMNS";
+      emptyCell.font = { name: "Calibri", size: 9, italic: true, color: { argb: _XL.muted } };
+      emptyCell.alignment = { vertical: "middle", horizontal: "center" };
+      emptyCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: _XL.zebra } };
+      ws.getRow(rowIdx).height = 20;
+      rowIdx++;
+    }
+
+    _getExportGroups(completeRows)
       .forEach(([key, rows]) => {
         // Group separator row
         ws.mergeCells(`A${rowIdx}:${colLetter(lastCol)}${rowIdx}`);
@@ -839,12 +1061,25 @@ async function _exportExcel(btn) {
       });
 
     // ── Footer credit row ────────────────────────────────────────
-    rowIdx += 1;
-    ws.mergeCells(`A${rowIdx}:${colLetter(lastCol)}${rowIdx}`);
-    const fcell = ws.getCell(`A${rowIdx}`);
-    fcell.value = `© ${now.getFullYear()} SPES Portal System V${_appVersion}  •  Developed by Mark Jordan Ugtong  •  Exclusive Property of DOLE Iligan City`;
-    fcell.font  = { name: "Calibri", size: 8, color: { argb: _XL.muted } };
-    fcell.alignment = { vertical: "middle", horizontal: "center" };
+    const completedFooterRow = rowIdx;
+    ws.mergeCells("A" + completedFooterRow + ":" + colLetter(lastCol) + completedFooterRow);
+    const completedFooter = ws.getCell("A" + completedFooterRow);
+    completedFooter.value = "COMPLETED: " + completeRows.length.toLocaleString() + "  •  © " + now.getFullYear() + " SPES Portal System V" + _appVersion + "  •  Developed by Mark Jordan Ugtong  •  Exclusive Property of DOLE Iligan City";
+    completedFooter.font = { name: "Calibri", size: 8, color: { argb: _XL.muted } };
+    completedFooter.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    completedFooter.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF9FAFB" } };
+    ws.getRow(completedFooterRow).height = 28;
+    rowIdx++;
+
+    if (incompleteRows.length > 0) {
+      _writeIncompleteExcelSidePanel(ws, incompleteRows, cols, isBenef, lastCol, colLetter, {
+        orgTitle: "DEPARTMENT OF LABOR AND EMPLOYMENT",
+        reportTitle: isBenef ? "SPES Beneficiaries Monitoring Report" : "SPES Implementors Roster Report",
+        dateLine,
+        summaryLine,
+      });
+    }
+
 
     // ── Auto column widths (clamped) ─────────────────────────────
     cols.forEach((c, i) => {
@@ -882,8 +1117,8 @@ async function _exportExcel(btn) {
 
 // ── Print ─────────────────────────────────────────────────────
 function _print() {
-  const colDefs = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
-  const cols    = colDefs.filter(c => _cfg.columns.includes(c.key));
+  const cols = _getConfiguredExportColumns();
+  const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
   const now     = new Date();
   const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
@@ -898,42 +1133,76 @@ function _print() {
   if (_cfg.genderFilter !== "all") parts.push(`GENDER: ${_cfg.genderFilter.toUpperCase()}`);
   if (_cfg.yearFilter   !== "all") parts.push(`YEAR: ${_cfg.yearFilter}`);
   if (parts.length === 0) parts.push(isBenefPrint ? "ALL SPES BENEFICIARIES" : "ALL OFFICES");
+  const printSummaryLine = parts.concat([
+    "TOTAL OUTPUTS: " + _filteredData.length.toLocaleString(),
+    "COMPLETED: " + completeRows.length.toLocaleString(),
+    "INCOMPLETE: " + incompleteRows.length.toLocaleString(),
+  ]).join("   " + String.fromCharCode(8226) + "   ");
 
   // Group rows — beneficiaries by year period, implementors by office
   const printGroupLabel = (key) => isBenefPrint ? `PERIOD: ${key}` : `OFFICE: ${key}`;
-  const groups = {};
-  _filteredData.forEach(r => {
-    const k = r._group || "Unknown";
-    if (!groups[k]) groups[k] = [];
-    groups[k].push(r);
-  });
+  const buildPrintTableBody = (rows, { missingPanel = false } = {}) => {
+    if (rows.length === 0) {
+      return `<tr><td colspan="${cols.length}" style="padding:18px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#9CA3AF;">No complete records for the selected columns.</td></tr>`;
+    }
 
-  const tableBody = Object.entries(groups)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, rows]) => {
-      const officeRow = `<tr style="background:#EFF6FF;border-bottom:1px solid #DBEAFE;">
-        <td colspan="${cols.length}" style="padding:7px 16px;font-size:9px;font-weight:900;letter-spacing:0.22em;text-transform:uppercase;color:#1D4ED8;">${printGroupLabel(key)}</td>
+    return _getExportGroups(rows).map(([key, groupRows]) => {
+      const groupBackground = missingPanel ? "#FFF7ED" : "#EFF6FF";
+      const groupBorder = missingPanel ? "#FED7AA" : "#DBEAFE";
+      const groupColor = missingPanel ? "#B45309" : "#1D4ED8";
+      const groupRow = `<tr style="background:${groupBackground};border-bottom:1px solid ${groupBorder};">
+        <td colspan="${cols.length}" style="padding:7px 12px;font-size:8px;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;color:${groupColor};">${_esc(printGroupLabel(key))}</td>
       </tr>`;
-      const dataRows = rows.map((r, idx) => `
-        <tr style="background:${idx % 2 === 0 ? "#FFFFFF" : "#F9FAFB"};border-bottom:1px solid #F3F4F6;">
-          ${cols.map(c => {
-            const val = String(r[c.key] ?? "—");
-            const isName   = c.key === "full_name";
-            const isStatus = c.key === "status";
-            const isGender = c.key === "gender";
-            const isId     = c.key === "id_display";
-            let color  = "#111827";
-            let weight = isName ? "700" : "500";
-            if (isStatus) color = val.toLowerCase() === "archived" ? "#B45309" : "#059669";
-            if (isGender) color = val.toLowerCase() === "male" ? "#0284C7" : "#DB2777";
-            if (isId)     color = "#0038A8";
-            return `<td style="padding:6px 14px;font-size:10px;font-weight:${weight};text-align:${isName ? "left" : "center"};color:${color};white-space:nowrap;">${val}</td>`;
+      const dataRows = groupRows.map((rowData, index) => `
+        <tr style="background:${index % 2 === 0 ? "#FFFFFF" : "#F9FAFB"};border-bottom:1px solid #F3F4F6;">
+          ${cols.map(column => {
+            const raw = rowData[column.key];
+            const isMissing = _isBlankExportValue(raw);
+            const value = isMissing ? "—" : String(raw);
+            const isName = column.key === "full_name";
+            const isStatus = column.key === "status";
+            const isGender = column.key === "gender";
+            const isId = column.key === "id_display";
+            let color = isMissing ? "#B45309" : "#111827";
+            let weight = isName || isMissing ? "700" : "500";
+            if (!isMissing && isStatus) color = value.toLowerCase() === "archived" ? "#B45309" : "#059669";
+            if (!isMissing && isGender) color = value.toLowerCase() === "male" ? "#0284C7" : "#DB2777";
+            if (!isMissing && isId) color = "#0038A8";
+            const background = missingPanel && isMissing ? "background:#FFF7ED;" : "";
+            return `<td style="${background}padding:${missingPanel ? "5px 9px" : "6px 14px"};font-size:${missingPanel ? "8.5px" : "10px"};font-weight:${weight};text-align:${isName ? "left" : "center"};color:${color};white-space:nowrap;">${_esc(value)}</td>`;
           }).join("")}
         </tr>`).join("");
-      return officeRow + dataRows;
+      return groupRow + dataRows;
     }).join("");
+  };
+
+  const tableBody = buildPrintTableBody(completeRows);
+  const incompleteTableBody = buildPrintTableBody(incompleteRows, { missingPanel: true });
 
   const logoPath = "/c_spes.png";
+  const hasIncompleteRows = incompleteRows.length > 0;
+  const printTableShellStyle = hasIncompleteRows
+    ? "display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,0.42fr);gap:14px;align-items:start;"
+    : (cols.length <= 2 ? "display:flex;justify-content:center;" : "");
+  const printTableStyle = hasIncompleteRows || cols.length > 2 ? "width:100%;" : "width:auto;max-width:100%;";
+  const incompletePrintPanel = hasIncompleteRows ? `
+    <div style="min-width:0;overflow:hidden;border:1px solid #FED7AA;background:#FFFBEB;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:#B45309;color:#FFFFFF;">
+        <div>
+          <div style="font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.16em;">Incomplete / Missing Data</div>
+          <div style="margin-top:2px;font-size:7px;font-weight:600;opacity:0.8;">Missing one or more selected values</div>
+        </div>
+        <div style="font-size:8px;font-weight:900;">${incompleteRows.length.toLocaleString()}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-family:Inter,Arial,sans-serif;">
+        <thead>
+          <tr style="background:#002878;">
+            ${cols.map(column => `<th style="padding:7px 9px;text-align:${column.key === "full_name" ? "left" : "center"};font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#FFFFFF;white-space:nowrap;">${_esc(column.label)}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>${incompleteTableBody}</tbody>
+      </table>
+    </div>` : "";
 
   // NOTE: We use <div> throughout — NOT <header>/<main>/<footer>.
   // The page's print CSS rule `body > main > *:not(#print-area) { display:none }`
@@ -963,13 +1232,13 @@ function _print() {
           <div style="display:inline-block;background:#F3F4F6;border-radius:9999px;padding:3px 12px;font-size:9px;font-weight:600;color:#6B7280;">
             Generated: <strong style="color:#374151;">${dateStr} ${timeStr}</strong>
           </div>
-          <div style="margin:5px 0 0;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;">${parts.join(" · ")}</div>
+          <div style="margin:5px 0 0;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;">${printSummaryLine}</div>
         </div>
       </div>
 
       <!-- Data table — grows to fill available space -->
-      <div style="flex:1;margin-bottom:24px;">
-        <table style="width:100%;border-collapse:collapse;font-family:Inter,Arial,sans-serif;">
+      <div style="flex:1;margin-bottom:24px;${printTableShellStyle}">
+        <table style="${printTableStyle}border-collapse:collapse;font-family:Inter,Arial,sans-serif;">
           <thead>
             <tr style="background:#0038A8;">
               ${cols.map(c => `<th style="padding:10px 14px;text-align:center;font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#FFFFFF;white-space:nowrap;">${c.label}</th>`).join("")}
@@ -977,6 +1246,7 @@ function _print() {
           </thead>
           <tbody>${tableBody}</tbody>
         </table>
+        ${incompletePrintPanel}
       </div>
 
       <!-- Signature lines — pinned after the table, avoids page break split -->

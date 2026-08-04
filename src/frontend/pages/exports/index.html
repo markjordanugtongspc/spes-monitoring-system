@@ -160,7 +160,8 @@
         </div>
 
         <!-- Preview Table -->
-        <div class="overflow-x-auto">
+        <div id="preview-data-layout" class="space-y-6">
+          <div id="preview-table-shell" class="min-w-0 overflow-x-auto">
           <table class="w-full text-left text-sm" id="preview-table">
             <thead id="preview-thead">
               <!-- Rendered by exports.js -->
@@ -202,6 +203,23 @@
               </tr>
             </tbody>
           </table>
+          </div>
+
+          <aside id="preview-incomplete-shell" class="hidden overflow-hidden rounded-xl border border-amber-200/80 bg-amber-50/50 shadow-sm dark:border-amber-300/20 dark:bg-amber-900/10">
+            <div class="flex items-center justify-between gap-3 border-b border-amber-200/80 bg-amber-100/70 px-4 py-3 dark:border-amber-300/20 dark:bg-amber-900/20">
+              <div>
+                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-amber-800 dark:text-amber-200">Incomplete records</p>
+                <p class="mt-0.5 text-[9px] font-semibold text-amber-700/70 dark:text-amber-200/60">Missing one or more selected values</p>
+              </div>
+              <span id="preview-incomplete-count" class="rounded-full bg-amber-200/70 px-2 py-1 text-[9px] font-black tabular-nums text-amber-800 dark:bg-amber-300/20 dark:text-amber-200">0</span>
+            </div>
+            <div class="max-h-[28rem] overflow-auto">
+              <table class="w-full text-left text-sm">
+                <thead id="preview-incomplete-thead" class="sticky top-0 z-10 bg-amber-700 dark:bg-amber-800"></thead>
+                <tbody id="preview-incomplete-tbody"></tbody>
+              </table>
+            </div>
+          </aside>
         </div>
 
         <!-- Preview Footer -->
