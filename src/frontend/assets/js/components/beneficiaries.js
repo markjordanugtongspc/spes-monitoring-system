@@ -13,7 +13,12 @@ import {
   archiveBeneficiary,
   fetchBatches,
   fetchBeneficiaryTransferDestinations,
+  fetchBeneficiaryBatchDestinations,
   bulkTransferBeneficiaries,
+  bulkArchiveBeneficiaries,
+  bulkRestoreBeneficiaries,
+  bulkDeleteBeneficiaries,
+  restoreBeneficiary,
 } from "../../../../backend/api/beneficiary.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices, fetchGlobalStaffMetricRoster } from "../../../../backend/api/staff.js";
@@ -454,7 +459,7 @@ function initBatchSortPanel(onFilter) {
       const { data } = await fetchBatches({ forceRefresh: false });
       return data || [];
     },
-    getLabel:      (b) => b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`,
+    getLabel:      (b) => b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.id}`,
     getId:         (b) => String(b.id),
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
@@ -490,6 +495,9 @@ export function initBeneficiaries() {
   let allOffices = [];
   let globalImplementorMetric = null;
 
+  const getPaginationStorageKey = () => viewMode === "implementors"
+    ? "beneficiaries-implementors"
+    : "beneficiaries";
   function getActiveBeneficiaryRecords(records = []) {
     return (records || []).filter((beneficiary) => !beneficiary.archived_at);
   }
@@ -610,12 +618,15 @@ export function initBeneficiaries() {
   let allBeneficiaries = [];
   let activeBeneficiaries = [];
   let currentPage = 1;
+  currentPage = preferenceStorage.getPaginationPage(getPaginationStorageKey()) || 1;
   let sortFilterInstance = null;
   let selectedBatchId = null;
   let currentOfficeName = "";
   let activeStatusMode = "NEW";
+  let archiveStatusMode = "active";
   let beneficiarySortMode = "none";
   const selectedBeneficiaryIds = new Set();
+  let beneficiaryBulkScope = "current-batch";
 
   const canManageCurrentOffice = () => (
     currentOfficeId !== "ALL" &&
@@ -628,7 +639,20 @@ export function initBeneficiaries() {
     )
   );
 
-  // --- START: BENEFICIARY BULK TRANSFER TOOL FUNCTION ---
+  const getBranchBulkBeneficiaries = () => allBeneficiaries.filter(canManageBeneficiary);
+
+  const getBulkScopeBeneficiaries = () => {
+    const scope = beneficiaryBulkScope;
+    const isArchivedView = archiveStatusMode === "archived";
+    let rows = getBranchBulkBeneficiaries().filter((beneficiary) => Boolean(beneficiary.archived_at) === isArchivedView);
+    if (scope === "all-batches" || selectedBatchId === null) return rows;
+    if (selectedBatchId === "unassigned") {
+      return rows.filter((beneficiary) => beneficiary.batch_id == null && beneficiary.batch?.id == null);
+    }
+    return rows.filter((beneficiary) => String(beneficiary.batch_id ?? beneficiary.batch?.id) === String(selectedBatchId));
+  };
+
+  // --- START: BENEFICIARY BULK ACTION TOOL FUNCTION ---
   function initBeneficiaryBulkTransferTools() {
     const toolsWrap = document.getElementById("beneficiary-bulk-tools");
     const trigger = document.getElementById("btn-beneficiary-bulk-tools");
@@ -639,9 +663,18 @@ export function initBeneficiaries() {
     const destinationsPanel = document.getElementById("beneficiary-transfer-destinations");
     const destinationList = document.getElementById("beneficiary-transfer-destination-list");
     const destinationSearch = document.getElementById("beneficiary-transfer-search");
+    const destinationHeading = document.getElementById("beneficiary-transfer-heading");
     const statusBtn = document.getElementById("btn-transfer-beneficiary-status");
+    const officeTransferBtn = document.getElementById("btn-transfer-beneficiary-office");
+    const batchTransferBtn = document.getElementById("btn-transfer-beneficiary-batch");
     const statusLabel = document.getElementById("beneficiary-transfer-status-label");
     const backBtn = document.getElementById("btn-back-transfer-actions");
+    const archiveBtn = document.getElementById("btn-bulk-archive-beneficiaries");
+    const archiveMenu = document.getElementById("beneficiary-bulk-archive-menu");
+    const archiveActionBtn = document.getElementById("btn-bulk-archive-action");
+    const archiveActionLabelEl = document.getElementById("beneficiary-bulk-archive-action-label");
+    const archiveLabelEl = document.getElementById("beneficiary-bulk-archive-label");
+    const deleteRevealBtn = document.getElementById("btn-reveal-bulk-delete-beneficiaries");
 
     if (
       !toolsWrap ||
@@ -652,8 +685,8 @@ export function initBeneficiaries() {
       !destinationList ||
       !destinationSearch
     ) {
-      flowDebug("BULK TRANSFER", "Beneficiary transfer tool skipped", {
-        reason: "one or more transfer controls are missing",
+      flowDebug("BULK ACTIONS", "Beneficiary bulk-action tool skipped", {
+        reason: "one or more bulk action controls are missing",
       });
       return {
         sync: () => {},
@@ -661,9 +694,11 @@ export function initBeneficiaries() {
       };
     }
 
-    let destinations = null;
+    let officeDestinations = null;
+    let batchDestinations = null;
     let destinationMode = "office";
     let transferInFlight = false;
+    let bulkActionInFlight = false;
 
     const getSelectedRows = () => allBeneficiaries.filter(
       (beneficiary) => selectedBeneficiaryIds.has(String(beneficiary.id))
@@ -682,6 +717,10 @@ export function initBeneficiaries() {
       trigger.setAttribute("aria-expanded", "false");
       actionsPanel.classList.remove("hidden");
       destinationsPanel.classList.add("hidden");
+      archiveMenu?.classList.add("hidden");
+      archiveBtn?.setAttribute("aria-expanded", "false");
+      officeTransferBtn?.setAttribute("aria-expanded", "false");
+      batchTransferBtn?.setAttribute("aria-expanded", "false");
     };
 
     const sync = () => {
@@ -691,10 +730,41 @@ export function initBeneficiaries() {
       });
 
       const selectAll = document.getElementById("spes-checkbox-all");
-      const selectedVisible = visibleCheckboxes.filter((checkbox) => checkbox.checked).length;
+      const scopeMenu = document.getElementById("beneficiary-bulk-scope-menu");
+      const hasCurrentBatch = selectedBatchId !== null;
+      if (!hasCurrentBatch && beneficiaryBulkScope === "current-batch") beneficiaryBulkScope = "all-batches";
+      scopeMenu?.querySelectorAll("[data-bulk-scope]").forEach((button) => {
+        const isCurrent = button.dataset.bulkScope === beneficiaryBulkScope;
+        button.classList.toggle("bg-spes-blue/8", isCurrent);
+        button.classList.toggle("dark:bg-white/8", isCurrent);
+        button.disabled = button.dataset.bulkScope === "current-batch" && !hasCurrentBatch;
+        button.classList.toggle("cursor-not-allowed", button.disabled);
+        button.classList.toggle("opacity-45", button.disabled);
+      });
+      scopeMenu?.querySelectorAll("[data-bulk-scope-check]").forEach((check) => {
+        check.classList.toggle("hidden", check.dataset.bulkScopeCheck !== beneficiaryBulkScope);
+      });
+      const allScopeRows = getBulkScopeBeneficiaries();
+      const visibleIds = [...document.querySelectorAll(".beneficiary-row-checkbox")].map((checkbox) => String(checkbox.dataset.beneId));
+      const selectedOnPage = visibleIds.filter((id) => selectedBeneficiaryIds.has(id)).length;
       if (selectAll) {
-        selectAll.checked = visibleCheckboxes.length > 0 && selectedVisible === visibleCheckboxes.length;
-        selectAll.indeterminate = selectedVisible > 0 && selectedVisible < visibleCheckboxes.length;
+        selectAll.checked = visibleIds.length > 0 && selectedOnPage === visibleIds.length;
+        selectAll.indeterminate = selectedOnPage > 0 && selectedOnPage < visibleIds.length;
+      }
+      const selectedInScope = allScopeRows.filter((beneficiary) =>
+        selectedBeneficiaryIds.has(String(beneficiary.id))
+      ).length;
+      const selectAllScopeBtn = document.querySelector("[data-bulk-scope-action=\"toggle\"]");
+      if (selectAllScopeBtn) {
+        const allSelected = allScopeRows.length > 0 && selectedInScope === allScopeRows.length;
+        const scopeLabel = beneficiaryBulkScope === "all-batches" ? "all batches" : "the current batch";
+        const statusLabel = archiveStatusMode === "archived" ? "archived" : "active";
+        selectAllScopeBtn.setAttribute("aria-pressed", String(allSelected));
+        const actionLabel = selectAllScopeBtn.querySelector("[data-bulk-scope-action-label]");
+        if (actionLabel) actionLabel.textContent = allSelected ? "Clear selection" : `Select all in ${scopeLabel}`;
+        selectAllScopeBtn.title = allSelected
+          ? `Clear the ${scopeLabel} selection`
+          : `Select all ${allScopeRows.length} ${statusLabel} beneficiaries in ${scopeLabel}`;
       }
 
       const count = selectedBeneficiaryIds.size;
@@ -703,12 +773,23 @@ export function initBeneficiaries() {
         summaryEl.textContent = `${count} beneficiar${count === 1 ? "y" : "ies"} selected`;
       }
       if (statusLabel) statusLabel.textContent = `Transfer to ${getTargetStatus()}`;
+      const isArchivedView = archiveStatusMode === "archived";
+      if (archiveLabelEl) archiveLabelEl.textContent = isArchivedView ? "Restore & delete" : "Archive & delete";
+      if (archiveActionLabelEl) archiveActionLabelEl.textContent = isArchivedView ? "Restore selected" : "Archive selected";
+      archiveBtn?.classList.toggle("hover:bg-emerald-500/10", isArchivedView);
+      archiveBtn?.classList.toggle("hover:text-emerald-700", isArchivedView);
+      archiveBtn?.classList.toggle("dark:hover:bg-emerald-400/10", isArchivedView);
+      archiveBtn?.classList.toggle("dark:hover:text-emerald-300", isArchivedView);
+      officeTransferBtn?.classList.toggle("hidden", count === 0);
+      batchTransferBtn?.classList.toggle("hidden", count === 0);
+      deleteRevealBtn?.classList.toggle("hidden", !access.isAdmin);
 
       const tableIsVisible =
         viewMode === "beneficiaries" &&
         !document.getElementById("implementors-table-wrapper")?.classList.contains("hidden");
-      toolsWrap.classList.toggle("hidden", count === 0 || !tableIsVisible);
-      if (count === 0 || !tableIsVisible) closeMenu();
+      const hasSelectableRows = allScopeRows.length > 0;
+      toolsWrap.classList.toggle("hidden", count === 0 || !hasSelectableRows || !tableIsVisible);
+      if (count === 0 || !hasSelectableRows || !tableIsVisible) closeMenu();
     };
 
     const clear = () => {
@@ -761,18 +842,83 @@ export function initBeneficiaries() {
       );
     };
 
+    const executeBulkMutation = async ({ title, message, loadingTitle, action, successTitle, successMessage, confirmLabel = title, cancelLabel = "Cancel" }) => {
+      const ids = [...selectedBeneficiaryIds];
+      if (!ids.length || bulkActionInFlight) return;
+
+      const confirmation = await modals.confirm(title, message, confirmLabel, cancelLabel);
+      if (!confirmation.isConfirmed) return;
+
+      bulkActionInFlight = true;
+      modals.loading(loadingTitle, "Please wait while the selected records are updated...");
+      let result;
+      try {
+        result = await action(ids);
+      } catch (error) {
+        flowDebugError("Beneficiary bulk action threw an error", error, { ids, title });
+        result = { success: false, error: "The bulk action failed unexpectedly." };
+      } finally {
+        bulkActionInFlight = false;
+      }
+      modals.close();
+
+      if (!result.success) {
+        await modals.error("Bulk Action Failed", result.error);
+        return;
+      }
+
+      clear();
+      closeMenu();
+      await loadData(true);
+      await batchSortPanel?.rebuild?.();
+      await modals.success(successTitle, successMessage(result));
+    };
+
     const renderDestinations = () => {
       const query = destinationSearch.value.trim().toLowerCase();
-      const currentLocation = String(currentOfficeLocation || "").trim().toLowerCase();
+      const selectedRows = getSelectedRows();
+      const selectedBatchIds = new Set(selectedRows.map((beneficiary) => String(beneficiary.batch_id ?? beneficiary.batch?.id ?? "")));
+      const selectedOfficeIds = new Set(selectedRows.map((beneficiary) => String(beneficiary.staffs?.office_id ?? "")));
+      if (destinationMode === "batch") {
+        const filteredBatches = (batchDestinations ?? [])
+          .filter((batch) => {
+            if (!query) return true;
+            return [batch.batch_name, batch.id, `batch ${batch.id}`]
+              .some((value) => String(value || "").toLowerCase().includes(query));
+          })
+          .sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+
+        if (!filteredBatches.length) {
+          destinationList.innerHTML = `
+            <div class="px-3 py-8 text-center text-xs font-semibold text-spes-black/40 dark:text-white/40">
+              No matching batch destinations.
+            </div>`;
+          return;
+        }
+
+        destinationList.innerHTML = filteredBatches.map((batch) => {
+          const batchLabel = batch.batch_name || `Batch ${batch.id}`;
+          const isCurrentBatch = selectedBatchIds.has(String(batch.id));
+          return `
+            <button type="button" data-transfer-batch-id="${batch.id}" ${isCurrentBatch ? "disabled" : ""}
+              class="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${isCurrentBatch ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-white/8"}">
+              <span class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M12 3v6m0 0H6m6 0h6M6 9v5m12-5v5M3 14h6v6H3v-6Zm12 0h6v6h-6v-6Z" />
+                </svg>
+              </span>
+              <span class="min-w-0">
+                <span class="block truncate text-xs font-black uppercase text-spes-black/80 dark:text-white/80">${escHtml(batchLabel)}${isCurrentBatch ? " (Current)" : ""}</span>
+                <span class="mt-0.5 block truncate text-[0.625rem] font-semibold text-spes-black/45 dark:text-white/45">Batch ID ${escHtml(batch.id)}</span>
+              </span>
+            </button>`;
+        }).join("");
+        return;
+      }
+
       const currentOffice = String(currentOfficeId || "");
 
-      const filtered = (destinations ?? [])
-        .filter((destination) => {
-          if (destinationMode === "branch") {
-            return String(destination.branch_name || "").trim().toLowerCase() !== currentLocation;
-          }
-          return String(destination.office_id) !== currentOffice;
-        })
+      const filtered = (officeDestinations ?? [])
         .filter((destination) => {
           if (!query) return true;
           return [
@@ -781,62 +927,78 @@ export function initBeneficiaries() {
             destination.staff_name,
           ].some((value) => String(value || "").toLowerCase().includes(query));
         })
-        .sort((a, b) => {
-          const aKey = destinationMode === "branch" ? a.branch_name : a.office_name;
-          const bKey = destinationMode === "branch" ? b.branch_name : b.office_name;
-          return String(aKey).localeCompare(String(bKey));
-        });
+        .sort((a, b) => String(a.office_name).localeCompare(String(b.office_name)));
 
       if (!filtered.length) {
         destinationList.innerHTML = `
           <div class="px-3 py-8 text-center text-xs font-semibold text-spes-black/40 dark:text-white/40">
-            No matching ${destinationMode === "branch" ? "branch" : "office"} destinations.
+            No matching office destinations.
           </div>`;
         return;
       }
 
       destinationList.innerHTML = filtered.map((destination) => `
-        <button type="button" data-transfer-staff-id="${destination.staff_id}"
-          class="flex w-full cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-spes-blue/8 dark:hover:bg-white/8">
-          <span class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${destinationMode === "branch" ? "bg-violet-500/10 text-violet-600 dark:text-violet-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"}">
+        <button type="button" data-transfer-staff-id="${destination.staff_id}" ${selectedOfficeIds.has(String(destination.office_id)) ? "disabled" : ""}
+          class="flex w-full items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${selectedOfficeIds.has(String(destination.office_id)) ? "cursor-not-allowed opacity-45" : "cursor-pointer hover:bg-spes-blue/8 dark:hover:bg-white/8"}">
+          <span class="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
             <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="${destinationMode === "branch" ? "M12 3v6m0 0H6m6 0h6M6 9v5m12-5v5M3 14h6v6H3v-6Zm12 0h6v6h-6v-6Z" : "M3 21h18M5 21V5l7-3 7 3v16"}" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" d="M3 21h18M5 21V5l7-3 7 3v16" />
             </svg>
           </span>
           <span class="min-w-0">
-            <span class="block truncate text-xs font-black uppercase text-spes-black/80 dark:text-white/80">${escHtml(destinationMode === "branch" ? destination.branch_name : destination.office_name)}</span>
-            <span class="mt-0.5 block truncate text-[0.625rem] font-semibold text-spes-black/45 dark:text-white/45">${escHtml(destinationMode === "branch" ? destination.office_name : destination.branch_name)} · ${escHtml(destination.staff_name)}</span>
+            <span class="block truncate text-xs font-black uppercase text-spes-black/80 dark:text-white/80">${escHtml(destination.office_name)}${selectedOfficeIds.has(String(destination.office_id)) ? " (Current)" : ""}</span>
+            <span class="mt-0.5 block truncate text-[0.625rem] font-semibold text-spes-black/45 dark:text-white/45">${escHtml(destination.branch_name)} | ${escHtml(destination.staff_name)}</span>
           </span>
         </button>
       `).join("");
     };
 
     const openDestinationPicker = async (mode) => {
+      const activeButton = mode === "batch" ? batchTransferBtn : officeTransferBtn;
+      const otherButton = mode === "batch" ? officeTransferBtn : batchTransferBtn;
+      const isAlreadyOpen = !destinationsPanel.classList.contains("hidden") && destinationMode === mode;
+      if (isAlreadyOpen) {
+        destinationsPanel.classList.add("hidden");
+        activeButton?.setAttribute("aria-expanded", "false");
+        return;
+      }
+
       destinationMode = mode;
-      actionsPanel.classList.add("hidden");
       destinationsPanel.classList.remove("hidden");
+      activeButton?.setAttribute("aria-expanded", "true");
+      otherButton?.setAttribute("aria-expanded", "false");
+      archiveMenu?.classList.add("hidden");
+      archiveBtn?.setAttribute("aria-expanded", "false");
       destinationSearch.value = "";
-      destinationSearch.placeholder = mode === "branch"
-        ? "Search branch, office, or implementor..."
+      if (destinationHeading) destinationHeading.textContent = mode === "batch" ? "Batch destinations" : "Office destinations";
+      destinationSearch.placeholder = mode === "batch"
+        ? "Search batch number or name..."
         : "Search office or implementor...";
       destinationList.innerHTML = `
         <div class="px-3 py-8 text-center text-xs font-semibold text-spes-black/40 dark:text-white/40">
-          Loading destinations...
+          Loading ${mode === "batch" ? "batches" : "destinations"}...
         </div>`;
 
-      if (!destinations) {
+      if (mode === "batch" && !batchDestinations) {
+        const result = await fetchBeneficiaryBatchDestinations();
+        if (result.error) {
+          destinationList.innerHTML = `
+            <div class="px-3 py-8 text-center text-xs font-semibold text-red-500">${escHtml(result.error)}</div>`;
+          return;
+        }
+        batchDestinations = result.data;
+      } else if (mode === "office" && !officeDestinations) {
         const result = await fetchBeneficiaryTransferDestinations();
         if (result.error) {
           destinationList.innerHTML = `
             <div class="px-3 py-8 text-center text-xs font-semibold text-red-500">${escHtml(result.error)}</div>`;
           return;
         }
-        destinations = result.data;
+        officeDestinations = result.data;
       }
       renderDestinations();
       destinationSearch.focus();
     };
-
     trigger.addEventListener("click", (event) => {
       event.stopPropagation();
       const willOpen = menu.classList.contains("hidden");
@@ -856,7 +1018,69 @@ export function initBeneficiaries() {
         payload: { returnStatus: targetStatus },
       });
     });
-
+    archiveActionBtn?.addEventListener("click", () => {
+      const count = selectedBeneficiaryIds.size;
+      executeBulkMutation({
+        title: `${archiveStatusMode === "archived" ? "Restore" : "Archive"} ${count} Beneficiar${count === 1 ? "y" : "ies"}?`,
+        message: archiveStatusMode === "archived"
+          ? `Restore ${count} selected beneficiary record${count === 1 ? "" : "s"} to the active roster?`
+          : `Archive ${count} selected beneficiary record${count === 1 ? "" : "s"}? They can be restored later.`,
+        loadingTitle: archiveStatusMode === "archived" ? "Restoring Beneficiaries" : "Archiving Beneficiaries",
+        action: archiveStatusMode === "archived" ? bulkRestoreBeneficiaries : bulkArchiveBeneficiaries,
+        successTitle: archiveStatusMode === "archived" ? "Restore Complete" : "Archive Complete",
+        successMessage: (result) => archiveStatusMode === "archived"
+          ? `${result.restored} beneficiar${result.restored === 1 ? "y was" : "ies were"} restored.`
+          : `${result.archived} beneficiar${result.archived === 1 ? "y was" : "ies were"} archived.`,
+      });
+    });
+    archiveBtn?.addEventListener("click", () => {
+      const expanded = archiveBtn.getAttribute("aria-expanded") === "true";
+      archiveBtn.setAttribute("aria-expanded", String(!expanded));
+      archiveMenu?.classList.toggle("hidden", expanded);
+      destinationsPanel.classList.add("hidden");
+      officeTransferBtn?.setAttribute("aria-expanded", "false");
+      batchTransferBtn?.setAttribute("aria-expanded", "false");
+    });
+    document.getElementById("btn-beneficiary-bulk-scope")?.addEventListener("click", () => {
+      const scopeButton = document.getElementById("btn-beneficiary-bulk-scope");
+      const scopeMenu = document.getElementById("beneficiary-bulk-scope-menu");
+      const expanded = scopeButton?.getAttribute("aria-expanded") === "true";
+      scopeButton?.setAttribute("aria-expanded", String(!expanded));
+      scopeMenu?.classList.toggle("hidden", expanded);
+    });
+    document.querySelectorAll("[data-bulk-scope]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
+        beneficiaryBulkScope = button.dataset.bulkScope || "current-batch";
+        beneficiaryBulkTransferTools.sync();
+      });
+    });
+    document.querySelector("[data-bulk-scope-action=\"toggle\"]")?.addEventListener("click", () => {
+      const selectableRows = getBulkScopeBeneficiaries();
+      const isFullySelected = selectableRows.length > 0 && selectableRows.every(
+        (beneficiary) => selectedBeneficiaryIds.has(String(beneficiary.id))
+      );
+      selectableRows.forEach((beneficiary) => {
+        const id = String(beneficiary.id);
+        if (!isFullySelected) selectedBeneficiaryIds.add(id);
+        else selectedBeneficiaryIds.delete(id);
+      });
+      beneficiaryBulkTransferTools.sync();
+    });
+    deleteRevealBtn?.addEventListener("click", () => {
+      const count = selectedBeneficiaryIds.size;
+      closeMenu();
+      executeBulkMutation({
+        title: `Permanently delete ${count} Beneficiar${count === 1 ? "y" : "ies"}?`,
+        message: `This permanently removes ${count} selected beneficiary record${count === 1 ? "" : "s"} from Supabase. This cannot be undone.`,
+        loadingTitle: "Deleting Beneficiaries",
+        action: bulkDeleteBeneficiaries,
+        successTitle: "Permanent Delete Complete",
+        successMessage: (result) => `${result.deleted} beneficiar${result.deleted === 1 ? "y was" : "ies were"} permanently deleted.`,
+        confirmLabel: "Continue",
+        cancelLabel: "Cancel",
+      });
+    });
     document.querySelectorAll("[data-transfer-destination-mode]").forEach((button) => {
       button.addEventListener("click", () => openDestinationPicker(button.dataset.transferDestinationMode));
     });
@@ -866,19 +1090,32 @@ export function initBeneficiaries() {
     });
     destinationSearch.addEventListener("input", renderDestinations);
     destinationList.addEventListener("click", (event) => {
+      const batchButton = event.target.closest("[data-transfer-batch-id]");
+      if (batchButton) {
+        if (batchButton.disabled) return;
+        const batch = (batchDestinations ?? []).find(
+          (item) => String(item.id) === String(batchButton.dataset.transferBatchId)
+        );
+        if (!batch) return;
+        const batchLabel = batch.batch_name || `Batch ${batch.id}`;
+        executeTransfer({
+          title: `Transfer to ${batchLabel}?`,
+          message: `Move ${selectedBeneficiaryIds.size} selected beneficiar${selectedBeneficiaryIds.size === 1 ? "y" : "ies"} to ${batchLabel}? Their implementor assignment will remain unchanged.`,
+          payload: { destinationBatchId: batch.id },
+        });
+        return;
+      }
+
       const destinationButton = event.target.closest("[data-transfer-staff-id]");
       if (!destinationButton) return;
-      const destination = (destinations ?? []).find(
+      const destination = (officeDestinations ?? []).find(
         (item) => String(item.staff_id) === String(destinationButton.dataset.transferStaffId)
       );
       if (!destination) return;
 
-      const destinationLabel = destinationMode === "branch"
-        ? `${destination.branch_name} · ${destination.office_name}`
-        : destination.office_name;
       executeTransfer({
-        title: `Transfer to ${destinationMode === "branch" ? "Branch" : "Office"}?`,
-        message: `Move ${selectedBeneficiaryIds.size} selected beneficiar${selectedBeneficiaryIds.size === 1 ? "y" : "ies"} to ${destinationLabel}? Their previous batch assignment will be cleared.`,
+        title: "Transfer to Office?",
+        message: `Move ${selectedBeneficiaryIds.size} selected beneficiar${selectedBeneficiaryIds.size === 1 ? "y" : "ies"} to ${destination.office_name}? Their previous batch assignment will be cleared.`,
         payload: { destinationStaffId: destination.staff_id },
       });
     });
@@ -899,7 +1136,7 @@ export function initBeneficiaries() {
     sync();
     return { sync, clear };
   }
-  // --- END: BENEFICIARY BULK TRANSFER TOOL FUNCTION ---
+  // --- END: BENEFICIARY BULK ACTION TOOL FUNCTION ---
 
   const beneficiaryBulkTransferTools = initBeneficiaryBulkTransferTools();
 
@@ -933,7 +1170,7 @@ export function initBeneficiaries() {
     const isEdit = trigger.classList.contains("btn-edit-batch");
     const batch = isEdit ? {
       id: trigger.dataset.batchId,
-      batchNumber: trigger.dataset.batchNumber,
+      batchId: trigger.dataset.batchId,
       batchName: trigger.dataset.batchName
     } : null;
 
@@ -1169,7 +1406,9 @@ export function initBeneficiaries() {
     // Swap Buttons: Hide Add Beneficiary until inside a batch, Show Create Batch
     const addBtn = document.getElementById("btn-add-beneficiary");
     const createBatchBtn = document.getElementById("btn-create-batch");
-    if (addBtn) {
+
+
+  if (addBtn) {
       addBtn.classList.remove("inline-flex");
       addBtn.classList.add("hidden");
     }
@@ -1215,7 +1454,7 @@ export function initBeneficiaries() {
     } else {
       renderOverallSpesSummary(filteredData);
     }
-    currentPage = 1;
+    currentPage = preferenceStorage.getPaginationPage(getPaginationStorageKey()) || 1;
 
     updateDynamicFilterDropdown(filteredData);
 
@@ -1402,7 +1641,9 @@ export function initBeneficiaries() {
     // Hide Add Beneficiary & Create Batch Buttons
     const addBtn = document.getElementById("btn-add-beneficiary");
     const createBatchBtn = document.getElementById("btn-create-batch");
-    if (addBtn) {
+
+
+  if (addBtn) {
       addBtn.classList.remove("inline-flex");
       addBtn.classList.add("hidden");
     }
@@ -1433,7 +1674,7 @@ export function initBeneficiaries() {
     const activeStaffs = pinSystemAdministratorFirst(staffs.filter(s => !s.archive_at));
 
     allImplementors = activeStaffs;
-    currentPage = 1;
+    currentPage = preferenceStorage.getPaginationPage(getPaginationStorageKey()) || 1;
 
     const targetId = _getUrlParam("id");
     if (targetId) {
@@ -1546,8 +1787,8 @@ export function initBeneficiaries() {
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
           <span class="font-bold text-spes-black/55 dark:text-white/50">Batch</span>
-          ${b.batch?.batch_number != null
-            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.batch_number}`)}</span>`
+          ${b.batch?.id != null
+            ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.id}`)}</span>`
             : `<span class="italic text-[0.625rem] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
           }
         </div>
@@ -1628,6 +1869,10 @@ export function initBeneficiaries() {
 
   // ── Table rendering ─────────────────────────────────────────
   function renderPaginatedTable() {
+    const visibleRows = viewMode === "implementors" ? activeImplementors : getVisibleBeneficiaries();
+    const totalPages = Math.max(1, Math.ceil(visibleRows.length / ROWS_PER_PAGE));
+    currentPage = Math.min(totalPages, Math.max(1, currentPage));
+    preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
     const start = (currentPage - 1) * ROWS_PER_PAGE;
     const end = start + ROWS_PER_PAGE;
 
@@ -1644,12 +1889,13 @@ export function initBeneficiaries() {
         if (controlsContainer) controlsContainer.classList.add("hidden");
       } else {
         const showOfficeCol = currentOfficeLocation === "ALL";
-        const canManageRoster = canManageCurrentOffice();
+        const canManageRoster = getBranchBulkBeneficiaries().length > 0;
         headerRow.innerHTML = `
           <th scope="col" class="p-4 text-center w-4">
-            <div class="flex items-center justify-center">
+            <div class="flex items-center justify-center gap-1.5">
               ${canManageRoster ? `<input id="spes-checkbox-all" type="checkbox"
-                class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
+                class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow"
+                title="Select all active beneficiaries in this branch">
               ` : `<span class="text-[0.5625rem] font-black uppercase text-spes-black/35 dark:text-white/35">View</span>`}
             </div>
           </th>
@@ -1749,13 +1995,16 @@ export function initBeneficiaries() {
       const tableTitle = document.getElementById("table-title");
       if (tableTitle) {
         const offName = currentOfficeName || "SPES";
-        if (selectedBatchId === null) {
+        const matchBatch = activeBeneficiaries.find(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId))?.batch;
+        const archiveBatchLabel = matchBatch ? `BATCH ${matchBatch.id}` : selectedBatchId === null ? "ALL BATCHES" : selectedBatchId === "unassigned" ? "UNASSIGNED" : "BATCH LIST";
+        if (archiveStatusMode === "archived") {
+          tableTitle.textContent = `ARCHIVE LISTS - ${archiveBatchLabel} OF ${offName.toUpperCase()}`;
+        } else if (selectedBatchId === null) {
           tableTitle.textContent = `BATCHES - ${offName.toUpperCase()}`;
         } else if (selectedBatchId === "unassigned") {
           tableTitle.textContent = `UNASSIGNED - ${offName.toUpperCase()}`;
         } else {
-          const matchBatch = activeBeneficiaries.find(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId))?.batch;
-          const batchLabel = matchBatch ? (matchBatch.batch_name ? matchBatch.batch_name.toUpperCase() : `BATCH ${matchBatch.batch_number}`) : "BATCH LIST";
+          const batchLabel = matchBatch ? (matchBatch.batch_name ? matchBatch.batch_name.toUpperCase() : archiveBatchLabel) : "BATCH LIST";
           tableTitle.textContent = `${batchLabel} - ${offName.toUpperCase()}`;
         }
       }
@@ -1766,7 +2015,9 @@ export function initBeneficiaries() {
 
       if (selectedBatchId === null) {
         // Show Batch Cards Grid
-        if (addBtn) {
+
+
+  if (addBtn) {
           addBtn.classList.remove("inline-flex");
           addBtn.classList.add("hidden");
         }
@@ -1791,7 +2042,9 @@ export function initBeneficiaries() {
         renderBatchCards();
       } else {
         // Show Filtered Beneficiaries Table
-        if (addBtn) {
+
+
+  if (addBtn) {
           addBtn.classList.toggle("hidden", !canManageCurrentOffice());
           addBtn.classList.toggle("inline-flex", canManageCurrentOffice());
         }
@@ -1822,6 +2075,7 @@ export function initBeneficiaries() {
           const absIdx = start + idx;
           const period = formatPeriod(b);
           const isBaby = String(b.return_status || "NEW").toUpperCase() === "SPES BABY";
+          const isArchivedRow = Boolean(b.archived_at);
 
           const canManageRow = canManageBeneficiary(b);
           const checkboxTd = canManageRow ? `
@@ -1852,8 +2106,10 @@ export function initBeneficiaries() {
                 <button class="btn-edit-bene cursor-pointer p-1 text-spes-blue hover:text-spes-blue/80 dark:text-spes-yellow dark:hover:text-spes-yellow/80" title="Edit">
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 </button>
-                <button class="btn-archive-bene cursor-pointer p-1 text-red-500 hover:text-red-600" title="Archive">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <button class="btn-archive-bene cursor-pointer rounded-md p-1 transition-colors ${isArchivedRow ? "text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-300" : "text-red-500 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-400/10 dark:hover:text-red-300"}" title="${isArchivedRow ? "Restore Archive" : "Archive"}" aria-label="${isArchivedRow ? "Restore Archive" : "Archive"}">
+                  ${isArchivedRow
+                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 lucide lucide-archive-restore-icon lucide-archive-restore"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h2"/><path d="M20 8v11a2 2 0 0 1-2 2h-2"/><path d="m9 15 3-3 3 3"/><path d="M12 12v9"/></svg>'
+                    : '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1 1v3M4 7h16"/></svg>'}
                 </button>
               </div>
             </td>
@@ -1910,7 +2166,11 @@ export function initBeneficiaries() {
 
           row.querySelector(".btn-archive-bene")?.addEventListener("click", (e) => {
             e.stopPropagation();
-            confirmArchive(bData.id, bData.full_name);
+            if (bData.archived_at) {
+              confirmRestore(bData.id, bData.full_name);
+            } else {
+              confirmArchive(bData.id, bData.full_name);
+            }
           });
         });
         beneficiaryBulkTransferTools.sync();
@@ -1960,10 +2220,10 @@ export function initBeneficiaries() {
     { bg: "bg-orange-100 dark:bg-orange-900/80",   text: "text-orange-900 dark:text-orange-100",   border: "border-orange-300 dark:border-orange-500/70" },
   ];
 
-    const getBatchCapacity = (batchNumber) => [1, 2, 3].includes(Number(batchNumber)) ? 2000 : 350;
+    const getBatchCapacity = (batchId) => [1, 2, 3].includes(Number(batchId)) ? 2000 : 350;
 
-    const createCard = (title, items, colId, pal, isUnassigned = false, batchNumber = "", batchName = "") => {
-      const capacityTarget = getBatchCapacity(batchNumber);
+    const createCard = (title, items, colId, pal, isUnassigned = false, batchId = "", batchName = "") => {
+      const capacityTarget = getBatchCapacity(batchId);
       const totalCount = items.length;
       const newCount = items.filter(item =>
         String(item.return_status || "").trim().toUpperCase() === "NEW"
@@ -1992,7 +2252,7 @@ export function initBeneficiaries() {
                 <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount.toLocaleString()} of ${capacityTarget.toLocaleString()} beneficiaries</p>
               </div>
             ${canManageCurrentOffice() ? `<button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-white/60 shadow-inner transition-all hover:scale-110 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spes-blue active:scale-95 dark:bg-black/20 dark:hover:bg-black/40 dark:focus-visible:outline-spes-yellow pointer-events-auto"
-              data-batch-id="${escHtml(String(colId))}" data-batch-number="${escHtml(String(batchNumber || ""))}" data-batch-name="${escHtml(String(batchName || ""))}"
+              data-batch-id="${escHtml(String(colId))}" data-batch-name="${escHtml(String(batchName || ""))}"
               aria-label="Edit ${escHtml(title)}" title="Edit Batch">
               <svg class="pointer-events-none h-4 w-4 ${pal.text}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -2032,8 +2292,8 @@ export function initBeneficiaries() {
     // Batches
     batches.forEach((b, i) => {
       const pal = BATCH_PALETTES[i % BATCH_PALETTES.length];
-      const title = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
-      cardsHtml += createCard(title, grouped[b.id] || [], b.id, pal, false, b.batch_number, b.batch_name);
+      const title = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.id}`;
+      cardsHtml += createCard(title, grouped[b.id] || [], b.id, pal, false, b.id, b.batch_name);
     });
 
     kanbanWrap.innerHTML = cardsHtml;
@@ -2049,25 +2309,22 @@ export function initBeneficiaries() {
 
   }
 
-  // ── Pagination Indicators (Updated to compacted + responsive input) ──────
+  // ── Pagination Indicators ───────────────────────────────────────────────
   function updatePageIndicators(totalCount) {
     const indicatorsEl = document.getElementById("page-indicators-container");
     if (indicatorsEl) {
       const totalPages = Math.max(1, Math.ceil(totalCount / ROWS_PER_PAGE));
-      
-      let pages = [];
-      if (totalPages <= 5) {
-        for (let i = 1; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages = [1, 2, 3, 4, 'input', totalPages];
-      }
+
+      const pages = totalPages <= 3
+        ? Array.from({ length: totalPages }, (_, index) => index + 1)
+        : [1, 2, 'input', totalPages];
 
       let html = "";
       pages.forEach(p => {
         if (p === 'input') {
-          const showValue = (currentPage > 4 && currentPage < totalPages) ? currentPage : '';
+          const showValue = currentPage > 2 && currentPage < totalPages ? currentPage : "";
           const activeClass = showValue !== '' ? 'bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold' : 'text-spes-black/60 dark:text-spes-white/60';
-          
+
           html += `
             <li class="flex items-center border border-spes-blue/15 dark:border-white/10 bg-spes-white dark:bg-spes-dark-primary">
               <input type="number" min="1" max="${totalPages}" value="${showValue}" placeholder="..." 
@@ -2082,16 +2339,14 @@ export function initBeneficiaries() {
           html += `<li><button class="page-btn cursor-pointer border px-3 py-2 text-sm font-medium ${active} transition-colors" data-page="${p}">${p}</button></li>`;
         }
       });
-      
       indicatorsEl.innerHTML = html;
-      
       indicatorsEl.querySelectorAll(".page-btn").forEach(btn => {
         btn.addEventListener("click", e => {
           currentPage = parseInt(e.currentTarget.getAttribute("data-page"), 10);
           renderPaginatedTable();
         });
       });
-      
+
       const input = indicatorsEl.querySelector("input");
       if (input) {
         input.addEventListener("change", (e) => {
@@ -2099,14 +2354,14 @@ export function initBeneficiaries() {
           if (isNaN(val) || val < 1) val = 1;
           if (val > totalPages) val = totalPages;
           currentPage = val;
+          preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
           renderPaginatedTable();
         });
         input.addEventListener("keyup", (e) => {
-          if (e.key === "Enter") {
-            input.blur();
-          }
+          if (e.key === "Enter") input.blur();
         });
       }
+      // End page-jump listeners.
     }
   }
 
@@ -2133,17 +2388,20 @@ export function initBeneficiaries() {
   // --- START: BENEFICIARY SELECT-ALL FUNCTION ---
   function wireBeneficiarySelectAll() {
     const selectAll = document.getElementById("spes-checkbox-all");
-    if (!selectAll || selectAll.dataset.bulkSelectionWired === "true") return;
-    selectAll.dataset.bulkSelectionWired = "true";
-    selectAll.addEventListener("change", () => {
+    const setPageSelection = (shouldSelect) => {
       document.querySelectorAll(".beneficiary-row-checkbox").forEach((checkbox) => {
-        checkbox.checked = selectAll.checked;
         const id = String(checkbox.dataset.beneId);
-        if (selectAll.checked) selectedBeneficiaryIds.add(id);
+        if (shouldSelect) selectedBeneficiaryIds.add(id);
         else selectedBeneficiaryIds.delete(id);
       });
       beneficiaryBulkTransferTools.sync();
-    });
+    };
+    if (selectAll && selectAll.dataset.bulkSelectionWired !== "true") {
+      selectAll.dataset.bulkSelectionWired = "true";
+      selectAll.addEventListener("change", () => setPageSelection(selectAll.checked));
+    }
+
+
   }
   wireBeneficiarySelectAll();
   // --- END: BENEFICIARY SELECT-ALL FUNCTION ---
@@ -2163,10 +2421,16 @@ export function initBeneficiaries() {
         tabFilterId: "sf-tab-filter",
         originalData: data,
         getDefaultFilters: () => viewMode === "beneficiaries"
-          ? { return_status: activeStatusMode }
-          : {},
+          ? { status: "active", return_status: activeStatusMode }
+         : {},
         onSortChange: (sortValue) => {
           beneficiarySortMode = sortValue;
+        },
+        onFilterChange: (key, value) => {
+          if (key === "status") {
+            archiveStatusMode = value === "archived" ? "archived" : "active";
+            beneficiaryBulkTransferTools.sync();
+          }
         },
         onRender: (filtered) => {
           if (viewMode === "implementors") {
@@ -2287,17 +2551,17 @@ export function initBeneficiaries() {
     const assignSelect = document.getElementById("bdf-assign-staff");
     if (isAdmin && assignContainer && assignSelect) {
       assignContainer.classList.remove("hidden");
-      
+
       // Ensure we have implementors list
       let staffList = allImplementors;
       if (!staffList || staffList.length === 0) {
         staffList = await fetchImplementorList({ forceRefresh: false });
         staffList = staffList.filter(s => !s.archive_at);
       }
-      
+
       assignSelect.innerHTML = `<option value="">— Unassigned (All SPES) —</option>` + 
         staffList.map(s => `<option value="${s.id}">${s.full_name} (${s.office || 'No Office'})</option>`).join("");
-        
+
       if (defaults && defaults.staff_id) {
         assignSelect.value = defaults.staff_id;
       } else if (!_bdfEditId && currentStaffIdView) {
@@ -2326,7 +2590,7 @@ export function initBeneficiaries() {
 
       let html = `<option value="">— Unassigned —</option>`;
       (batches ?? []).forEach(b => {
-        const label = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
+        const label = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.id}`;
         html += `<option value="${b.id}">${label}</option>`;
       });
       batchIdSelect.innerHTML = html;
@@ -2454,6 +2718,32 @@ export function initBeneficiaries() {
   }
 
   // ── Wire Add button ──────────────────────────────────────────
+
+
+
+
+// --- START: BENEFICIARY RESTORE CONFIRMATION ---
+  async function confirmRestore(id, name) {
+    const result = await modals.confirm(
+      "Restore Archive",
+      "Restore " + String(name || "").toUpperCase() + " to the active roster?",
+      "Restore",
+      "Cancel"
+    );
+    if (!result.isConfirmed) return;
+
+    modals.loading("Restoring...", "Please wait...");
+    const res = await restoreBeneficiary(id);
+    modals.close();
+
+    if (res.success) {
+      await modals.success("Restored", String(name || "") + " has been restored to the active roster.");
+      await loadData(true);
+    } else {
+      modals.error("Error", res.error);
+    }
+  }
+// --- END: BENEFICIARY RESTORE CONFIRMATION ---
   if (addBtn) {
     addBtn.addEventListener("click", showAddModal);
   }
@@ -2602,7 +2892,7 @@ export function initBeneficiaries() {
     if (!allDbLevels || allDbLevels.length === 0) {
       allDbLevels = DEFAULT_EDU_LEVELS;
     }
-    
+
     // Filter matching education_id
     const matchingLevels = allDbLevels.filter(lvl => lvl.education_id === catId);
 
@@ -2741,7 +3031,7 @@ export function initBeneficiaries() {
       btn.type = "button";
       btn.className = "batch-option cursor-pointer flex w-full items-center px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors font-bold text-sm";
       btn.dataset.batchId    = b.id;
-      const displayName = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.batch_number}`;
+      const displayName = b.batch_name ? b.batch_name.toUpperCase() : `BATCH ${b.id}`;
       btn.dataset.batchLabel = displayName;
       btn.textContent = displayName;
       li.appendChild(btn);
@@ -2855,7 +3145,7 @@ export function initBeneficiaries() {
       if (idx !== -1) {
         // Go to the correct page
         currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
-        
+
         // renderPaginatedTable might not be in scope here if it's defined inside another block,
         // but wait, it is hoisted or accessible? We should check if we can call it.
         // But instead we can just click the pagination button or call renderPaginatedTable if it's available.
@@ -2872,7 +3162,7 @@ export function initBeneficiaries() {
             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             // Add highlight effect
             row.classList.add("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
-            
+
             // Wait for 1.5 seconds to let the user see the highlight before opening the drawer
             setTimeout(() => {
               row.classList.remove("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
@@ -2901,7 +3191,7 @@ export async function calculateTotalBeneficiariesByImplementor(officeId) {
   if (!officeId) return 0;
   try {
     const skipArchive = sessionStorage.getItem("spes_bene_no_archive_col") === "1";
-    
+
     let query = supabase
       .from("beneficiary")
       .select("*, staffs!staff_id!inner(office_id)", { count: "exact", head: false })
@@ -2925,7 +3215,7 @@ export async function calculateTotalBeneficiariesByImplementor(officeId) {
         count = fallback.count;
         error = fallback.error;
       }
-      
+
       if (error) {
         if (import.meta.env.DEV) console.error("[SPES] Error fetching beneficiaries for count:", error?.code);
         return 0;

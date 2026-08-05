@@ -766,7 +766,6 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   const cancelBtn = document.getElementById("btn-cancel-batch-form");
   const closeBtn = document.getElementById("btn-close-batch-form-drawer");
   const submitBtn = document.getElementById("btn-save-batch-form");
-  const batchNumberInput = document.getElementById("batch-form-number");
   const batchNameInput = document.getElementById("batch-form-name");
 
   if (!drawerEl || !overlay || !form) {
@@ -953,7 +952,6 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     flowDebug("DRAWER", "Opening batch form drawer", {
       mode: batch?.id == null ? "create" : "edit",
       batchId: batch?.id ?? null,
-      batchNumber: batch?.batchNumber ?? null,
       next: "populate fields and reveal drawer",
     });
     if (closeTimer) {
@@ -977,7 +975,6 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
         ? "Update the batch details below."
         : "Define a new batch group.";
     }
-    if (batchNumberInput) batchNumberInput.value = batch?.batchNumber ?? "";
     if (batchNameInput) batchNameInput.value = batch?.batchName ?? "";
 
     drawerEl.classList.remove("hidden");
@@ -997,7 +994,7 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       }, 340);
     });
     document.body.classList.add("overflow-hidden");
-    setTimeout(() => batchNumberInput?.focus(), 300);
+    setTimeout(() => batchNameInput?.focus(), 300);
     flowDebug("DRAWER", "Batch form drawer open state applied", {
       mode: currentEditId ? "edit" : "create",
       batchId: currentEditId,
@@ -1044,17 +1041,13 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     e.preventDefault();
     _hideError();
 
-    const batchNumber = batchNumberInput?.value.trim() ?? "";
     const batchName = batchNameInput?.value.trim() ?? "";
     flowDebug("FORM", "Batch form submitted", {
       mode: currentEditId ? "edit" : "create",
       batchId: currentEditId,
-      batchNumber,
       batchName,
       next: currentEditId ? "updateBatch API" : "addBatch API",
     });
-    if (!batchNumber) return _showError("Batch Number is required.");
-
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.textContent = "Saving...";
@@ -1075,14 +1068,14 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       const sessionRaw = localStorage.getItem("spes_session");
       if (sessionRaw) {
         const session = JSON.parse(sessionRaw);
-        if (String(session.role).toLowerCase() !== "admin") sessionStaffId = session.id;
+        const candidate = Number(session?.id);
+        if (Number.isInteger(candidate) && candidate > 0) sessionStaffId = candidate;
       }
     } catch {}
 
     const payload = {
-      batchNumber,
       batchName: batchName || null,
-      created_by_staff_id: sessionStaffId
+      created_by: sessionStaffId
     };
     let result;
     try {
@@ -1110,12 +1103,13 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     }
 
     const completedMode = currentEditId ? "updated" : "created";
-    flowDebugSuccess(`Batch ${completedMode}`, { batchId: currentEditId ?? result.data?.id, batchNumber });
+    const resolvedBatchId = currentEditId ?? result.data?.id;
+    flowDebugSuccess(`Batch ${completedMode}`, { batchId: resolvedBatchId });
     closeDrawer();
     import("./modals.js").then(({ modals }) => {
       modals.success(
         completedMode === "updated" ? "Batch Updated" : "Batch Created",
-        `Batch ${batchNumber} has been ${completedMode} successfully.`
+        `Batch ID ${resolvedBatchId} has been ${completedMode} successfully.`
       );
     });
     if (typeof onSuccess === "function") onSuccess(result.data, { mode: completedMode });

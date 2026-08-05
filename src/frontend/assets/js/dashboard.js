@@ -24,6 +24,7 @@ import Swal from "sweetalert2";
 import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./components/animations.js";
 import { applyTextSize } from "./components/settings.js";
 import { flowDebug, flowDebugError, flowDebugSuccess } from "./components/flow-debugger.js";
+import { preferenceStorage } from "./components/storage.js";
 
 const ROLE_PERMISSION_DESCRIPTIONS = {
   "users:view": "View the implementor directory for the user’s assigned office.",
@@ -267,6 +268,7 @@ async function init(user) {
       updateDynamicBadges();
     }
     _wireExportStatsButtons();
+    _wireExportsPageButtons();
     initQuickAccessCarousel();
     initQuickAccessPremiumInteractions();
     await loadRecentBeneficiaries();
@@ -341,21 +343,44 @@ function populateSidebar(user) {
 }
 
 function setActiveSidebarLink(navId) {
+  const userManagementTrigger = document.querySelector('[aria-controls="sidebar-dropdown-users"]');
+  userManagementTrigger?.classList.remove(
+    "bg-spes-blue/10",
+    "dark:bg-spes-yellow/15",
+    "text-spes-blue",
+    "dark:text-spes-yellow",
+    "font-bold"
+  );
+
+  document.querySelectorAll("#sidebar-dropdown-users > li").forEach((item) => {
+    item.removeAttribute("data-active");
+    item.classList.remove(
+      "before:border-spes-blue",
+      "before:bg-spes-blue",
+      "dark:before:border-spes-yellow",
+      "dark:before:bg-spes-yellow"
+    );
+  });
+
   document.querySelectorAll(".sidebar-link").forEach(link => {
     const isMatch   = link.getAttribute("data-nav-item") === navId;
     const isSubLink = link.closest("ul[id^='sidebar-dropdown-']");
+    const subItem = link.closest("li");
 
     if (isMatch) {
       if (isSubLink) {
         link.classList.add(
-          "underline",
-          "underline-offset-4",
-          "decoration-2",
-          "decoration-spes-blue",
-          "dark:decoration-spes-yellow",
           "text-spes-blue",
-          "dark:text-spes-yellow"
+          "dark:text-spes-yellow",
+          "font-bold"
         );
+        subItem?.classList.add(
+          "before:border-spes-blue",
+          "before:bg-spes-blue",
+          "dark:before:border-spes-yellow",
+          "dark:before:bg-spes-yellow"
+        );
+        subItem?.setAttribute("data-active", "true");
       } else {
         link.classList.add(
           "bg-spes-blue/10",
@@ -369,21 +394,23 @@ function setActiveSidebarLink(navId) {
         isSubLink.classList.remove("hidden");
         const trigger = document.querySelector(`[aria-controls="${isSubLink.id}"]`);
         if (trigger) {
-          trigger.classList.add("text-spes-blue", "dark:text-spes-yellow", "font-bold");
+          trigger.classList.add(
+            "bg-spes-blue/10",
+            "dark:bg-spes-yellow/15",
+            "text-spes-blue",
+            "dark:text-spes-yellow",
+            "font-bold"
+          );
           trigger.querySelector("svg:last-child")?.classList.add("rotate-180");
         }
       }
     } else {
-      link.classList.remove(
-        "underline",
-        "underline-offset-4",
-        "decoration-2",
-        "decoration-spes-blue",
-        "dark:decoration-spes-yellow",
-        "bg-spes-blue/10",
-        "dark:bg-spes-yellow/15",
+        link.classList.remove(
+          "bg-spes-blue/10",
+          "dark:bg-spes-yellow/15",
         "text-spes-blue",
         "dark:text-spes-yellow",
+        "font-bold",
         "bg-spes-blue/8",
         "dark:bg-spes-white/8",
         "border-l-4",
@@ -445,7 +472,10 @@ function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lg
 let allImplementors = [];
 let allStaffPermissions = {};
 const selectedPermissionStaffIds = new Set();
-let currentPage = 1;
+const paginationStorageKey = window.location.pathname.includes("/roles/")
+  ? "roles"
+  : "implementors";
+let currentPage = preferenceStorage.getPaginationPage(paginationStorageKey) || 1;
 const rowsPerPage = (window.location.pathname.includes("/implementors/") || window.location.pathname.includes("/roles/")) ? 5 : 3;
 
 async function loadImplementorTable(userRole) {
@@ -526,7 +556,7 @@ async function loadImplementorTable(userRole) {
         isImplPage && String(userRole || "").toLowerCase() === "admin",
         rolesLguOfficeIds
       );
-      currentPage = 1;
+      currentPage = preferenceStorage.getPaginationPage(paginationStorageKey) || 1;
 
       // Jump to page if ?id= matches an implementor
       const urlId = new URLSearchParams(window.location.search).get("id");
@@ -618,24 +648,25 @@ function updateStaffPageIndicators(totalCount) {
   const indicatorsEl = document.getElementById("page-indicators-container");
   if (!indicatorsEl) return;
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
-  const pageNumbers = totalPages <= 7
+  currentPage = Math.min(totalPages, Math.max(1, currentPage));
+  preferenceStorage.savePaginationPage(paginationStorageKey, currentPage);
+  const pages = totalPages <= 3
     ? Array.from({ length: totalPages }, (_, index) => index + 1)
-    : [1, 2, Math.max(3, currentPage - 1), currentPage, Math.min(totalPages, currentPage + 1), totalPages];
-  const pages = [...new Set(pageNumbers.filter((page) => page >= 1 && page <= totalPages))];
-  const inputIndex = totalPages > 1 ? Math.floor(pages.length / 2) : -1;
+    : [1, 2, "input", totalPages];
   let html = "";
   pages.forEach((page, index) => {
-    if (index === inputIndex) {
+    if (index === 2 && page === "input") {
       html += `<li class="flex items-center border border-spes-blue/15 bg-spes-white dark:border-white/10 dark:bg-spes-dark-primary">
-        <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="" placeholder="..." aria-label="Jump to page"
+        <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="${currentPage > 2 && currentPage < totalPages ? currentPage : ""}" placeholder="..." aria-label="Jump to page"
           class="w-16 bg-transparent px-2 py-2 text-center text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           style="-moz-appearance: textfield" title="Type a page number and press Enter">
       </li>`;
-    }
+    } else {
     const active = page === currentPage
       ? "bg-spes-blue/10 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-black"
       : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-white/8 dark:hover:text-spes-yellow";
     html += `<li><button type="button" class="page-btn cursor-pointer border border-spes-blue/15 px-3 py-2 text-sm font-medium transition-colors ${active}" data-page="${page}" aria-label="Go to page ${page}">${page}</button></li>`;
+    }
   });
   indicatorsEl.innerHTML = html;
   indicatorsEl.querySelectorAll(".page-btn").forEach((button) => button.addEventListener("click", () => {
@@ -2022,6 +2053,17 @@ function _wireExportStatsButtons() {
       document.getElementById(id)?.addEventListener("click", () => exportDashboardStats());
     });
 }
+
+// --- FUNCTION: WIRE QUICK ACCESS EXPORT PAGE BUTTONS (START) ---
+function _wireExportsPageButtons() {
+  ["quick-audit", "quick-audit-expanded", "quick-audit-expanded-mob", "quick-audit-mob"]
+    .forEach(id => {
+      document.getElementById(id)?.addEventListener("click", () => {
+        window.location.href = "../exports/";
+      });
+    });
+}
+// --- FUNCTION: WIRE QUICK ACCESS EXPORT PAGE BUTTONS (END) ---
 
 function initGlobalSearch(user) {
   const overlay = document.getElementById("global-search-overlay");

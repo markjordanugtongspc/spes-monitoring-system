@@ -19,7 +19,8 @@ export function setupSortFiltration({
   onRender,
   initialSort = "none",
   sortComparator,
-  onSortChange
+  onSortChange,
+  onFilterChange
 }) {
   let activeSort = initialSort;
   // Merge caller-supplied defaults (e.g. { archiveStatus: "active" } for implementors,
@@ -198,6 +199,7 @@ export function setupSortFiltration({
     siblings.forEach(s => s.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
     opt.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
 
+    onFilterChange?.(key, val);
     applySortAndFilter();
   });
 
@@ -254,6 +256,7 @@ export function setupSortFiltration({
   clearAllButton?.addEventListener("click", (e) => {
     e.stopPropagation();
     activeFilters = resolveDefaultFilters();
+    onFilterChange?.("status", activeFilters.status || "active");
     activeSort = initialSort;
     dropdownFilter?.querySelectorAll("[data-filter-key]").forEach((option) => option.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
     Object.keys(activeFilters).forEach((key) => {
@@ -307,9 +310,9 @@ export function setupSortFiltration({
         } else if (activeValue === "archived") {
           processed = processed.filter(item => !!item.archive_at);
         }
-      } else if (key === "batch_number") {
+      } else if (key === "batch_id") {
         processed = processed.filter(item => {
-          const num = item.batch?.batch_number;
+          const num = item.batch?.id;
           return num != null && String(num) === activeValue;
         });
       } else if (key === "return_status") {
@@ -415,6 +418,7 @@ export function setupSortFiltration({
     },
     resetFilters() {
       activeFilters = resolveDefaultFilters();
+      onFilterChange?.("status", activeFilters.status || "active");
       activeSort = initialSort;
       
       // Clear visual highlights in filter/sort dropdowns

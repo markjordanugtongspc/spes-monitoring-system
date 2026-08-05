@@ -26,73 +26,60 @@ export function invalidateBatchCache() {
   try { localStorage.removeItem(BATCH_CACHE_KEY); } catch {}
 }
 
-export async function fetchBatches({ forceRefresh = false, created_by_staff_id = undefined } = {}) {
-  if (!forceRefresh && created_by_staff_id === undefined) {
+export async function fetchBatches({ forceRefresh = false } = {}) {
+  if (!forceRefresh) {
     const cached = _readBatchCache();
     if (cached) return { data: cached, fromCache: true };
   }
-  
-  let query = supabase
+
+  const { data, error } = await supabase
     .from("batch")
     .select("*")
-    .order("batch_number", { ascending: true });
-    
-  if (created_by_staff_id !== undefined) {
-    query = query.or(`created_by_staff_id.is.null,created_by_staff_id.eq.${created_by_staff_id}`);
-  }
-  
-  const { data, error } = await query;
-  
+    .order("id", { ascending: true });
+
   if (error) {
     if (import.meta.env.DEV) console.error("[SPES Batch] fetch error:", error.code, error.hint);
     return { data: [], error: "Unable to load batches." };
   }
-  
+
   const records = data ?? [];
-  if (created_by_staff_id === undefined) {
-    _writeBatchCache(records);
-  }
+  _writeBatchCache(records);
   return { data: records };
 }
 
-export async function addBatch(payload) {
-  let num, name, staff_id;
-  if (typeof payload === 'object' && payload !== null) {
-      num = parseInt(payload.batchNumber, 10);
-      name = payload.batchName || null;
-      staff_id = payload.created_by_staff_id || null;
-  } else {
-      num = parseInt(payload, 10);
-  }
-  if (!num || num < 1) return { success: false, error: "Invalid batch number." };
+export async function addBatch(payload = {}) {
+  const batchName = typeof payload === "object" && payload !== null
+    ? String(payload.batchName ?? "").trim()
+    : "";
+  const createdByCandidate = Number(payload?.created_by);
+  const createdBy = Number.isInteger(createdByCandidate) && createdByCandidate > 0
+    ? createdByCandidate
+    : null;
 
-  const insertData = { batch_number: num };
-  if (name) insertData.batch_name = name;
-  if (staff_id) insertData.created_by_staff_id = staff_id;
+  const insertData = {
+    batch_name: batchName || null,
+    created_by: createdBy,
+  };
 
   const { data, error } = await supabase
     .from("batch")
     .insert([insertData])
     .select()
     .single();
-    
+
   if (error) {
     if (import.meta.env.DEV) console.error("[SPES Batch] insert error:", error.code, error.hint);
-    const msg = error.code === "23505"
-      ? `Batch ${num} already exists.`
-      : "Failed to add batch. Please try again.";
-    return { success: false, error: msg };
+    return { success: false, error: "Failed to add batch. Please try again." };
   }
-  
+
   invalidateBatchCache();
   return { success: true, data };
 }
 
-export async function updateBatch(id, payload) {
+export async function updateBatch(id, payload = {}) {
   const updateData = {};
-  if (payload.batchNumber) updateData.batch_number = parseInt(payload.batchNumber, 10);
-  if (payload.batchName !== undefined) updateData.batch_name = payload.batchName || null;
-  
+  if (payload.batchName !== undefined) updateData.batch_name = String(payload.batchName ?? "").trim() || null;
+
   if (Object.keys(updateData).length === 0) return { success: false, error: "No data to update." };
 
   const { data, error } = await supabase
@@ -101,20 +88,16 @@ export async function updateBatch(id, payload) {
     .eq("id", id)
     .select()
     .single();
-    
+
   if (error) {
     if (import.meta.env.DEV) console.error("[SPES Batch] update error:", error.code, error.hint);
-    const msg = error.code === "23505" 
-      ? `Batch number already exists.`
-      : "Failed to update batch. Please try again.";
-    return { success: false, error: msg };
+    return { success: false, error: "Failed to update batch. Please try again." };
   }
-  
+
   invalidateBatchCache();
   return { success: true, data };
 }
-
-// ── Cache helpers ──────────────────────────────────────────────
+// -- Cache helpers ----------------------------------------------
 function _readCache(cacheKey = CACHE_KEY) {
   try {
     const raw = localStorage.getItem(cacheKey);
@@ -188,11 +171,11 @@ async function _authorizeBeneficiaryStaffTarget(staffId) {
   return { allowed: true, session, access, staffId: data.id };
 }
 
-// ── Read ───────────────────────────────────────────────────────
+// -- Read -------------------------------------------------------
 /**
  * Fetch all active (non-archived) beneficiaries.
  * Results are cached for 5 minutes in localStorage.
- * NOTE: Requires `archived_at` column — run migration_beneficiary_archive.sql first.
+ * NOTE: Requires `archived_at` column � run migration_beneficiary_archive.sql first.
  */
 const ARCHIVE_COL_FLAG = "spes_bene_no_archive_col";
 
@@ -249,7 +232,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     return { data: [], error: "Account Not Approved. List is hidden." };
   }
 
-  let selectStr = "*, batch:batch_id(id, batch_number, batch_name), education:education!beneficiary_educ_id_fkey(id, name), education_level:education_levels!beneficiary_education_level_id_fkey(id, name), gender:gender_id(id, name)";
+  let selectStr = "*, batch:batch_id(id, batch_name), education:education!beneficiary_educ_id_fkey(id, name), education_level:education_levels!beneficiary_education_level_id_fkey(id, name), gender:gender_id(id, name)";
   if (!access.canViewOtherOffices && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
@@ -293,6 +276,47 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
  * Fetch the latest beneficiaries for dashboard snapshots.
  * This always queries Supabase directly so the dashboard does not reuse a stale full-list cache.
  */
+
+// --- START: SYSTEM BENEFICIARY DUPLICATE API ---
+function _normalizeDuplicateBeneficiaryName(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[^\x00-\x7F]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Reads the caller's authorized beneficiary records and groups exact normalized
+ * full-name duplicates. This is diagnostic only and does not mutate data.
+ */
+export async function fetchBeneficiaryDuplicateGroups({ forceRefresh = true, includeArchived = true } = {}) {
+  const result = await fetchBeneficiaries({ forceRefresh });
+  if (result.error) return { data: [], error: result.error };
+
+  const groups = new Map();
+  (result.data ?? []).forEach(record => {
+    if (!includeArchived && record.archived_at) return;
+    const key = _normalizeDuplicateBeneficiaryName(record.full_name);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  });
+
+  const data = [...groups.entries()]
+    .filter(([, records]) => records.length > 1)
+    .map(([key, records]) => ({
+      key,
+      name: String(records[0]?.full_name ?? "").trim().toUpperCase(),
+      records: [...records].sort((a, b) => Number(a.id) - Number(b.id)),
+    }))
+    .sort((a, b) => b.records.length - a.records.length || a.name.localeCompare(b.name));
+
+  return { data, scanned: result.data?.length ?? 0 };
+}
+// --- END: SYSTEM BENEFICIARY DUPLICATE API ---
 export async function fetchRecentBeneficiaries({ limit = 4 } = {}) {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
@@ -446,18 +470,39 @@ export async function fetchBeneficiaryTransferDestinations() {
 }
 
 /**
- * Bulk-transfers selected beneficiaries to another return status or destination
- * staff/office. Non-admin users may mutate only rows from their assigned office.
+ * Returns the available beneficiary batches for bulk assignment.
+ */
+export async function fetchBeneficiaryBatchDestinations() {
+  const { data, error } = await supabase
+    .from("batch")
+    .select("id, batch_name")
+    .order("id", { ascending: true });
+
+  if (error) {
+    if (import.meta.env.DEV) {
+      console.error("[SPES Beneficiary] batch destinations error:", error.code, error.hint);
+    }
+    return { data: [], error: "Unable to load available batches." };
+  }
+
+  return {
+    data: (data ?? []).map((batch) => ({
+      id: batch.id,
+      batch_name: batch.batch_name,
+    })),
+  };
+}
+
+/**
+ * Bulk-transfers selected beneficiaries to another return status, office, or
+ * batch. Non-admin users may mutate only rows from their assigned office.
  */
 export async function bulkTransferBeneficiaries(ids, {
   returnStatus = undefined,
   destinationStaffId = undefined,
+  destinationBatchId = undefined,
 } = {}) {
-  const safeIds = [...new Set(
-    (Array.isArray(ids) ? ids : [])
-      .map((id) => Number.parseInt(id, 10))
-      .filter((id) => Number.isInteger(id) && id > 0)
-  )].slice(0, 500);
+  const safeIds = _normalizeBulkBeneficiaryIds(ids);
 
   if (!safeIds.length) {
     return { success: false, error: "Select at least one beneficiary." };
@@ -476,20 +521,24 @@ export async function bulkTransferBeneficiaries(ids, {
     return { success: false, error: "Your account has no assigned office." };
   }
 
-  let sourceQuery = supabase
-    .from("beneficiary")
-    .select(isAdmin ? "id, staff_id" : "id, staff_id, staffs!staff_id!inner(office_id)")
-    .in("id", safeIds);
-  if (!isAdmin) sourceQuery = sourceQuery.eq("staffs.office_id", session.office_id);
+  let authorizedCount = 0;
+  for (const idChunk of _chunkIds(safeIds)) {
+    let sourceQuery = supabase
+      .from("beneficiary")
+      .select(isAdmin ? "id, staff_id" : "id, staff_id, staffs!staff_id!inner(office_id)")
+      .in("id", idChunk);
+    if (!isAdmin) sourceQuery = sourceQuery.eq("staffs.office_id", session.office_id);
 
-  const { data: authorizedRows, error: sourceError } = await sourceQuery;
-  if (sourceError) {
-    if (import.meta.env.DEV) {
-      console.error("[SPES Beneficiary] transfer authorization error:", sourceError.code, sourceError.hint);
+    const { data: authorizedRows, error: sourceError } = await sourceQuery;
+    if (sourceError) {
+      if (import.meta.env.DEV) {
+        console.error("[SPES Beneficiary] transfer authorization error:", sourceError.code, sourceError.hint);
+      }
+      return { success: false, error: "Could not verify the selected beneficiaries." };
     }
-    return { success: false, error: "Could not verify the selected beneficiaries." };
+    authorizedCount += (authorizedRows ?? []).length;
   }
-  if ((authorizedRows ?? []).length !== safeIds.length) {
+  if (authorizedCount !== safeIds.length) {
     return { success: false, error: "One or more selected beneficiaries are outside your authorized office." };
   }
 
@@ -529,21 +578,43 @@ export async function bulkTransferBeneficiaries(ids, {
     updates.batch_id = null;
   }
 
-  if (updates.return_status === undefined && updates.staff_id === undefined) {
-    return { success: false, error: "Choose a status, office, or branch destination." };
+  if (destinationBatchId !== undefined) {
+    const safeBatchId = Number.parseInt(destinationBatchId, 10);
+    if (!Number.isInteger(safeBatchId) || safeBatchId < 1) {
+      return { success: false, error: "Invalid batch destination." };
+    }
+
+    const { data: destinationBatch, error: destinationBatchError } = await supabase
+      .from("batch")
+      .select("id")
+      .eq("id", safeBatchId)
+      .maybeSingle();
+
+    if (destinationBatchError || !destinationBatch) {
+      return { success: false, error: "The selected batch is unavailable." };
+    }
+    updates.batch_id = destinationBatch.id;
   }
 
-  const { data: updatedRows, error: updateError } = await supabase
-    .from("beneficiary")
-    .update(updates)
-    .in("id", safeIds)
-    .select("id");
+  if (updates.return_status === undefined && updates.staff_id === undefined && updates.batch_id === undefined) {
+    return { success: false, error: "Choose a status, office, or batch destination." };
+  }
 
-  if (updateError) {
-    if (import.meta.env.DEV) {
-      console.error("[SPES Beneficiary] bulk transfer error:", updateError.code, updateError.hint);
+  const updatedRows = [];
+  for (const idChunk of _chunkIds(safeIds)) {
+    const { data, error: updateError } = await supabase
+      .from("beneficiary")
+      .update(updates)
+      .in("id", idChunk)
+      .select("id");
+
+    if (updateError) {
+      if (import.meta.env.DEV) {
+        console.error("[SPES Beneficiary] bulk transfer error:", updateError.code, updateError.hint);
+      }
+      return { success: false, error: "The beneficiary transfer could not be completed." };
     }
-    return { success: false, error: "The beneficiary transfer could not be completed." };
+    updatedRows.push(...(data ?? []));
   }
   if ((updatedRows ?? []).length !== safeIds.length) {
     return { success: false, error: "Some selected beneficiaries were not transferred." };
@@ -553,6 +624,151 @@ export async function bulkTransferBeneficiaries(ids, {
   return { success: true, data: updatedRows, transferred: updatedRows.length };
 }
 // --- END: BENEFICIARY BULK TRANSFER API ---
+
+function _normalizeBulkBeneficiaryIds(ids) {
+  return [...new Set(
+    (Array.isArray(ids) ? ids : [])
+      .map((id) => Number.parseInt(id, 10))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  )];
+}
+
+function _chunkIds(ids, chunkSize = 400) {
+  const chunks = [];
+  for (let index = 0; index < ids.length; index += chunkSize) {
+    chunks.push(ids.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
+async function _authorizeBulkBeneficiaryMutation(ids, { requireAdmin = false, onlyActive = true, onlyArchived = false } = {}) {
+  const session = _getStoredSession();
+  const access = getOfficeAccessScope(session);
+  if (requireAdmin && !access.isAdmin) {
+    return { allowed: false, error: "Only administrators can permanently delete beneficiaries." };
+  }
+  if (!access.isAdmin && (session.approved !== true || access.ownOfficeId == null)) {
+    return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
+  }
+
+  for (const idChunk of _chunkIds(ids)) {
+    let query = supabase
+      .from("beneficiary")
+      .select(access.isAdmin ? "id" : "id, staffs!staff_id!inner(office_id)")
+      .in("id", idChunk);
+    if (onlyActive) query = query.is("archived_at", null);
+    if (!access.isAdmin) query = query.eq("staffs.office_id", access.ownOfficeId);
+
+    const { data, error } = await query;
+    if (error) {
+      const message = error.code === "42703"
+        ? "Archive is not available yet. Please run the database migration first."
+        : "Could not verify the selected beneficiaries.";
+      return { allowed: false, error: message };
+    }
+    if ((data ?? []).length !== idChunk.length) {
+      return { allowed: false, error: "One or more selected beneficiaries are outside your authorized active roster." };
+    }
+  }
+
+  return { allowed: true, session, access };
+}
+
+// --- START: BENEFICIARY BULK ARCHIVE API ---
+/**
+ * Soft-archives every selected active beneficiary after verifying each record
+ * is within the caller's allowed office scope.
+ */
+export async function bulkArchiveBeneficiaries(ids) {
+  const safeIds = _normalizeBulkBeneficiaryIds(ids);
+  if (!safeIds.length) return { success: false, error: "Select at least one beneficiary." };
+
+  const authorization = await _authorizeBulkBeneficiaryMutation(safeIds);
+  if (!authorization.allowed) return { success: false, error: authorization.error };
+
+  let archived = 0;
+  for (const idChunk of _chunkIds(safeIds)) {
+    const timestamp = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("beneficiary")
+      .update({ archived_at: timestamp, updated_at: timestamp })
+      .in("id", idChunk)
+      .is("archived_at", null)
+      .select("id");
+
+    if (error || (data ?? []).length !== idChunk.length) {
+      if (import.meta.env.DEV) console.error("[SPES Beneficiary] bulk archive error:", error?.code, error?.hint);
+      return { success: false, error: "Some selected beneficiaries could not be archived." };
+    }
+    archived += data.length;
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true, archived };
+}
+// --- END: BENEFICIARY BULK ARCHIVE API ---
+// --- START: BENEFICIARY BULK RESTORE API ---
+/** Restores selected archived beneficiaries by clearing archived_at. */
+export async function bulkRestoreBeneficiaries(ids) {
+  const safeIds = _normalizeBulkBeneficiaryIds(ids);
+  if (!safeIds.length) return { success: false, error: "Select at least one beneficiary." };
+
+  const authorization = await _authorizeBulkBeneficiaryMutation(safeIds, { onlyActive: false, onlyArchived: true });
+  if (!authorization.allowed) return { success: false, error: authorization.error };
+
+  let restored = 0;
+  for (const idChunk of _chunkIds(safeIds)) {
+    const timestamp = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("beneficiary")
+      .update({ archived_at: null, updated_at: timestamp })
+      .in("id", idChunk)
+      .not("archived_at", "is", null)
+      .select("id");
+
+    if (error || (data ?? []).length !== idChunk.length) {
+      if (import.meta.env.DEV) console.error("[SPES Beneficiary] bulk restore error:", error?.code, error?.hint);
+      return { success: false, error: "Some selected beneficiaries could not be restored." };
+    }
+    restored += data.length;
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true, restored };
+}
+// --- END: BENEFICIARY BULK RESTORE API ---
+
+// --- START: BENEFICIARY BULK PERMANENT DELETE API ---
+/**
+ * Permanently removes selected active beneficiaries. This is intentionally
+ * restricted to administrators and cannot be undone.
+ */
+export async function bulkDeleteBeneficiaries(ids) {
+  const safeIds = _normalizeBulkBeneficiaryIds(ids);
+  if (!safeIds.length) return { success: false, error: "Select at least one beneficiary." };
+
+  const authorization = await _authorizeBulkBeneficiaryMutation(safeIds, { requireAdmin: true, onlyActive: false });
+  if (!authorization.allowed) return { success: false, error: authorization.error };
+
+  let deleted = 0;
+  for (const idChunk of _chunkIds(safeIds)) {
+    const { data, error } = await supabase
+      .from("beneficiary")
+      .delete()
+      .in("id", idChunk)
+      .select("id");
+
+    if (error || (data ?? []).length !== idChunk.length) {
+      if (import.meta.env.DEV) console.error("[SPES Beneficiary] bulk delete error:", error?.code, error?.hint);
+      return { success: false, error: "Some selected beneficiaries could not be permanently deleted." };
+    }
+    deleted += data.length;
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true, deleted };
+}
+// --- END: BENEFICIARY BULK PERMANENT DELETE API ---
 
 // ── Archive (soft delete) ──────────────────────────────────────
 /**
@@ -582,6 +798,31 @@ export async function archiveBeneficiary(id) {
 }
 
 // ── Education Levels Helper ────────────────────────────────────
+
+// --- START: BENEFICIARY RESTORE API ---
+/** Restores one archived beneficiary by clearing archived_at. */
+export async function restoreBeneficiary(id) {
+  const authorization = await _authorizeBeneficiaryMutation(id);
+  if (!authorization.allowed) return { success: false, error: authorization.error };
+
+  const { error } = await supabase
+    .from("beneficiary")
+    .update({ archived_at: null, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .not("archived_at", "is", null);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Beneficiary] restore error:", error.code, error.hint);
+    const msg = error.code === "42703"
+      ? "Archive is not available yet. Please run the database migration first."
+      : "Failed to restore beneficiary. Please try again.";
+    return { success: false, error: msg };
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true };
+}
+// --- END: BENEFICIARY RESTORE API ---
 const EDU_LEVEL_CACHE_KEY = "spes_edu_levels_v1";
 
 export async function fetchEducationLevels({ forceRefresh = false } = {}) {
@@ -669,52 +910,4 @@ export function processBeneficiaryReturnStatus(data) {
     }
   });
   return data;
-}
-
-// ── Cleanup Helper ──────────────────────────────────────────────
-export async function cleanupExtraBatches() {
-  // Fetch IDs of batches 3, 4, 5, 6
-  const { data: batches, error } = await supabase
-    .from("batch")
-    .select("id, batch_number")
-    .in("batch_number", [3, 4, 5, 6]);
-
-  if (error || !batches) {
-    if (import.meta.env.DEV) console.error("[SPES Batch] fetch for cleanup error:", error);
-    return { success: false, error: "Failed to fetch batches for cleanup." };
-  }
-
-  const batch3 = batches.find(b => b.batch_number === 3);
-  const badBatches = batches.filter(b => [4, 5, 6].includes(b.batch_number));
-
-  if (!batch3) return { success: false, error: "Batch 3 does not exist to receive transfers." };
-  if (badBatches.length === 0) return { success: true, message: "No batches 4, 5, or 6 found." };
-
-  const badBatchIds = badBatches.map(b => b.id);
-
-  // 1. Transfer beneficiaries from 4, 5, 6 to batch 3
-  const { error: updateErr } = await supabase
-    .from("beneficiary")
-    .update({ batch_id: batch3.id })
-    .in("batch_id", badBatchIds);
-
-  if (updateErr) {
-    if (import.meta.env.DEV) console.error("[SPES Beneficiary] transfer error:", updateErr);
-    return { success: false, error: "Failed to transfer beneficiaries to Batch 3." };
-  }
-
-  // 2. Delete batches 4, 5, 6
-  const { error: delErr } = await supabase
-    .from("batch")
-    .delete()
-    .in("id", badBatchIds);
-
-  if (delErr) {
-    if (import.meta.env.DEV) console.error("[SPES Batch] delete error:", delErr);
-    return { success: false, error: "Failed to delete extra batches." };
-  }
-
-  invalidateBatchCache();
-  invalidateBeneficiaryCache();
-  return { success: true, message: "Successfully transferred beneficiaries to Batch 3 and deleted batches 4, 5, 6." };
 }

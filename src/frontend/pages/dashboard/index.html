@@ -98,23 +98,23 @@
                 class="font-bold">Admin</span></p>
           </div>
 
-          <div class="order-1 flex w-full flex-col items-center gap-2 sm:order-2 sm:w-auto sm:items-end">
+          <div class="contents sm:order-2 sm:flex sm:w-auto sm:flex-col sm:items-end sm:gap-2">
             <!-- Real-time Clock (above the period selector on mobile) -->
             <div
-              class="flex w-full max-w-md items-center justify-center gap-2 rounded px-3 py-2.5 text-[9px] font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 sm:w-auto sm:min-w-72 sm:text-xs">
-              <svg class="h-3 w-3 sm:h-4 sm:w-4 text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              class="order-1 flex w-full max-w-md items-center justify-center gap-2 rounded px-3 py-2.5 text-[9px] font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 sm:order-none sm:w-auto sm:min-w-72 sm:px-4 sm:py-3 sm:text-xs">
+              <svg class="h-3 w-3 text-spes-yellow sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
               <span id="real-time-clock" class="whitespace-nowrap tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
             </div>
             <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
-            <div id="dashboard-period-selector" class="relative flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md p-1 ring-1 ring-white/30 text-[9px] font-bold sm:w-auto sm:min-w-72 sm:text-xs">
-              <button id="dashboard-period-all" type="button" class="cursor-pointer shrink-0 rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3">All Time</button>
+            <div id="dashboard-period-selector" role="group" aria-label="Dashboard period filters" class="relative order-3 flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md bg-spes-blue/25 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:order-none sm:w-auto sm:min-w-72 sm:text-xs">
+              <button id="dashboard-period-all" type="button" class="cursor-pointer shrink-0 whitespace-nowrap rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3 sm:py-1.5">All Time</button>
 
               <div class="relative min-w-0">
-                <button id="dashboard-year-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-1.5 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3">
-                  <span id="dashboard-selected-year" class="truncate">All Years</span>
+                <button id="dashboard-year-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
+                  <span id="dashboard-selected-year" class="truncate whitespace-nowrap">All Years</span>
                   <svg id="dashboard-year-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
                 </button>
                 <div id="dashboard-year-dropdown-menu" class="absolute left-0 top-full z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
@@ -123,8 +123,8 @@
               </div>
 
               <div class="relative min-w-0">
-                <button id="dashboard-month-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-1.5 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3">
-                  <span id="dashboard-selected-month" class="truncate">All Months</span>
+                <button id="dashboard-month-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
+                  <span id="dashboard-selected-month" class="truncate whitespace-nowrap">All Months</span>
                   <svg id="dashboard-month-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
                 </button>
                 <div id="dashboard-month-dropdown-menu" class="absolute right-0 top-full z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
@@ -179,7 +179,7 @@
             </div>
           </div>
           <!-- Roster summary — populated by _renderImplementorsByOffice() -->
-          <div id="distribution-summary"></div>
+          <div id="distribution-summary" class="hidden md:block"></div>
         </div>
 
         <!-- Card 2: Total SPES (Male/Female) -->
@@ -188,7 +188,7 @@
             <div class="flex flex-col items-start gap-3">
               <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Total Gender Stats</h3>
             </div>
-            <span id="badge-student-metric" class="mt-1 flex items-center justify-center rounded-full bg-emerald-500/5 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-500">...</span>
+            <span id="badge-student-metric" class="mt-1 flex max-w-[9rem] flex-wrap items-center justify-center gap-1 rounded-lg bg-emerald-500/5 px-1.5 py-1 text-[8px] font-black uppercase leading-tight text-emerald-500 sm:max-w-none sm:rounded-full sm:px-2.5 sm:py-1 sm:text-[10px]">...</span>
           </div>
           <div id="spes-gender-chart" class="h-[250px] pr-4">
             <!-- Card Placeholder Skeleton -->
@@ -519,7 +519,7 @@
             <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add Beneficiary</span>
           </div>
 
-          <!-- System Audit -->
+          <!-- Export -->
           <div class="flex flex-col items-center gap-3">
             <button id="quick-audit" data-tooltip-target="tooltip-audit" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
@@ -528,7 +528,7 @@
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">System Audit</span>
+            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export</span>
           </div>
 
           <!-- Export Stats -->
@@ -676,19 +676,19 @@
               <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Search Up</span>
             </div>
           </div>
-<!-- Giant Skewed Buttons Grid (Row 3 - Audit, Roles, Export - Same Giant Size in the Bottom) -->
+<!-- Giant Skewed Buttons Grid (Row 3 - Export, Roles, Export Stats - Same Giant Size in the Bottom) -->
           <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
-            <!-- System Audit (Giant) -->
+            <!-- Export (Giant) -->
             <div class="flex flex-col items-center gap-4">
               <button id="quick-audit-expanded" data-tooltip-target="tooltip-audit-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
                   <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span class="text-[11px] font-black uppercase tracking-widest">Audit</span>
+                  <span class="text-[11px] font-black uppercase tracking-widest">Export</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">System Audit</span>
+              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export</span>
             </div>
 
             <!-- Roles Setup (Giant) -->
@@ -795,17 +795,17 @@
               <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Search Up</span>
             </div>
 
-            <!-- System Audit -->
+            <!-- Export -->
             <div class="flex flex-col items-center gap-2">
               <button id="quick-audit-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span class="text-[9px] font-black uppercase tracking-wider">Audit</span>
+                  <span class="text-[9px] font-black uppercase tracking-wider">Export</span>
                 </div>
               </button>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Audit</span>
+              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Export</span>
             </div>
 
             <!-- Roles Setup -->
@@ -878,7 +878,7 @@
             <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Search Up</span>
           </div>
 
-          <!-- Quick Action 3: System Audit -->
+          <!-- Quick Action 3: Export -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
             <button id="quick-audit-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
@@ -887,7 +887,7 @@
                 </svg>
               </div>
             </button>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Audit</span>
+            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
           </div>
 
           <!-- Quick Action 4: Hide/Show Stats Toggle (Now exactly in the middle!) -->
@@ -960,7 +960,7 @@
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-audit" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
-        View system audit trail and activity logs
+        Open Exports & Reports
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-export" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
@@ -994,7 +994,7 @@
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-audit-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
-        View system audit trail and activity logs
+        Open Exports & Reports
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
       <div id="tooltip-export-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">

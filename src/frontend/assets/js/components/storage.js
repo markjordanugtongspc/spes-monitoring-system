@@ -86,6 +86,38 @@ class PreferenceStorage {
     }
   }
   // --- FUNCTION: SAVE TEMPORARY BENEFICIARY EDU SUB-LEVEL (END) ---
+
+  // --- FUNCTION: SAVE PAGINATION PAGE TO LOCALSTORAGE (START) ---
+  savePaginationPage(pageKey, page) {
+    if (!pageKey) return;
+    const pageNumber = Number.parseInt(page, 10);
+    if (!Number.isInteger(pageNumber) || pageNumber < 1) return;
+    try {
+      const storageKey = "spes-pagination-pages";
+      const raw = localStorage.getItem(storageKey);
+      const pages = raw ? JSON.parse(raw) : {};
+      pages[String(pageKey)] = pageNumber;
+      localStorage.setItem(storageKey, JSON.stringify(pages));
+    } catch (e) {
+      console.warn("Failed to save pagination page in localStorage", e);
+    }
+  }
+  // --- FUNCTION: SAVE PAGINATION PAGE TO LOCALSTORAGE (END) ---
+
+  // --- FUNCTION: READ PAGINATION PAGE FROM LOCALSTORAGE (START) ---
+  getPaginationPage(pageKey) {
+    if (!pageKey) return 0;
+    try {
+      const raw = localStorage.getItem("spes-pagination-pages");
+      if (!raw) return 0;
+      const pages = JSON.parse(raw);
+      const pageNumber = Number.parseInt(pages?.[String(pageKey)], 10);
+      return Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 0;
+    } catch {
+      return 0;
+    }
+  }
+  // --- FUNCTION: READ PAGINATION PAGE FROM LOCALSTORAGE (END) ---
 }
 
 export const preferenceStorage = new PreferenceStorage();

@@ -335,6 +335,7 @@ function _renderImplementorsByOffice(staffs) {
 
   // Roster Summary below the chart
   const summaryEl = document.getElementById("distribution-summary");
+  summaryEl?.classList.add("hidden", "md:block");
   if (summaryEl && sorted.length > 0) {
     const officeCount = sorted.length;
     const pills = sorted.map(([name, count], i) =>
@@ -387,15 +388,15 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
     const studentBadge = document.getElementById("badge-student-metric");
     if (studentBadge) {
       studentBadge.innerHTML = `
-        <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-2 py-0.5 text-[#4F91FF]">
+          <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-1.5 py-0.5 text-[8px] text-[#4F91FF] sm:px-2 sm:text-[9px]">
           <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
           Male <span class="border-b-2 border-current pb-0.5 leading-none">0</span>
         </span>
-        <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-2 py-0.5 text-[#FF5B9B]">
+        <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-1.5 py-0.5 text-[8px] text-[#FF5B9B] sm:px-2 sm:text-[9px]">
           <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
           Female <span class="border-b-2 border-current pb-0.5 leading-none">0</span>
         </span>`;
-      studentBadge.className = "mt-1 flex max-w-full flex-wrap items-center justify-center gap-1 rounded-full bg-gray-100 px-1.5 py-1 text-[9px] font-black uppercase dark:bg-white/5 shadow-sm";
+      studentBadge.className = "mt-1 flex max-w-[9rem] flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:max-w-none sm:rounded-full sm:text-[9px]";
       studentBadge.title = "Male 0 | Female 0";
     }
     return _showNoData(el, "No beneficiaries found");
@@ -410,15 +411,15 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
   const studentBadge = document.getElementById("badge-student-metric");
   if (studentBadge) {
     studentBadge.innerHTML = `
-      <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-2 py-0.5 text-[#4F91FF]">
+      <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-1.5 py-0.5 text-[8px] text-[#4F91FF] sm:px-2 sm:text-[9px]">
         <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
         Male <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(male)}</span>
       </span>
-      <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-2 py-0.5 text-[#FF5B9B]">
+      <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-1.5 py-0.5 text-[8px] text-[#FF5B9B] sm:px-2 sm:text-[9px]">
         <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
         Female <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(female)}</span>
       </span>`;
-    studentBadge.className = "mt-1 flex max-w-full flex-wrap items-center justify-center gap-1 rounded-full bg-gray-100 px-1.5 py-1 text-[9px] font-black uppercase dark:bg-white/5 shadow-sm";
+    studentBadge.className = "mt-1 flex max-w-[9rem] flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:max-w-none sm:rounded-full sm:text-[9px]";
     studentBadge.title = `Male ${fmt(male)} | Female ${fmt(female)}`;
   }
 

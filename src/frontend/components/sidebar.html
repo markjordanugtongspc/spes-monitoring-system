@@ -4,17 +4,17 @@
 
 <!-- Mobile Sidebar Trigger: Modernized Glass Tab -->
 <button id="sidebar-toggle-btn" data-drawer-target="sidebar-dashboard" data-drawer-toggle="sidebar-dashboard"
-  aria-controls="sidebar-dashboard" type="button"
-  class="group cursor-pointer fixed left-0 top-1/2 z-30 flex -translate-y-1/2 items-center justify-center rounded-r-2xl border-y border-r border-spes-blue/30 bg-white/70 px-2 py-6 text-spes-blue shadow-[0_0_20px_rgba(37,99,235,0.2)] backdrop-blur-xl opacity-40 transition-all hover:opacity-100 active:opacity-100 hover:bg-spes-blue hover:pl-3 hover:text-white dark:border-spes-yellow/30 dark:bg-spes-dark-primary/80 dark:text-spes-yellow dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary sm:hidden">
+  data-drawer-placement="right" aria-controls="sidebar-dashboard" aria-label="Open sidebar" title="Open sidebar" type="button"
+  class="group fixed right-0 top-1/2 z-30 flex -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-2xl border-y border-l border-spes-blue/30 bg-white/70 px-2 py-6 text-spes-blue shadow-[0_0_20px_rgba(37,99,235,0.2)] backdrop-blur-xl opacity-60 transition-all duration-500 hover:-translate-x-0.5 hover:opacity-100 active:opacity-100 hover:bg-spes-blue hover:pr-3 hover:text-white dark:border-spes-yellow/30 dark:bg-spes-dark-primary/80 dark:text-spes-yellow dark:shadow-[0_0_20px_rgba(250,204,21,0.15)] dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary sm:hidden">
   <span class="sr-only">Open sidebar</span>
   <svg class="h-5 w-5 animate-pulse transition-transform group-hover:scale-125" fill="none" viewBox="0 0 24 24"
     stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m9 5 7 7-7 7" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="m15 5-7 7 7 7" />
   </svg>
 </button>
 
 <aside id="sidebar-dashboard"
-  class="fixed top-0 left-0 z-40 h-screen w-64 2xl:w-80 -translate-x-full border-r border-spes-blue/15 bg-spes-white transition-transform dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:translate-x-0"
+  class="fixed top-0 right-0 z-40 h-screen w-64 2xl:w-80 translate-x-full border-l border-spes-blue/15 bg-spes-white transition-transform dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:left-0 sm:right-auto sm:translate-x-0 sm:border-l-0 sm:border-r"
   aria-label="Dashboard Sidebar">
   <div class="flex h-full flex-col overflow-y-auto px-3 py-5">
     <!-- Brand -->
@@ -61,30 +61,18 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
           </svg>
         </button>
-        <ul id="sidebar-dropdown-users" class="hidden space-y-1 py-1.5">
-          <li>
+        <ul id="sidebar-dropdown-users" class="relative ml-3 hidden space-y-1 py-1.5 pl-3 before:absolute before:bottom-[1.375rem] before:left-0 before:top-[1.375rem] before:w-px before:bg-spes-blue/15 dark:before:bg-white/10">
+          <li class="relative before:absolute before:-left-1 before:top-1/2 before:z-10 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:border-2 before:border-spes-blue/25 before:bg-spes-white after:absolute after:-left-3 after:top-1/2 after:h-px after:w-3 after:bg-spes-blue/15 data-[active=true]:before:border-spes-blue data-[active=true]:before:bg-spes-blue dark:before:border-white/20 dark:before:bg-spes-dark-secondary dark:after:bg-white/10 dark:data-[active=true]:before:border-spes-yellow dark:data-[active=true]:before:bg-spes-yellow">
             <a href="../implementors/" data-nav-item="implementor-list"
-              class="cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-8 pr-3 text-sm text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
-              <svg
-                class="h-4 w-4 shrink-0 mr-2.5 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Implementor Directory
+              class="group cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-3 pr-3 text-sm text-spes-black/70 transition-colors duration-200 hover:text-spes-blue dark:text-spes-white/70 dark:hover:text-spes-yellow">
+              <span class="relative whitespace-nowrap after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:origin-left after:scale-x-0 after:bg-spes-blue after:transition-transform after:duration-200 after:ease-out group-hover:after:scale-x-100 dark:after:bg-spes-yellow">Implementor Directory</span>
             </a>
           </li>
 
-          <li data-permission="roles:manage" class="hidden">
+          <li data-permission="roles:manage" class="relative hidden before:absolute before:-left-1 before:top-1/2 before:z-10 before:h-2 before:w-2 before:-translate-y-1/2 before:rounded-full before:border-2 before:border-spes-blue/25 before:bg-spes-white after:absolute after:-left-3 after:top-1/2 after:h-px after:w-3 after:bg-spes-blue/15 data-[active=true]:before:border-spes-blue data-[active=true]:before:bg-spes-blue dark:before:border-white/20 dark:before:bg-spes-dark-secondary dark:after:bg-white/10 dark:data-[active=true]:before:border-spes-yellow dark:data-[active=true]:before:bg-spes-yellow">
             <a href="../roles/" data-nav-item="roles"
-              class="cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-8 pr-3 text-sm text-spes-black/70 hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/70 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">
-              <svg
-                class="h-4 w-4 shrink-0 mr-2.5 transition-colors group-hover:text-spes-blue dark:group-hover:text-spes-yellow"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Roles & Permissions
+              class="group cursor-pointer sidebar-link flex items-center rounded-lg py-2 pl-3 pr-3 text-sm text-spes-black/70 transition-colors duration-200 hover:text-spes-blue dark:text-spes-white/70 dark:hover:text-spes-yellow">
+              <span class="relative whitespace-nowrap after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:origin-left after:scale-x-0 after:bg-spes-blue after:transition-transform after:duration-200 after:ease-out group-hover:after:scale-x-100 dark:after:bg-spes-yellow">Roles &amp; Permissions</span>
             </a>
           </li>
         </ul>
@@ -174,7 +162,8 @@
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
-          const isOpen = !sidebar.classList.contains('-translate-x-full');
+          const isOpen = !sidebar.classList.contains('translate-x-full') &&
+            !sidebar.classList.contains('-translate-x-full');
           if (isOpen) {
             toggleBtn.classList.add('hidden');
           } else {
