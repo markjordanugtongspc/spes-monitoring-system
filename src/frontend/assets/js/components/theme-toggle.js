@@ -6,8 +6,7 @@ export function initThemeToggle() {
   const lightIcon = document.getElementById("theme-toggle-light-icon");
 
   const savedTheme = localStorage.getItem("color-theme");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const initialDark = savedTheme ? savedTheme === "dark" : prefersDark;
+  const initialDark = savedTheme === "dark";
   root.classList.toggle("dark", initialDark);
 
   const updateIcons = () => {
