@@ -97,6 +97,7 @@ function spesVercelApiDev(env) {
     "/api/session": () => import("./api/session.js"),
     "/api/offices": () => import("./api/offices.js"),
     "/api/permissions": () => import("./api/permissions.js"),
+    "/sso/callback": () => import("./api/sso/callback.js"),
   };
 
   for (const name of [
@@ -105,6 +106,8 @@ function spesVercelApiDev(env) {
     "SUPABASE_SECRET_KEY",
     "SUPABASE_SERVICE_ROLE",
     "SPES_SESSION_SECRET",
+    "PORTAL_SSO_CONSUME_URL",
+    "PORTAL_SSO_CLIENT_SECRET",
   ]) {
     if (!process.env[name] && env[name]) process.env[name] = env[name];
   }

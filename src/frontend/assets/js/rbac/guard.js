@@ -111,7 +111,8 @@ export async function applyPermissions(userRole) {
  */
 export function getSession() {
   try {
-    const raw = localStorage.getItem("spes_session");
+    // SSO writes only safe display data to this tab. Authentication remains the HttpOnly server cookie.
+    const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;

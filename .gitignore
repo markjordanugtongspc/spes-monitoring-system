@@ -30,3 +30,4 @@ src/backend/.env
 *.sw?
 
 /src/frontend/services/
+.vercel
