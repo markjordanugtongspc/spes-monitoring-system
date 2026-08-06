@@ -237,7 +237,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
     // Cross-office readers need office metadata for local read-only filtering.
-    selectStr += ", staffs!staff_id(office_id, full_name)";
+    selectStr += ", staffs!staff_id(office_id, full_name, offices!office_id(id, name, location))";
   }
 
   let result = await _fetchBeneficiaryPages(

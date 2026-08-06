@@ -29,9 +29,4 @@ src/backend/.env
 *.sln
 *.sw?
 
-# Temporary local beneficiary CSV import review UI.
-# Rename beneficiary-csv-import-review.html to beneficiary-csv-import-review.html.X to disable local browser access.
-/src/frontend/services/beneficiary-csv-import-review.html
-/src/frontend/services/beneficiary-csv-import-review.html.X
-src/frontend/services/beneficiary-csv-tool.js
-src/frontend/services/beneficiary-csv-converter.js
+/src/frontend/services/

@@ -6,7 +6,7 @@
  * flows are being diagnosed. Set it back to false when debugging is complete.
  */
 const DEFAULT_FLOW_DEBUG_ENABLED = false;
-const TEMPORARY_FLOW_DEBUG_ENABLED = true;
+const TEMPORARY_FLOW_DEBUG_ENABLED = false;
 const STORAGE_KEY = "spes_flow_debug";
 
 let initialized = false;
@@ -22,10 +22,7 @@ function readStoredOverride() {
 }
 
 export function isFlowDebugEnabled() {
-  // Disable flow debugger in production to prevent console spam and remove
-  // the `import.meta.env.PROD` guard for this line to restore it when needed.
-  if (import.meta.env.PROD) return false;
-  return readStoredOverride() ?? TEMPORARY_FLOW_DEBUG_ENABLED ?? DEFAULT_FLOW_DEBUG_ENABLED;
+  return false;
 }
 
 export function setFlowDebugEnabled(enabled) {
@@ -103,6 +100,7 @@ function snapshotOutcome(target) {
 export function initFlowDebugger() {
   if (initialized) return;
   initialized = true;
+  if (!isFlowDebugEnabled()) return;
 
   window.SPES_FLOW_DEBUG = Object.freeze({
     isEnabled: isFlowDebugEnabled,
