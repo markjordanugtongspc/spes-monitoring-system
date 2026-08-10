@@ -86,9 +86,9 @@
 
       <!-- ── Action Buttons Bar ──────────────────────────── -->
       <div class="mb-6 flex flex-wrap items-center justify-between gap-3 border border-white/20 bg-white px-5 py-4 shadow-xl dark:bg-spes-dark-primary">
-        <div class="flex items-center gap-2">
+        <div class="flex w-full items-center gap-2 sm:w-auto">
           <!-- Record count badge -->
-          <span class="flex items-center gap-1.5 rounded-full bg-spes-blue/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">
+          <span class="flex w-full items-center justify-center gap-1.5 rounded-full bg-spes-blue/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow sm:w-auto">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
             </svg>
@@ -97,10 +97,10 @@
           <span class="text-[10px] font-semibold text-spes-black/40 dark:text-spes-white/40 hidden sm:inline">Live Preview</span>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           <!-- Configure Reports -->
           <button id="btn-configure-reports" data-tilt-btn
-            class="cursor-pointer inline-flex items-center gap-2 border border-slate-200 bg-slate-50 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm transition-all hover:bg-slate-100 hover:border-slate-300 active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/70 dark:hover:bg-white/10">
+            class="col-span-2 w-full cursor-pointer inline-flex items-center justify-center gap-2 border border-slate-200 bg-slate-50 px-4 py-2 sm:col-span-1 sm:w-auto text-[11px] font-black uppercase tracking-wider text-slate-600 shadow-sm transition-all hover:bg-slate-100 hover:border-slate-300 active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-spes-white/70 dark:hover:bg-white/10">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -110,20 +110,20 @@
 
           <!-- Export to Excel -->
           <button id="btn-export-excel" data-tilt-btn
-            class="cursor-pointer inline-flex items-center gap-2 bg-emerald-500 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-emerald-600 active:scale-95">
+            class="w-full cursor-pointer inline-flex items-center justify-center gap-2 bg-emerald-500 px-4 py-2 sm:w-auto text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-emerald-600 active:scale-95">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125H8.25m3.75-1.5c0 .621.504 1.125 1.125 1.125h1.5" />
             </svg>
-            Export to Excel
+            <span class="sm:hidden">Excel</span><span class="hidden sm:inline">Export to Excel</span>
           </button>
 
           <!-- Print to Paper -->
           <button id="btn-print-paper" data-tilt-btn
-            class="cursor-pointer inline-flex items-center gap-2 bg-spes-blue px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#002878] active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
+            class="w-full cursor-pointer inline-flex items-center justify-center gap-2 bg-spes-blue px-4 py-2 sm:w-auto text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:bg-[#002878] active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
             </svg>
-            Print to Paper
+            <span class="sm:hidden">Print</span><span class="hidden sm:inline">Print to Paper</span>
           </button>
         </div>
       </div>
@@ -445,20 +445,20 @@
     </div>
 
     <!-- Drawer Footer -->
-    <div class="flex items-center justify-between gap-3 border-t border-spes-blue/10 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-primary/50 px-5 py-4">
+    <div class="grid grid-cols-2 items-center gap-3 border-t border-spes-blue/10 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-primary/50 px-5 py-4">
       <button id="btn-reset-config" type="button" data-tilt-btn
-        class="cursor-pointer inline-flex items-center gap-1.5 border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2.5 text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-white/50 hover:text-spes-red dark:hover:text-red-400 hover:border-spes-red/30 transition-all">
+        class="w-full cursor-pointer inline-flex items-center justify-center gap-1.5 border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-2 text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-white/50 hover:text-spes-red dark:hover:text-red-400 hover:border-spes-red/30 transition-all">
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
         </svg>
         Reset
       </button>
       <button id="btn-apply-config" type="button" data-tilt-btn
-        class="cursor-pointer inline-flex items-center gap-1.5 bg-spes-blue px-6 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-md hover:bg-[#002878] transition-all dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
+        class="w-full cursor-pointer inline-flex items-center justify-center gap-1.5 bg-spes-blue px-6 py-2 text-[11px] font-black uppercase tracking-wider text-white shadow-md hover:bg-[#002878] transition-all dark:bg-spes-yellow dark:text-spes-dark-primary dark:hover:bg-yellow-400">
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
-        Apply &amp; Preview
+        <span class="sm:hidden">Apply</span><span class="hidden sm:inline">Apply &amp; Preview</span>
       </button>
     </div>
   </div>

@@ -235,7 +235,7 @@ function _setupYearStatusSwitcher() {
   const inactiveNew = "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-300";
   const activeBaby  = "bg-white text-red-500 shadow-sm dark:bg-white/10 dark:text-red-300";
   const inactiveBaby= "text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-300";
-  const base = "cursor-pointer rounded-md px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ";
+  const base = "min-w-0 basis-1/2 flex-1 cursor-pointer rounded-full px-3 py-1 text-center text-[9px] font-black uppercase tracking-wider transition-all duration-200 sm:basis-auto sm:flex-none sm:rounded-md sm:px-2.5 sm:py-0.5 ";
 
   const apply = () => {
     const isNew = _yearStatusMode === "NEW";
@@ -396,7 +396,7 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
           <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
           Female <span class="border-b-2 border-current pb-0.5 leading-none">0</span>
         </span>`;
-      studentBadge.className = "mt-1 flex max-w-[9rem] flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:max-w-none sm:rounded-full sm:text-[9px]";
+      studentBadge.className = "mt-3 flex w-fit max-w-full flex-nowrap items-center justify-start gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:mt-3 sm:justify-start sm:text-[9px]";
       studentBadge.title = "Male 0 | Female 0";
     }
     return _showNoData(el, "No beneficiaries found");
@@ -419,7 +419,7 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
         <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
         Female <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(female)}</span>
       </span>`;
-    studentBadge.className = "mt-1 flex max-w-[9rem] flex-wrap items-center justify-center gap-1 rounded-lg bg-gray-100 px-1.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:max-w-none sm:rounded-full sm:text-[9px]";
+    studentBadge.className = "mt-3 flex w-fit max-w-full flex-nowrap items-center justify-start gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:mt-3 sm:justify-start sm:text-[9px]";
     studentBadge.title = `Male ${fmt(male)} | Female ${fmt(female)}`;
   }
 

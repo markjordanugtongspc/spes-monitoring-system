@@ -1403,12 +1403,12 @@ export function initBeneficiaries() {
       backBtn.classList.add("inline-flex");
     }
 
-    // Swap Buttons: Hide Add Beneficiary until inside a batch, Show Create Batch
+    // Keep Add Beneficiary hidden on the BATCHES overview; it appears inside a literal batch.
     const addBtn = document.getElementById("btn-add-beneficiary");
     const createBatchBtn = document.getElementById("btn-create-batch");
 
 
-  if (addBtn) {
+      if (addBtn) {
       addBtn.classList.remove("inline-flex");
       addBtn.classList.add("hidden");
     }
@@ -2018,9 +2018,9 @@ export function initBeneficiaries() {
 
 
   if (addBtn) {
-          addBtn.classList.remove("inline-flex");
-          addBtn.classList.add("hidden");
-        }
+      addBtn.classList.remove("inline-flex");
+      addBtn.classList.add("hidden");
+    }
         if (createBatchBtn) {
           if (canManageCurrentOffice()) {
             createBatchBtn.classList.remove("hidden");
