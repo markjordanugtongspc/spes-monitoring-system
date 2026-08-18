@@ -36,20 +36,13 @@
 
       <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
         <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex flex-col items-start gap-3">
-            <div class="flex items-center gap-2.5">
-              <span
-                class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-spes-yellow/20 text-spes-yellow ring-1 ring-spes-yellow/30">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </span>
-              <span class="text-xs font-black uppercase tracking-[0.2em] text-spes-yellow">Financial Management</span>
+          <div class="flex flex-col items-start gap-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-black uppercase tracking-[0.25em] text-spes-yellow">Financial Management</span>
             </div>
             <div>
-              <h1 class="font-montserrat text-3xl sm:text-4xl font-black text-spes-white">SPES Payroll System</h1>
-              <p class="mt-1 text-sm sm:text-base text-spes-white/70">Budget allocation, 50-item ET.AL batch management,
+              <h1 class="font-montserrat text-3xl sm:text-4xl font-black text-spes-white tracking-tight">SPES Payroll System</h1>
+              <p class="mt-1 text-sm sm:text-base text-spes-white/75 font-medium">Budget allocation, 50-item ET.AL batch management,
                 and individual stipend disbursements.</p>
             </div>
           </div>
@@ -80,141 +73,162 @@
     <div class="mx-auto -mt-20 max-w-7xl 2xl:max-w-[2200px] px-4 sm:px-6 pb-16 relative z-20">
 
       <!-- ════════════════════════════════════════════════════ -->
-      <!-- TOP 4 EXECUTIVE STATISTIC CARDS (SOLID DARK GRADIENT) -->
+      <!-- TOP 4 EXECUTIVE STATISTIC CARDS (DUAL COLOR-FILLED)     -->
       <!-- ════════════════════════════════════════════════════ -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
 
-        <!-- CARD 01: TOTAL BUDGET -->
+        <!-- CARD 01: TOTAL BUDGET (REFINED DEEP BLUE / DARK TINTED BLUE) -->
         <div
-          class="relative overflow-hidden rounded-2xl border-t-4 border-t-spes-blue border-x border-b border-spes-blue/30 bg-gradient-to-br from-[#1b2a47] via-[#141d2b] to-[#0a0f18] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-spes-blue/20">
-          <!-- Background Watermark SVG -->
-          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.2">
+          class="relative overflow-hidden rounded-none bg-[#1d4ed8] p-5 shadow-lg shadow-blue-900/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-[#16336e] dark:border-t-4 dark:border-t-blue-400 dark:border-x dark:border-b dark:border-blue-500/20 dark:shadow-none dark:hover:border-blue-400">
+          <!-- Background Watermark SVG: Philippine Peso Symbol -->
+          <svg class="pointer-events-none absolute -bottom-5 -right-5 h-44 w-44 text-white/25 dark:text-blue-200/15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.4">
             <path stroke-linecap="round" stroke-linejoin="round"
-              d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              d="M7 4h7a4.5 4.5 0 0 1 0 9H7m0 0v7m-3-12h14m-14 4h14M7 4v16" />
           </svg>
 
           <div class="relative z-10 flex items-start justify-between">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-spes-blue/30 text-white border border-spes-blue/50 shadow-inner">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+              class="flex h-11 w-11 items-center justify-center rounded-none bg-white/20 text-white border border-white/30 shadow-inner dark:bg-blue-500/25 dark:text-blue-200 dark:border-blue-400/40">
+              <!-- Philippine Peso (₱) Icon -->
+              <span class="font-mono text-xl font-black text-white dark:text-blue-200">₱</span>
             </div>
-            <span class="font-mono text-xs font-black tracking-widest text-white/40">01</span>
+            <span class="font-mono text-xs font-black tracking-widest text-white/70 dark:text-blue-200/50">01</span>
           </div>
 
           <div class="relative z-10 mt-4">
-            <p class="text-xs font-black uppercase tracking-widest text-white/70">Total Budget</p>
+            <p class="text-xs font-black uppercase tracking-widest text-blue-100 dark:text-blue-200/90">Total Budget</p>
             <h3 id="stat-total-budget" class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">
               ₱0.00</h3>
-            <p class="text-xs sm:text-sm font-bold text-spes-yellow mt-0.5" id="stat-beneficiary-count">0 Beneficiaries
-            </p>
+            <div class="flex items-center justify-between mt-1 text-xs">
+              <span class="font-bold text-spes-yellow dark:text-yellow-300" id="stat-beneficiary-count">0 Beneficiaries</span>
+              <span class="inline-flex items-center gap-1 font-semibold text-blue-100/90 dark:text-blue-200 text-[11px]">
+                <svg class="h-3 w-3 text-spes-yellow dark:text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                Allocated
+              </span>
+            </div>
           </div>
 
           <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-3 -mx-2 h-10">
+          <div class="relative z-10 mt-2 -mx-2 h-10">
             <div id="sparkline-budget" class="h-full w-full"></div>
           </div>
         </div>
 
-        <!-- CARD 02: TOTAL PAID (DISBURSED) -->
+        <!-- CARD 02: TOTAL PAID (REFINED EMERALD TEAL / DARK TINTED TEAL) -->
         <div
-          class="relative overflow-hidden rounded-2xl border-t-4 border-t-emerald-500 border-x border-b border-emerald-500/30 bg-gradient-to-br from-[#12382c] via-[#0d241c] to-[#071410] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-emerald-500/20">
+          class="relative overflow-hidden rounded-none bg-[#0f766e] p-5 shadow-lg shadow-teal-900/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-[#0d4540] dark:border-t-4 dark:border-t-teal-400 dark:border-x dark:border-b dark:border-teal-500/20 dark:shadow-none dark:hover:border-teal-400">
           <!-- Background Watermark SVG -->
-          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.2">
+          <svg class="pointer-events-none absolute -bottom-5 -right-5 h-44 w-44 text-white/25 dark:text-teal-200/15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
 
           <div class="relative z-10 flex items-start justify-between">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 shadow-inner">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              class="flex h-11 w-11 items-center justify-center rounded-none bg-white/20 text-white border border-white/30 shadow-inner dark:bg-teal-500/25 dark:text-teal-200 dark:border-teal-400/40">
+              <svg class="h-5 w-5 text-white dark:text-teal-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <span class="font-mono text-xs font-black tracking-widest text-emerald-400/50">02</span>
+            <span class="font-mono text-xs font-black tracking-widest text-white/70 dark:text-teal-200/50">02</span>
           </div>
 
           <div class="relative z-10 mt-4">
-            <p class="text-xs font-black uppercase tracking-widest text-emerald-300/80">Total Paid (Disbursed)</p>
+            <p class="text-xs font-black uppercase tracking-widest text-teal-100 dark:text-teal-200/90">Total Paid (Disbursed)</p>
             <h3 id="stat-total-paid"
-              class="font-mono text-2xl sm:text-3xl font-black text-emerald-400 mt-1 tabular-nums">₱0.00</h3>
-            <p class="text-xs sm:text-sm font-bold text-emerald-300 mt-0.5" id="stat-paid-count">0 Paid Accounts</p>
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
+            <div class="flex items-center justify-between mt-1 text-xs">
+              <span class="font-bold text-emerald-200 dark:text-emerald-300" id="stat-paid-count">0 Paid Accounts</span>
+              <span class="inline-flex items-center gap-1 font-semibold text-teal-100/90 dark:text-teal-200 text-[11px]">
+                <svg class="h-3 w-3 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                Disbursed
+              </span>
+            </div>
           </div>
 
           <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-3 -mx-2 h-10">
+          <div class="relative z-10 mt-2 -mx-2 h-10">
             <div id="sparkline-paid" class="h-full w-full"></div>
           </div>
         </div>
 
-        <!-- CARD 03: TOTAL PENDING -->
+        <!-- CARD 03: TOTAL PENDING (REFINED AMBER OCHRE / DARK TINTED AMBER) -->
         <div
-          class="relative overflow-hidden rounded-2xl border-t-4 border-t-amber-500 border-x border-b border-amber-500/30 bg-gradient-to-br from-[#3d2510] via-[#291708] to-[#140b03] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-amber-500/20">
+          class="relative overflow-hidden rounded-none bg-[#d97706] p-5 shadow-lg shadow-amber-900/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-[#5c3109] dark:border-t-4 dark:border-t-amber-400 dark:border-x dark:border-b dark:border-amber-500/20 dark:shadow-none dark:hover:border-amber-400">
           <!-- Background Watermark SVG -->
-          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.2">
+          <svg class="pointer-events-none absolute -bottom-5 -right-5 h-44 w-44 text-white/25 dark:text-amber-200/15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
 
           <div class="relative z-10 flex items-start justify-between">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/25 text-amber-400 border border-amber-500/40 shadow-inner">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              class="flex h-11 w-11 items-center justify-center rounded-none bg-white/20 text-white border border-white/30 shadow-inner dark:bg-amber-500/25 dark:text-amber-200 dark:border-amber-400/40">
+              <svg class="h-5 w-5 text-white dark:text-amber-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <span class="font-mono text-xs font-black tracking-widest text-amber-400/50">03</span>
+            <span class="font-mono text-xs font-black tracking-widest text-white/70 dark:text-amber-200/50">03</span>
           </div>
 
           <div class="relative z-10 mt-4">
-            <p class="text-xs font-black uppercase tracking-widest text-amber-300/80">Total Pending</p>
+            <p class="text-xs font-black uppercase tracking-widest text-amber-100 dark:text-amber-200/90">Total Pending</p>
             <h3 id="stat-total-pending"
-              class="font-mono text-2xl sm:text-3xl font-black text-amber-400 mt-1 tabular-nums">₱0.00</h3>
-            <p class="text-xs sm:text-sm font-bold text-amber-300 mt-0.5" id="stat-pending-count">0 In Processing</p>
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
+            <div class="flex items-center justify-between mt-1 text-xs">
+              <span class="font-bold text-amber-200 dark:text-amber-300" id="stat-pending-count">0 In Processing</span>
+              <span class="inline-flex items-center gap-1 font-semibold text-amber-100/90 dark:text-amber-200 text-[11px]">
+                <svg class="h-3 w-3 text-amber-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3"/></svg>
+                Processing
+              </span>
+            </div>
           </div>
 
           <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-3 -mx-2 h-10">
+          <div class="relative z-10 mt-2 -mx-2 h-10">
             <div id="sparkline-pending" class="h-full w-full"></div>
           </div>
         </div>
 
-        <!-- CARD 04: REMAINING BALANCE -->
+        <!-- CARD 04: REMAINING BALANCE (REFINED ROSE/CRIMSON / DARK TINTED ROSE) -->
         <div
-          class="relative overflow-hidden rounded-2xl border-t-4 border-t-red-500 border-x border-b border-red-500/30 bg-gradient-to-br from-[#3d1418] via-[#290b0e] to-[#140406] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-red-500/20">
+          class="relative overflow-hidden rounded-none bg-[#be123c] p-5 shadow-lg shadow-rose-900/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:bg-[#590e20] dark:border-t-4 dark:border-t-rose-400 dark:border-x dark:border-b dark:border-rose-500/20 dark:shadow-none dark:hover:border-rose-400">
           <!-- Background Watermark SVG -->
-          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.2">
+          <svg class="pointer-events-none absolute -bottom-5 -right-5 h-44 w-44 text-white/25 dark:text-rose-200/15" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.4">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
           </svg>
 
           <div class="relative z-10 flex items-start justify-between">
             <div
-              class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/25 text-red-400 border border-red-500/40 shadow-inner">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+              class="flex h-11 w-11 items-center justify-center rounded-none bg-white/20 text-white border border-white/30 shadow-inner dark:bg-rose-500/25 dark:text-rose-200 dark:border-rose-400/40">
+              <svg class="h-5 w-5 text-white dark:text-rose-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
               </svg>
             </div>
-            <span class="font-mono text-xs font-black tracking-widest text-red-400/50">04</span>
+            <span class="font-mono text-xs font-black tracking-widest text-white/70 dark:text-rose-200/50">04</span>
           </div>
 
           <div class="relative z-10 mt-4">
-            <p class="text-xs font-black uppercase tracking-widest text-red-300/80">Remaining Balance</p>
+            <p class="text-xs font-black uppercase tracking-widest text-rose-100 dark:text-rose-200/90">Remaining Balance</p>
             <h3 id="stat-remaining-balance"
-              class="font-mono text-2xl sm:text-3xl font-black text-red-400 mt-1 tabular-nums">₱0.00</h3>
-            <p class="text-xs sm:text-sm font-bold text-red-300 mt-0.5" id="stat-disbursement-rate">0% Disbursed</p>
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
+            <div class="flex items-center justify-between mt-1 text-xs">
+              <span class="font-bold text-rose-200 dark:text-rose-300" id="stat-disbursement-rate">0% Disbursed</span>
+              <span class="inline-flex items-center gap-1 font-semibold text-rose-100/90 dark:text-rose-200 text-[11px]">
+                <svg class="h-3 w-3 text-rose-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+                Balance
+              </span>
+            </div>
           </div>
 
           <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-3 -mx-2 h-10">
+          <div class="relative z-10 mt-2 -mx-2 h-10">
             <div id="sparkline-remaining" class="h-full w-full"></div>
           </div>
         </div>

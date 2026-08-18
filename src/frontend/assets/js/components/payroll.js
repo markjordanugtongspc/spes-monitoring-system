@@ -92,12 +92,12 @@ function initMiniSparklineCharts() {
       sparkline: { enabled: true },
       animations: { enabled: true, easing: "easeinout", speed: 600 },
     },
-    stroke: { curve: "smooth", width: 2 },
+    stroke: { curve: "smooth", width: 2.5 },
     fill: {
       type: "gradient",
       gradient: {
         shadeIntensity: 1,
-        opacityFrom: 0.45,
+        opacityFrom: 0.5,
         opacityTo: 0.05,
         stops: [0, 90, 100],
       },
@@ -111,45 +111,45 @@ function initMiniSparklineCharts() {
     },
   };
 
-  // 1. Budget Chart (Blue)
+  // 1. Budget Chart (Sky Blue accent in light mode on solid blue, Sky Blue in dark mode)
   const budgetEl = document.getElementById("sparkline-budget");
   if (budgetEl && !sparklineBudgetChart) {
     sparklineBudgetChart = new ApexCharts(budgetEl, {
       ...commonSparklineOptions,
-      colors: ["#0038A8"],
+      colors: [isDark ? "#38bdf8" : "#93c5fd"],
       series: [{ name: "Allocated", data: [45000, 62000, 58000, 85000, 105000, 140000, 180000] }],
     });
     sparklineBudgetChart.render();
   }
 
-  // 2. Paid Chart (Emerald Green)
+  // 2. Paid Chart (Soft Mint accent in light mode on teal/emerald, Mint in dark mode)
   const paidEl = document.getElementById("sparkline-paid");
   if (paidEl && !sparklinePaidChart) {
     sparklinePaidChart = new ApexCharts(paidEl, {
       ...commonSparklineOptions,
-      colors: ["#10B981"],
+      colors: [isDark ? "#34d399" : "#6ee7b7"],
       series: [{ name: "Disbursed", data: [15000, 28000, 42000, 60000, 82000, 110000, 135000] }],
     });
     sparklinePaidChart.render();
   }
 
-  // 3. Pending Chart (Amber)
+  // 3. Pending Chart (Soft Gold/Amber accent in light mode on amber, Yellow in dark mode)
   const pendingEl = document.getElementById("sparkline-pending");
   if (pendingEl && !sparklinePendingChart) {
     sparklinePendingChart = new ApexCharts(pendingEl, {
       ...commonSparklineOptions,
-      colors: ["#F59E0B"],
+      colors: [isDark ? "#fde047" : "#fef08a"],
       series: [{ name: "Pending", data: [30000, 34000, 16000, 25000, 23000, 30000, 45000] }],
     });
     sparklinePendingChart.render();
   }
 
-  // 4. Remaining Balance Chart (Red)
+  // 4. Remaining Balance Chart (Soft Rose/Peach accent in light mode on crimson, Coral in dark mode)
   const remainingEl = document.getElementById("sparkline-remaining");
   if (remainingEl && !sparklineRemainingChart) {
     sparklineRemainingChart = new ApexCharts(remainingEl, {
       ...commonSparklineOptions,
-      colors: ["#EF4444"],
+      colors: [isDark ? "#f87171" : "#fecdd3"],
       series: [{ name: "Remaining", data: [45000, 40000, 32000, 28000, 20000, 15000, 10000] }],
     });
     sparklineRemainingChart.render();
@@ -159,11 +159,11 @@ function initMiniSparklineCharts() {
   window.addEventListener("theme-changed", () => {
     const isDarkNow = document.documentElement.classList.contains("dark");
     const newTooltipTheme = isDarkNow ? "dark" : "light";
-    [sparklineBudgetChart, sparklinePaidChart, sparklinePendingChart, sparklineRemainingChart].forEach(chart => {
-      if (chart) {
-        chart.updateOptions({ tooltip: { theme: newTooltipTheme } });
-      }
-    });
+    
+    if (sparklineBudgetChart) sparklineBudgetChart.updateOptions({ colors: [isDarkNow ? "#38bdf8" : "#93c5fd"], tooltip: { theme: newTooltipTheme } });
+    if (sparklinePaidChart) sparklinePaidChart.updateOptions({ colors: [isDarkNow ? "#34d399" : "#6ee7b7"], tooltip: { theme: newTooltipTheme } });
+    if (sparklinePendingChart) sparklinePendingChart.updateOptions({ colors: [isDarkNow ? "#fde047" : "#fef08a"], tooltip: { theme: newTooltipTheme } });
+    if (sparklineRemainingChart) sparklineRemainingChart.updateOptions({ colors: [isDarkNow ? "#f87171" : "#fecdd3"], tooltip: { theme: newTooltipTheme } });
   });
 }
 // --- END: INITIALIZE APEXCHARTS MINI SPARKLINES ---
