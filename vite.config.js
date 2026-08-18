@@ -153,24 +153,24 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, join(__dirname, "src/backend"), "");
 
   return {
-  base: "./",
-  envDir: join(__dirname, "src/backend"),
-  define: {
-    "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version ?? "")
-  },
-  plugins: [
-    spesSitePartials(), 
-    spesVercelApiDev(env),
-    tailwindcss(),
-    {
-      name: "remove-crossorigin",
-      transformIndexHtml(html) {
-        // Removes crossorigin attributes that cause file:// loading issues in some browsers
-        return html.replace(/ (crossorigin|integrity)(="[^"]*")?/g, "");
+    base: "./",
+    envDir: join(__dirname, "src/backend"),
+    define: {
+      "import.meta.env.VITE_APP_VERSION": JSON.stringify(pkg.version ?? "")
+    },
+    plugins: [
+      spesSitePartials(), 
+      spesVercelApiDev(env),
+      tailwindcss(),
+      {
+        name: "remove-crossorigin",
+        transformIndexHtml(html) {
+          // Removes crossorigin attributes that cause file:// loading issues in some browsers
+          return html.replace(/ (crossorigin|integrity)(="[^"]*")?/g, "");
+        }
       }
-    }
-  ],
-  build: {
+    ],
+    build: {
     outDir: "dist",
     emptyOutDir: true,
     reportCompressedSize: true,
@@ -185,6 +185,7 @@ export default defineConfig(({ mode }) => {
         dashboard:      resolve(__dirname, "src/frontend/pages/dashboard/index.html"),
         implementors:   resolve(__dirname, "src/frontend/pages/implementors/index.html"),
         beneficiaries:  resolve(__dirname, "src/frontend/pages/beneficiaries/index.html"),
+        payroll:        resolve(__dirname, "src/frontend/pages/payroll/index.html"),
         roles:          resolve(__dirname, "src/frontend/pages/roles/index.html"),
         exports:        resolve(__dirname, "src/frontend/pages/exports/index.html"),
         settings:       resolve(__dirname, "src/frontend/pages/settings/index.html"),

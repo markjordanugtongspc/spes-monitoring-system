@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPES Payroll & Disbursement Monitoring | SPES Portal</title>
+  <link rel="icon" type="image/png" href="/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white text-sm sm:text-base">
+  <!-- SPES:SIDEBAR -->
+
+  <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
+    <!-- Top Enterprise Banner -->
+    <header class="relative overflow-hidden bg-spes-blue dark:bg-spes-dark-primary p-6 pb-28 shadow-lg">
+      <!-- Background Image Layer -->
+      <div
+        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-30">
+      </div>
+      <!-- Primary Color Overlay -->
+      <div
+        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/90 via-spes-dark-blue/95 to-[#001848]/95 dark:from-spes-dark-primary/95 dark:to-[#0A0A0A]/95">
+      </div>
+
+      <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
+        <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex flex-col items-start gap-3">
+            <div class="flex items-center gap-2.5">
+              <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-spes-yellow/20 text-spes-yellow ring-1 ring-spes-yellow/30">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <span class="text-xs font-black uppercase tracking-[0.2em] text-spes-yellow">Financial Management</span>
+            </div>
+            <div>
+              <h1 class="font-montserrat text-3xl sm:text-4xl font-black text-spes-white">SPES Payroll System</h1>
+              <p class="mt-1 text-sm sm:text-base text-spes-white/70">Budget allocation, 50-item ET.AL batch management,
+                and individual stipend disbursements.</p>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex flex-wrap items-center gap-3">
+            <button type="button" id="btn-export-payroll-summary"
+              class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all hover:bg-white/20 active:scale-95 sm:w-auto">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export Report
+            </button>
+            <button type="button" id="btn-bulk-disburse"
+              class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-xl bg-spes-yellow px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-widest text-spes-dark-blue shadow-lg transition-all hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 sm:w-auto">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Mark Batch Paid
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="mx-auto -mt-20 max-w-7xl 2xl:max-w-[2200px] px-4 sm:px-6 pb-16 relative z-20">
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- TOP 4 EXECUTIVE STATISTIC CARDS (SOLID DARK GRADIENT) -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+        <!-- CARD 01: TOTAL BUDGET -->
+        <div
+          class="relative overflow-hidden rounded-2xl border-t-4 border-t-spes-blue border-x border-b border-spes-blue/30 bg-gradient-to-br from-[#1b2a47] via-[#141d2b] to-[#0a0f18] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-spes-blue/20">
+          <!-- Background Watermark SVG -->
+          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+
+          <div class="relative z-10 flex items-start justify-between">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-spes-blue/30 text-white border border-spes-blue/50 shadow-inner">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <span class="font-mono text-xs font-black tracking-widest text-white/40">01</span>
+          </div>
+
+          <div class="relative z-10 mt-4">
+            <p class="text-xs font-black uppercase tracking-widest text-white/70">Total Budget</p>
+            <h3 id="stat-total-budget" class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">
+              ₱0.00</h3>
+            <p class="text-xs sm:text-sm font-bold text-spes-yellow mt-0.5" id="stat-beneficiary-count">0 Beneficiaries
+            </p>
+          </div>
+
+          <!-- Mini Sparkline Graph -->
+          <div class="relative z-10 mt-3 -mx-2 h-10">
+            <div id="sparkline-budget" class="h-full w-full"></div>
+          </div>
+        </div>
+
+        <!-- CARD 02: TOTAL PAID (DISBURSED) -->
+        <div
+          class="relative overflow-hidden rounded-2xl border-t-4 border-t-emerald-500 border-x border-b border-emerald-500/30 bg-gradient-to-br from-[#12382c] via-[#0d241c] to-[#071410] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-emerald-500/20">
+          <!-- Background Watermark SVG -->
+          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+
+          <div class="relative z-10 flex items-start justify-between">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 shadow-inner">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <span class="font-mono text-xs font-black tracking-widest text-emerald-400/50">02</span>
+          </div>
+
+          <div class="relative z-10 mt-4">
+            <p class="text-xs font-black uppercase tracking-widest text-emerald-300/80">Total Paid (Disbursed)</p>
+            <h3 id="stat-total-paid"
+              class="font-mono text-2xl sm:text-3xl font-black text-emerald-400 mt-1 tabular-nums">₱0.00</h3>
+            <p class="text-xs sm:text-sm font-bold text-emerald-300 mt-0.5" id="stat-paid-count">0 Paid Accounts</p>
+          </div>
+
+          <!-- Mini Sparkline Graph -->
+          <div class="relative z-10 mt-3 -mx-2 h-10">
+            <div id="sparkline-paid" class="h-full w-full"></div>
+          </div>
+        </div>
+
+        <!-- CARD 03: TOTAL PENDING -->
+        <div
+          class="relative overflow-hidden rounded-2xl border-t-4 border-t-amber-500 border-x border-b border-amber-500/30 bg-gradient-to-br from-[#3d2510] via-[#291708] to-[#140b03] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-amber-500/20">
+          <!-- Background Watermark SVG -->
+          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+
+          <div class="relative z-10 flex items-start justify-between">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/25 text-amber-400 border border-amber-500/40 shadow-inner">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span class="font-mono text-xs font-black tracking-widest text-amber-400/50">03</span>
+          </div>
+
+          <div class="relative z-10 mt-4">
+            <p class="text-xs font-black uppercase tracking-widest text-amber-300/80">Total Pending</p>
+            <h3 id="stat-total-pending"
+              class="font-mono text-2xl sm:text-3xl font-black text-amber-400 mt-1 tabular-nums">₱0.00</h3>
+            <p class="text-xs sm:text-sm font-bold text-amber-300 mt-0.5" id="stat-pending-count">0 In Processing</p>
+          </div>
+
+          <!-- Mini Sparkline Graph -->
+          <div class="relative z-10 mt-3 -mx-2 h-10">
+            <div id="sparkline-pending" class="h-full w-full"></div>
+          </div>
+        </div>
+
+        <!-- CARD 04: REMAINING BALANCE -->
+        <div
+          class="relative overflow-hidden rounded-2xl border-t-4 border-t-red-500 border-x border-b border-red-500/30 bg-gradient-to-br from-[#3d1418] via-[#290b0e] to-[#140406] p-5 shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-red-500/20">
+          <!-- Background Watermark SVG -->
+          <svg class="pointer-events-none absolute -bottom-4 -right-4 h-36 w-36 text-white/10" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+          </svg>
+
+          <div class="relative z-10 flex items-start justify-between">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/25 text-red-400 border border-red-500/40 shadow-inner">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                  d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+              </svg>
+            </div>
+            <span class="font-mono text-xs font-black tracking-widest text-red-400/50">04</span>
+          </div>
+
+          <div class="relative z-10 mt-4">
+            <p class="text-xs font-black uppercase tracking-widest text-red-300/80">Remaining Balance</p>
+            <h3 id="stat-remaining-balance"
+              class="font-mono text-2xl sm:text-3xl font-black text-red-400 mt-1 tabular-nums">₱0.00</h3>
+            <p class="text-xs sm:text-sm font-bold text-red-300 mt-0.5" id="stat-disbursement-rate">0% Disbursed</p>
+          </div>
+
+          <!-- Mini Sparkline Graph -->
+          <div class="relative z-10 mt-3 -mx-2 h-10">
+            <div id="sparkline-remaining" class="h-full w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════════════════ -->
+      <!-- MAIN PAYROLL SECTION CONTAINER                     -->
+      <!-- ════════════════════════════════════════════════════ -->
+      <section
+        class="relative overflow-visible rounded-2xl border border-spes-blue/15 bg-white shadow-lg dark:border-white/10 dark:bg-spes-dark-primary">
+
+        <!-- Header Bar with Gradient -->
+        <div
+          class="flex flex-col gap-4 bg-gradient-to-r from-spes-blue via-spes-blue to-[#002878] p-5 border-b border-white/10 rounded-t-2xl sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-center gap-3 min-w-0">
+            <!-- Back button: STRICTLY hidden on root view -->
+            <button id="btn-back-to-payroll-implementors"
+              class="cursor-pointer hidden items-center justify-center rounded-xl border border-white/30 bg-white/15 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-white/25 active:scale-95 transition-all shrink-0"
+              title="Back to Overview">
+              <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back
+            </button>
+            <h3 id="payroll-table-title"
+              class="font-montserrat text-sm sm:text-base font-black uppercase tracking-widest text-white transition-all duration-300">
+              Implementors Payroll Directory
+            </h3>
+          </div>
+
+          <!-- Search & Filter Controls (EXPANDED SPACIOUS WIDTH) -->
+          <div class="flex flex-wrap items-center gap-3 ml-auto w-full sm:w-auto">
+            <!-- Spacious Search input -->
+            <div class="relative w-full sm:w-80 md:w-96 flex-1 sm:flex-initial">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <svg class="h-4 w-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-width="2.5"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                </svg>
+              </div>
+              <input type="text" id="payroll-search-input"
+                class="h-10 w-full rounded-xl border border-white/30 bg-white/15 pl-10 pr-3.5 text-xs sm:text-sm text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/25 focus:outline-none transition-all shadow-inner"
+                placeholder="Search beneficiary, ID, or contract..." autocomplete="off" />
+            </div>
+
+            <!-- Payment Status Filter -->
+            <select id="payroll-status-filter"
+              class="cursor-pointer h-10 rounded-xl border border-white/30 bg-white/15 px-3.5 text-xs sm:text-sm font-bold text-white focus:border-spes-yellow focus:bg-spes-blue focus:outline-none transition-all">
+              <option value="all" class="text-spes-black bg-white">All Statuses</option>
+              <option value="PAID" class="text-emerald-700 bg-white font-bold">Paid</option>
+              <option value="PENDING" class="text-amber-700 bg-white font-bold">Pending</option>
+              <option value="UNPAID" class="text-slate-700 bg-white font-bold">Unpaid</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ── VIEW 1: IMPLEMENTORS PAYROLL OVERVIEW TABLE ── -->
+        <div id="payroll-implementors-view" class="overflow-x-auto">
+          <table class="w-full text-left text-sm sm:text-base">
+            <thead
+              class="bg-gray-100/80 text-xs font-black uppercase tracking-wider text-spes-black/75 border-b border-gray-200 dark:bg-white/5 dark:text-white/70 dark:border-white/10">
+              <tr>
+                <th scope="col" class="px-6 py-4">Implementor / Office</th>
+                <th scope="col" class="px-6 py-4">Assigned Officer</th>
+                <th scope="col" class="px-6 py-4 text-center">Beneficiaries</th>
+                <th scope="col" class="px-6 py-4 text-right">Total Budget</th>
+                <th scope="col" class="px-6 py-4 text-right">Total Disbursed</th>
+                <th scope="col" class="px-6 py-4 text-right">Pending Amount</th>
+                <th scope="col" class="px-6 py-4 text-right">Remaining Balance</th>
+              </tr>
+            </thead>
+            <tbody id="payroll-implementors-tbody" class="divide-y divide-gray-100 dark:divide-white/5">
+              <!-- Initial Flowbite Pulse Skeleton Loading State -->
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                <td class="px-6 py-5">
+                  <div class="h-4 w-48 rounded bg-gray-200 dark:bg-white/10"></div>
+                  <div class="mt-2 h-3 w-32 rounded bg-gray-100 dark:bg-white/5"></div>
+                </td>
+                <td class="px-6 py-5">
+                  <div class="h-4 w-36 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-center">
+                  <div class="mx-auto h-6 w-16 rounded-full bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+              </tr>
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                <td class="px-6 py-5">
+                  <div class="h-4 w-44 rounded bg-gray-200 dark:bg-white/10"></div>
+                  <div class="mt-2 h-3 w-28 rounded bg-gray-100 dark:bg-white/5"></div>
+                </td>
+                <td class="px-6 py-5">
+                  <div class="h-4 w-32 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-center">
+                  <div class="mx-auto h-6 w-16 rounded-full bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-24 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-24 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-24 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-24 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+              </tr>
+              <tr class="animate-pulse border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary">
+                <td class="px-6 py-5">
+                  <div class="h-4 w-52 rounded bg-gray-200 dark:bg-white/10"></div>
+                  <div class="mt-2 h-3 w-36 rounded bg-gray-100 dark:bg-white/5"></div>
+                </td>
+                <td class="px-6 py-5">
+                  <div class="h-4 w-40 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-center">
+                  <div class="mx-auto h-6 w-16 rounded-full bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                  <div class="ml-auto h-4 w-28 rounded bg-gray-200 dark:bg-white/10"></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── VIEW 2: 50-RECORD CHUNKED BATCHES ET.AL CARDS ── -->
+        <div id="payroll-batches-view" class="hidden p-6 sm:p-8">
+          <div id="payroll-batches-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+            <!-- Dynamic 50-Item Chunked Batches rendered via payroll.js -->
+          </div>
+        </div>
+
+        <!-- ── VIEW 3: INDIVIDUAL BENEFICIARY PAYROLL ROSTER TABLE ── -->
+        <div id="payroll-beneficiaries-view" class="hidden overflow-x-auto">
+          <table class="w-full text-left text-sm sm:text-base">
+            <thead
+              class="bg-gray-100/80 text-xs font-black uppercase tracking-wider text-spes-black/75 border-b border-gray-200 dark:bg-white/5 dark:text-white/70 dark:border-white/10">
+              <tr>
+                <th scope="col" class="p-5 text-center w-4">
+                  <input id="payroll-checkbox-all" type="checkbox"
+                    class="h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow" />
+                </th>
+                <th scope="col" class="px-6 py-4">Name of Assured / Beneficiary</th>
+                <th scope="col" class="px-6 py-4 text-center">Contract Period</th>
+                <th scope="col" class="px-6 py-4 text-right">Days Worked</th>
+                <th scope="col" class="px-6 py-4 text-right">Stipend Amount</th>
+                <th scope="col" class="px-6 py-4 text-center">Payment Status</th>
+                <th scope="col" class="px-6 py-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="payroll-beneficiaries-tbody" class="divide-y divide-gray-100 dark:divide-white/5">
+              <!-- Rendered via payroll.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <nav id="payroll-pagination"
+          class="flex flex-col sm:flex-row items-center justify-between p-5 border-t border-gray-100 dark:border-white/10 gap-3"
+          aria-label="Payroll Table Navigation">
+          <span class="text-sm font-semibold text-spes-black/60 dark:text-white/60">
+            Showing <span id="payroll-pagination-range" class="font-black text-spes-black dark:text-white">0</span> of
+            <span id="payroll-pagination-total" class="font-black text-spes-black dark:text-white">0</span> entries
+          </span>
+          <div class="inline-flex items-center gap-1.5">
+            <button id="payroll-prev-page"
+              class="cursor-pointer px-4 py-2 text-xs sm:text-sm font-bold rounded-xl border border-gray-300 dark:border-white/10 hover:bg-spes-blue/10 dark:hover:bg-white/10 transition-colors">Previous</button>
+            <ul id="payroll-page-indicators" class="inline-flex items-center gap-1.5"></ul>
+            <button id="payroll-next-page"
+              class="cursor-pointer px-4 py-2 text-xs sm:text-sm font-bold rounded-xl border border-gray-300 dark:border-white/10 hover:bg-spes-blue/10 dark:hover:bg-white/10 transition-colors">Next</button>
+          </div>
+        </nav>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- BENEFICIARY PAYROLL — OFFCANVAS DRAWER (VIEW / EDIT) -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="drawer-payroll-edit-overlay"
+    class="fixed inset-0 z-[130] hidden bg-spes-black/60 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+  </div>
+
+  <div id="drawer-payroll-edit"
+    class="fixed z-[140] flex flex-col bg-spes-white shadow-2xl transition-transform duration-300 ease-in-out dark:bg-spes-dark-secondary bottom-0 left-0 right-0 w-full h-[92dvh] max-h-[92dvh] rounded-t-3xl translate-y-full sm:bottom-auto sm:left-auto sm:right-0 sm:top-0 sm:h-screen sm:max-h-screen sm:w-[540px] sm:rounded-none sm:translate-y-0 sm:translate-x-full border-t sm:border-t-0 sm:border-l border-spes-blue/10 dark:border-spes-white/10 hidden"
+    tabindex="-1" aria-labelledby="drawer-payroll-title" aria-hidden="true">
+
+    <!-- Drag handle (mobile only) -->
+    <div class="flex justify-center pt-3 pb-1 shrink-0 sm:hidden">
+      <div class="h-1.5 w-12 rounded-full bg-spes-black/15 dark:bg-spes-white/20"></div>
+    </div>
+
+    <!-- Sticky Header -->
+    <div
+      class="flex shrink-0 items-center justify-between border-b border-spes-blue/10 px-6 py-5 dark:border-spes-white/10">
+      <div>
+        <h5 id="drawer-payroll-title"
+          class="font-montserrat text-xl font-black uppercase text-spes-black dark:text-spes-white">
+          Payroll Disbursement Details
+        </h5>
+        <p id="drawer-payroll-subtitle" class="text-xs sm:text-sm text-spes-black/50 dark:text-spes-white/50 mt-0.5">
+          Review individual beneficiary stipend and payment record.
+        </p>
+      </div>
+      <button type="button" id="btn-close-payroll-drawer"
+        class="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-spes-black/50 hover:bg-spes-blue/10 hover:text-spes-blue dark:text-spes-white/50 dark:hover:bg-spes-white/10 dark:hover:text-spes-yellow transition-colors">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="flex-1 overflow-y-auto px-6 py-6">
+      <!-- VIEW ONLY MODE CONTAINER (SQUARE ENTERPRISE CARDS) -->
+      <div id="pd-view-container" class="space-y-5">
+        <div
+          class="rounded-none bg-gradient-to-br from-spes-blue/5 to-slate-50 dark:from-[#243447] dark:to-[#141D26] p-5 border-2 border-spes-blue/15 dark:border-white/15">
+          <span
+            class="text-xs font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow block">Beneficiary
+            Name</span>
+          <p id="pd-view-student-name"
+            class="font-montserrat font-black text-xl text-spes-black dark:text-white uppercase mt-1">—</p>
+          <div class="mt-3 flex items-center justify-between text-sm font-bold text-spes-black/70 dark:text-white/70">
+            <span>Contract Period:</span>
+            <span id="pd-view-contract-period"
+              class="font-black text-spes-blue dark:text-spes-yellow uppercase">—</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-sm font-bold text-spes-black/70 dark:text-white/70">
+            <span>Student Status:</span>
+            <span id="pd-view-return-status" class="font-black uppercase">—</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div
+            class="rounded-none border-2 border-gray-200 dark:border-white/15 p-4 bg-gradient-to-br from-white to-slate-50 dark:from-[#243447] dark:to-[#141D26]">
+            <span
+              class="text-xs font-black uppercase tracking-wider text-spes-black/50 dark:text-white/40 block">Stipend
+              Amount</span>
+            <p id="pd-view-stipend-amount"
+              class="font-mono font-black text-2xl text-spes-blue dark:text-spes-yellow mt-1 tabular-nums">₱0.00</p>
+          </div>
+          <div
+            class="rounded-none border-2 border-gray-200 dark:border-white/15 p-4 bg-gradient-to-br from-white to-slate-50 dark:from-[#243447] dark:to-[#141D26]">
+            <span class="text-xs font-black uppercase tracking-wider text-spes-black/50 dark:text-white/40 block">Days
+              Rendered</span>
+            <p id="pd-view-days-worked"
+              class="font-mono font-black text-2xl text-spes-black dark:text-white mt-1 tabular-nums">20 Days</p>
+          </div>
+        </div>
+
+        <div
+          class="rounded-none border-2 border-gray-200 dark:border-white/15 p-4 bg-gradient-to-br from-white to-slate-50 dark:from-[#243447] dark:to-[#141D26]">
+          <span class="text-xs font-black uppercase tracking-wider text-spes-black/50 dark:text-white/40 block">Payment
+            Status</span>
+          <div id="pd-view-payment-status" class="mt-2">—</div>
+        </div>
+
+        <div
+          class="rounded-none border-2 border-gray-200 dark:border-white/15 p-4 bg-gradient-to-br from-white to-slate-50 dark:from-[#243447] dark:to-[#141D26]">
+          <span class="text-xs font-black uppercase tracking-wider text-spes-black/50 dark:text-white/40 block">Auditing
+            Remarks / Notes</span>
+          <p id="pd-view-notes" class="text-sm font-medium text-spes-black dark:text-white mt-1.5 italic">No notes
+            recorded.</p>
+        </div>
+
+        <button type="button" id="btn-switch-to-edit-drawer"
+          class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-none bg-spes-blue px-5 py-3.5 text-sm font-black uppercase tracking-wider text-white hover:bg-spes-blue/90 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 shadow-md transition-all">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit This Record
+        </button>
+      </div>
+
+      <!-- EDIT MODE CONTAINER (SQUARE ENTERPRISE FORM) -->
+      <form id="form-payroll-drawer" class="space-y-5 hidden">
+        <input type="hidden" id="pd-beneficiary-id" />
+
+        <!-- Beneficiary Info Card -->
+        <div
+          class="rounded-none bg-gradient-to-br from-spes-blue/5 to-slate-50 dark:from-[#243447] dark:to-[#141D26] p-4 border-2 border-spes-blue/15 dark:border-white/15">
+          <span
+            class="text-xs font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow block">Beneficiary
+            Name</span>
+          <p id="pd-student-name"
+            class="font-montserrat font-black text-lg text-spes-black dark:text-white uppercase mt-1">—</p>
+          <div class="mt-2 flex items-center gap-2 text-xs font-bold text-spes-black/60 dark:text-white/60">
+            <span>Contract Period:</span>
+            <span id="pd-contract-period" class="font-black text-spes-blue dark:text-spes-yellow uppercase">—</span>
+          </div>
+        </div>
+
+        <!-- Stipend Amount & Days Rendered -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="pd-stipend-amount"
+              class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+              Stipend Amount (₱) <span class="text-red-500">*</span>
+            </label>
+            <input type="number" step="0.01" id="pd-stipend-amount" required
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm sm:text-base font-mono font-black text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white transition" />
+          </div>
+
+          <div>
+            <label for="pd-days-worked"
+              class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+              Days Worked <span class="text-red-500">*</span>
+            </label>
+            <input type="number" id="pd-days-worked" min="1" max="60" value="20" required
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm sm:text-base font-mono font-black text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white transition" />
+          </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div>
+          <label for="pd-payment-status"
+            class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+            Payment Status <span class="text-red-500">*</span>
+          </label>
+          <select id="pd-payment-status" required
+            class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm sm:text-base font-bold text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white transition">
+            <option value="PAID" class="text-emerald-700 font-bold bg-white dark:bg-spes-dark-primary">PAID (Disbursed
+              to Beneficiary)</option>
+            <option value="PENDING" class="text-amber-700 font-bold bg-white dark:bg-spes-dark-primary">PENDING (In
+              Processing / Awaiting Release)</option>
+            <option value="UNPAID" class="text-slate-700 font-bold bg-white dark:bg-spes-dark-primary">UNPAID (Not Yet
+              Prepared)</option>
+          </select>
+        </div>
+
+        <!-- Remarks -->
+        <div>
+          <label for="pd-notes"
+            class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+            Auditing Remarks / Notes
+          </label>
+          <textarea id="pd-notes" rows="3" placeholder="Optional notes for disbursement records..."
+            class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white dark:placeholder:text-white/25 transition"></textarea>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sticky Footer Actions (Only visible in EDIT MODE) -->
+    <div id="drawer-payroll-footer"
+      class="shrink-0 hidden items-center justify-end gap-3 border-t border-spes-blue/10 bg-spes-white p-4 sm:px-6 sm:py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+      <button type="button" id="btn-cancel-payroll-drawer"
+        class="cursor-pointer inline-flex items-center justify-center rounded-none border border-spes-blue/20 px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:bg-spes-blue/5 hover:text-red-600 dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:bg-spes-white/5 dark:hover:text-red-400 transition-all">
+        Cancel
+      </button>
+      <button type="submit" form="form-payroll-drawer" id="btn-save-payroll-drawer"
+        class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-none bg-spes-blue px-6 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-lg hover:bg-spes-blue/90 active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 transition-all">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        </svg>
+        Save Changes
+      </button>
+    </div>
+  </div>
+
+  <script type="module" src="../../assets/js/payroll.js"></script>
+</body>
+
+</html>
