@@ -1045,7 +1045,7 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     flowDebug("FORM", "Batch form submitted", {
       mode: currentEditId ? "edit" : "create",
       batchId: currentEditId,
-      batchName,
+        batchName,
       next: currentEditId ? "updateBatch API" : "addBatch API",
     });
     if (submitBtn) {
@@ -1120,4 +1120,110 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     close: closeDrawer,
     isOpen: () => drawerEl.getAttribute("aria-hidden") === "false"
   };
-}// --- END: BATCH FORM DRAWER ---
+}
+// --- END: BATCH FORM DRAWER ---
+
+// --- FUNCTION: FORMAT NUMBER WITH COMMAS (START) ---
+/**
+ * Formats a raw number string or number into a comma-separated string preserving decimals.
+ * @param {string|number} val - Input value
+ * @param {boolean} allowDecimals - Whether to allow floating point decimals
+ * @returns {string} Formatted number string with commas
+ */
+export function formatNumberWithCommas(val, allowDecimals = true) {
+  if (val === null || val === undefined || val === "") return "";
+  const cleanStr = String(val).replace(/,/g, "").trim();
+  if (!cleanStr) return "";
+
+  if (allowDecimals) {
+    const parts = cleanStr.split(".");
+    const integerPart = parts[0].replace(/\D/g, "");
+    if (integerPart === "" && parts.length > 1) {
+      return "0." + parts.slice(1).join("").replace(/\D/g, "");
+    }
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    if (parts.length > 1) {
+      const decimalPart = parts.slice(1).join("").replace(/\D/g, "");
+      return `${formattedInteger}.${decimalPart}`;
+    }
+    return formattedInteger;
+  } else {
+    const integerPart = cleanStr.replace(/\D/g, "");
+    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+}
+// --- FUNCTION: FORMAT NUMBER WITH COMMAS (END) ---
+
+// --- FUNCTION: PARSE NUMBER FROM FORMATTED COMMA STRING (START) ---
+/**
+ * Parses numeric float or int from comma-formatted string.
+ * @param {string|number} val - Formatted string with commas
+ * @returns {number} Parsed numeric value
+ */
+export function parseNumberFromCommas(val) {
+  if (typeof val === "number") return val;
+  if (!val) return 0;
+  const sanitized = String(val).replace(/,/g, "").trim();
+  const num = Number(sanitized);
+  return Number.isFinite(num) ? num : 0;
+}
+// --- FUNCTION: PARSE NUMBER FROM FORMATTED COMMA STRING (END) ---
+
+// --- FUNCTION: ATTACH AUTOMATIC NUMBER COMMA FORMATTER (START) ---
+/**
+ * Automatically formats numeric text inputs with comma separators as the user types,
+ * while accurately maintaining cursor caret position.
+ * @param {HTMLInputElement} inputEl - Target input element
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.allowDecimals - Whether decimal points are allowed
+ * @param {Function} options.onInput - Optional callback fired when input changes
+ */
+export function attachNumberCommaFormatter(inputEl, { allowDecimals = true, onInput = null } = {}) {
+  if (!inputEl) return;
+
+  const handleInput = () => {
+    const originalVal = inputEl.value;
+    const selectionStart = inputEl.selectionStart || originalVal.length;
+
+    // Count how many non-comma characters were before the cursor
+    const rawBeforeCursor = originalVal.slice(0, selectionStart).replace(/,/g, "");
+
+    // Format new value
+    const formatted = formatNumberWithCommas(originalVal, allowDecimals);
+    inputEl.value = formatted;
+
+    // Restore caret position by finding the equivalent non-comma character index
+    let newCursorPos = 0;
+    let nonCommaCount = 0;
+    for (let i = 0; i < formatted.length; i++) {
+      if (nonCommaCount === rawBeforeCursor.length) {
+        newCursorPos = i;
+        break;
+      }
+      if (formatted[i] !== ",") {
+        nonCommaCount++;
+      }
+      if (nonCommaCount === rawBeforeCursor.length) {
+        newCursorPos = i + 1;
+        break;
+      }
+    }
+    if (nonCommaCount < rawBeforeCursor.length) {
+      newCursorPos = formatted.length;
+    }
+
+    inputEl.setSelectionRange(newCursorPos, newCursorPos);
+
+    if (typeof onInput === "function") {
+      onInput(parseNumberFromCommas(formatted), formatted);
+    }
+  };
+
+  inputEl.addEventListener("input", handleInput);
+
+  // Format initial value if already present
+  if (inputEl.value) {
+    inputEl.value = formatNumberWithCommas(inputEl.value, allowDecimals);
+  }
+}
+// --- FUNCTION: ATTACH AUTOMATIC NUMBER COMMA FORMATTER (END) ---

@@ -2,20 +2,22 @@
  * SPES Portal — Payroll Component & Interactive Controller
  * ─────────────────────────────────────────────────────────
  * Features:
- *  1. Top 4 Executive Statistic Cards with Flowbite ApexChart Mini-Graphs.
+ *  1. Top 4 Executive Statistic Cards with Dynamic Money & Number Counter Animations.
  *  2. Multi-tier hierarchy:
- *     - Tier 1: Implementors & Offices Summary (with dedicated Assigned Officer column).
- *     - Tier 2: Dynamic 50-Item Chunked Batches (Square-type enterprise cards, entire card clickable).
- *     - Tier 3: Individual Beneficiary Roster with larger typography (for 30+ users).
+ *     - Tier 1: Implementors & Offices Summary (with animated statistical metrics and Designated Officers).
+ *     - Tier 2: Dynamic 50-Item Chunked Batches (Square-type enterprise cards with animated disbursement counters).
+ *     - Tier 3: Individual Beneficiary Roster with animated stipend metrics and larger typography (for 30+ users).
  *  3. Flowbite Offcanvas Drawer supporting both VIEW MODE (on row click) and EDIT MODE (on edit icon click).
  *  4. Full RBAC, Theme-toggle, search, filter, and pagination support.
  */
 
-import ApexCharts from "apexcharts";
 import { applyPermissions, requireAuth, signOut, getSession } from "../rbac/guard.js";
 import { getOfficeAccessScope } from "../rbac/scope.js";
 import { initThemeToggle } from "./theme-toggle.js";
 import { modals } from "./modals.js";
+import { animateCounter } from "./animations.js";
+import { preferenceStorage } from "./storage.js";
+import { formatNumberWithCommas, parseNumberFromCommas, attachNumberCommaFormatter } from "./drawer.js";
 import {
   DEFAULT_STIPEND_RATE,
   DEFAULT_WORK_DAYS,
@@ -24,12 +26,22 @@ import {
   computePayrollExecutiveSummary,
   groupOfficeBeneficiariesIntoChunks,
   updateBeneficiaryPayrollRecord,
-  bulkUpdatePayrollStatus
+  bulkUpdatePayrollStatus,
+  fetchDbPayrollBudgets,
+  upsertDbPayrollBudget
 } from "../../../../backend/api/payroll.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices } from "../../../../backend/api/staff.js";
 
 const ROWS_PER_PAGE = 10;
+
+// --- START: PURGE LEGACY PAYROLL MOCK STORAGE ---
+function _purgeLegacyPayrollStorage() {
+  try {
+    localStorage.removeItem("spes_beneficiary_payroll_v3");
+  } catch {}
+}
+// --- END: PURGE LEGACY PAYROLL MOCK STORAGE ---
 
 // --- START: FORMAT CURRENCY HELPER ---
 function formatCurrency(amount) {
@@ -64,6 +76,8 @@ let allBeneficiaries = [];
 let filteredBeneficiaries = [];
 let allImplementors = [];
 let allOffices = [];
+let customGeneralBudget = null;
+let customOfficeBudgets = {};
 
 let currentView = "implementors"; // "implementors" | "batches" | "beneficiaries"
 let selectedOfficeId = null;
@@ -72,105 +86,16 @@ let currentOfficeBatches = [];
 let selectedBatchIndex = null;
 let selectedBatchTitle = "";
 let currentActiveBeneficiary = null;
+let isInlineEditMode = false;
+let isBudgetCardEditing = false;
+const editingOfficeIds = new Set();
 
 let currentPage = 1;
 const selectedBeneficiaryIds = new Set();
 
-let sparklineBudgetChart = null;
-let sparklinePaidChart = null;
-let sparklinePendingChart = null;
-let sparklineRemainingChart = null;
-
-// --- START: INITIALIZE APEXCHARTS MINI SPARKLINES ---
-function initMiniSparklineCharts() {
-  const isDark = document.documentElement.classList.contains("dark");
-
-  const commonSparklineOptions = {
-    chart: {
-      type: "area",
-      height: 40,
-      sparkline: { enabled: true },
-      animations: { enabled: true, easing: "easeinout", speed: 600 },
-    },
-    stroke: { curve: "smooth", width: 2.5 },
-    fill: {
-      type: "gradient",
-      gradient: {
-        shadeIntensity: 1,
-        opacityFrom: 0.5,
-        opacityTo: 0.05,
-        stops: [0, 90, 100],
-      },
-    },
-    tooltip: {
-      theme: isDark ? "dark" : "light",
-      x: { show: false },
-      y: {
-        formatter: (val) => formatCurrency(val),
-      },
-    },
-  };
-
-  // 1. Budget Chart (Sky Blue accent in light mode on solid blue, Sky Blue in dark mode)
-  const budgetEl = document.getElementById("sparkline-budget");
-  if (budgetEl && !sparklineBudgetChart) {
-    sparklineBudgetChart = new ApexCharts(budgetEl, {
-      ...commonSparklineOptions,
-      colors: [isDark ? "#38bdf8" : "#93c5fd"],
-      series: [{ name: "Allocated", data: [45000, 62000, 58000, 85000, 105000, 140000, 180000] }],
-    });
-    sparklineBudgetChart.render();
-  }
-
-  // 2. Paid Chart (Soft Mint accent in light mode on teal/emerald, Mint in dark mode)
-  const paidEl = document.getElementById("sparkline-paid");
-  if (paidEl && !sparklinePaidChart) {
-    sparklinePaidChart = new ApexCharts(paidEl, {
-      ...commonSparklineOptions,
-      colors: [isDark ? "#34d399" : "#6ee7b7"],
-      series: [{ name: "Disbursed", data: [15000, 28000, 42000, 60000, 82000, 110000, 135000] }],
-    });
-    sparklinePaidChart.render();
-  }
-
-  // 3. Pending Chart (Soft Gold/Amber accent in light mode on amber, Yellow in dark mode)
-  const pendingEl = document.getElementById("sparkline-pending");
-  if (pendingEl && !sparklinePendingChart) {
-    sparklinePendingChart = new ApexCharts(pendingEl, {
-      ...commonSparklineOptions,
-      colors: [isDark ? "#fde047" : "#fef08a"],
-      series: [{ name: "Pending", data: [30000, 34000, 16000, 25000, 23000, 30000, 45000] }],
-    });
-    sparklinePendingChart.render();
-  }
-
-  // 4. Remaining Balance Chart (Soft Rose/Peach accent in light mode on crimson, Coral in dark mode)
-  const remainingEl = document.getElementById("sparkline-remaining");
-  if (remainingEl && !sparklineRemainingChart) {
-    sparklineRemainingChart = new ApexCharts(remainingEl, {
-      ...commonSparklineOptions,
-      colors: [isDark ? "#f87171" : "#fecdd3"],
-      series: [{ name: "Remaining", data: [45000, 40000, 32000, 28000, 20000, 15000, 10000] }],
-    });
-    sparklineRemainingChart.render();
-  }
-
-  // Listen to custom theme-changed event from theme-toggle.js
-  window.addEventListener("theme-changed", () => {
-    const isDarkNow = document.documentElement.classList.contains("dark");
-    const newTooltipTheme = isDarkNow ? "dark" : "light";
-    
-    if (sparklineBudgetChart) sparklineBudgetChart.updateOptions({ colors: [isDarkNow ? "#38bdf8" : "#93c5fd"], tooltip: { theme: newTooltipTheme } });
-    if (sparklinePaidChart) sparklinePaidChart.updateOptions({ colors: [isDarkNow ? "#34d399" : "#6ee7b7"], tooltip: { theme: newTooltipTheme } });
-    if (sparklinePendingChart) sparklinePendingChart.updateOptions({ colors: [isDarkNow ? "#fde047" : "#fef08a"], tooltip: { theme: newTooltipTheme } });
-    if (sparklineRemainingChart) sparklineRemainingChart.updateOptions({ colors: [isDarkNow ? "#f87171" : "#fecdd3"], tooltip: { theme: newTooltipTheme } });
-  });
-}
-// --- END: INITIALIZE APEXCHARTS MINI SPARKLINES ---
-
 // --- START: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
-function updateExecutiveSummaryCards(beneficiaries) {
-  const stats = computePayrollExecutiveSummary(beneficiaries);
+function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFirstVisit = false) {
+  const stats = computePayrollExecutiveSummary(beneficiaries, customGeneralBudget);
 
   const budgetEl = document.getElementById("stat-total-budget");
   const paidEl = document.getElementById("stat-total-paid");
@@ -181,28 +106,43 @@ function updateExecutiveSummaryCards(beneficiaries) {
   const paidCountEl = document.getElementById("stat-paid-count");
   const pendingCountEl = document.getElementById("stat-pending-count");
   const disburseRateEl = document.getElementById("stat-disbursement-rate");
+  const inputBudget = document.getElementById("input-edit-total-budget");
 
-  if (budgetEl) budgetEl.textContent = formatCurrency(stats.totalBudget);
-  if (paidEl) paidEl.textContent = formatCurrency(stats.totalPaid);
-  if (pendingEl) pendingEl.textContent = formatCurrency(stats.totalPending);
-  if (remainingEl) remainingEl.textContent = formatCurrency(stats.remainingBalance);
+  if (inputBudget && !isInlineEditMode) {
+    inputBudget.value = formatNumberWithCommas(stats.totalBudget, false);
+  }
 
-  if (beneCountEl) beneCountEl.textContent = `${stats.totalBeneficiaries.toLocaleString()} Beneficiaries`;
-  
   const paidCount = beneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
   const pendingCount = beneficiaries.filter(b => b.payroll?.payment_status === "PENDING").length;
 
-  if (paidCountEl) paidCountEl.textContent = `${paidCount.toLocaleString()} Paid Accounts`;
-  if (pendingCountEl) pendingCountEl.textContent = `${pendingCount.toLocaleString()} In Processing`;
-  if (disburseRateEl) disburseRateEl.textContent = `${stats.disbursementRate}% Disbursed`;
+  // First visit has grand cinematic duration and sequential delay; returning visits have fast snappy rolls
+  const cardDuration = isFirstVisit ? 2000 : 750;
+  const subDuration = isFirstVisit ? 1600 : 600;
+
+  const budgetDelay = isFirstVisit ? 100 : 0;
+  const paidDelay = isFirstVisit ? 220 : 0;
+  const pendingDelay = isFirstVisit ? 340 : 0;
+  const remainingDelay = isFirstVisit ? 460 : 0;
+
+  if (budgetEl) animateCounter(budgetEl, stats.totalBudget, { isCurrency: true, duration: cardDuration, delay: budgetDelay, forceFromZero });
+  if (paidEl) animateCounter(paidEl, stats.totalPaid, { isCurrency: true, duration: cardDuration, delay: paidDelay, forceFromZero });
+  if (pendingEl) animateCounter(pendingEl, stats.totalPending, { isCurrency: true, duration: cardDuration, delay: pendingDelay, forceFromZero });
+  if (remainingEl) animateCounter(remainingEl, stats.remainingBalance, { isCurrency: true, duration: cardDuration, delay: remainingDelay, forceFromZero });
+
+  // Animate subtitle counts and percentages
+  if (beneCountEl) animateCounter(beneCountEl, stats.totalBeneficiaries, { suffix: " Beneficiaries", duration: subDuration, delay: isFirstVisit ? 150 : 0, forceFromZero });
+  if (paidCountEl) animateCounter(paidCountEl, paidCount, { suffix: " Paid Accounts", duration: subDuration, delay: isFirstVisit ? 270 : 0, forceFromZero });
+  if (pendingCountEl) animateCounter(pendingCountEl, pendingCount, { suffix: " In Processing", duration: subDuration, delay: isFirstVisit ? 390 : 0, forceFromZero });
+  if (disburseRateEl) animateCounter(disburseRateEl, stats.disbursementRate, { suffix: "% Disbursed", decimals: 0, duration: subDuration, delay: isFirstVisit ? 510 : 0, forceFromZero });
 }
 // --- END: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
 
 // --- START: RENDER VIEW 1 (IMPLEMENTORS / OFFICES SUMMARY WITH MULTI-TIER SEARCH) ---
-function renderImplementorsView() {
+function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
   currentView = "implementors";
   selectedOfficeId = null;
   selectedBatchIndex = null;
+  selectedBeneficiaryIds.clear();
 
   const titleEl = document.getElementById("payroll-table-title");
   if (titleEl) titleEl.textContent = "Implementors Payroll Directory";
@@ -223,6 +163,9 @@ function renderImplementorsView() {
   if (batchView) batchView.classList.add("hidden");
   if (beneView) beneView.classList.add("hidden");
   if (pagination) pagination.classList.add("hidden");
+
+  updateBulkDisburseButtonState();
+  if (updateUrl) syncUrlState(false);
 
   const tbody = document.getElementById("payroll-implementors-tbody");
   if (!tbody) return;
@@ -265,10 +208,12 @@ function renderImplementorsView() {
     }
   });
 
+  const officeOverrides = customOfficeBudgets;
   let rows = [];
   officeMap.forEach((item) => {
     if (item.beneficiaries.length === 0 && item.officeId === "other") return;
-    const stats = computePayrollExecutiveSummary(item.beneficiaries);
+    const customOfficeBudget = officeOverrides[String(item.officeId)] || null;
+    const stats = computePayrollExecutiveSummary(item.beneficiaries, customOfficeBudget);
     
     // Check search matches
     const nameMatch = item.officeName.toLowerCase().includes(searchQ);
@@ -329,6 +274,23 @@ function renderImplementorsView() {
 
     const highlightRowClass = searchQ ? "ring-2 ring-spes-blue/40 dark:ring-spes-yellow/40 bg-spes-blue/[0.02] dark:bg-spes-yellow/[0.02]" : "";
 
+    const isRowEditing = isInlineEditMode && editingOfficeIds.has(String(r.officeId));
+
+    const budgetCellContent = isRowEditing
+      ? `<div class="flex items-center justify-end gap-1.5" onclick="event.stopPropagation()">
+           <span class="text-xs font-bold text-spes-blue dark:text-spes-yellow">₱</span>
+           <input type="text" inputmode="numeric" data-office-id="${escHtml(String(r.officeId))}"
+             class="input-edit-office-budget w-28 rounded-none border border-spes-blue/30 bg-white px-2 py-1 font-mono text-xs font-bold text-spes-black focus:border-spes-blue focus:outline-none dark:border-white/20 dark:bg-spes-dark-secondary dark:text-white"
+             value="${formatNumberWithCommas(r.stats.totalBudget, false)}" />
+           <button type="button" class="btn-save-row-budget cursor-pointer inline-flex items-center justify-center p-1 bg-emerald-500 hover:bg-emerald-400 text-white rounded-none shadow transition" title="Save Office Budget" data-office-id="${escHtml(String(r.officeId))}">
+             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+           </button>
+           <button type="button" class="btn-reset-row-budget cursor-pointer inline-flex items-center justify-center p-1 bg-slate-200 hover:bg-rose-500 hover:text-white text-slate-700 rounded-none shadow transition dark:bg-white/10 dark:text-white" title="Cancel Office Edit" data-office-id="${escHtml(String(r.officeId))}">
+             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+           </button>
+         </div>`
+      : `<span class="impl-currency-cell" data-target="${r.stats.totalBudget}">₱0.00</span>`;
+
     return `
       <tr class="cursor-pointer border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200 ${highlightRowClass}"
           data-office-id="${escHtml(String(r.officeId))}" data-office-name="${escHtml(r.officeName)}">
@@ -344,40 +306,97 @@ function renderImplementorsView() {
           ${staffBadge}
         </td>
         <td class="px-6 py-5 text-center font-black text-base text-spes-black dark:text-white whitespace-nowrap tabular-nums">
-          ${r.stats.totalBeneficiaries.toLocaleString()}
+          <span class="impl-count-cell" data-target="${r.stats.totalBeneficiaries}">0</span>
         </td>
         <td class="px-6 py-5 text-right font-black text-base text-spes-blue dark:text-spes-yellow whitespace-nowrap tabular-nums">
-          ${formatCurrency(r.stats.totalBudget)}
+          ${budgetCellContent}
         </td>
         <td class="px-6 py-5 text-right font-black text-base text-emerald-600 dark:text-emerald-400 whitespace-nowrap tabular-nums">
-          ${formatCurrency(r.stats.totalPaid)}
+          <span class="impl-currency-cell" data-target="${r.stats.totalPaid}">₱0.00</span>
         </td>
         <td class="px-6 py-5 text-right font-black text-base text-amber-600 dark:text-amber-400 whitespace-nowrap tabular-nums">
-          ${formatCurrency(r.stats.totalPending)}
+          <span class="impl-currency-cell" data-target="${r.stats.totalPending}">₱0.00</span>
         </td>
         <td class="px-6 py-5 text-right font-black text-base text-red-600 dark:text-red-400 whitespace-nowrap tabular-nums">
-          ${formatCurrency(r.stats.remainingBalance)}
+          <span class="impl-currency-cell" data-target="${r.stats.remainingBalance}">₱0.00</span>
         </td>
       </tr>
     `;
   }).join("");
 
+  const countDuration = isFirstVisit ? 1400 : 600;
+  const currDuration = isFirstVisit ? 1500 : 650;
+  const baseDelay = isFirstVisit ? 150 : 0;
+  const stepDelay = isFirstVisit ? 30 : 10;
+
+  // Animate implementors table statistics with staggered roll
+  tbody.querySelectorAll(".impl-count-cell").forEach((el, idx) => {
+    const target = Number(el.dataset.target) || 0;
+    animateCounter(el, target, { duration: countDuration, delay: baseDelay + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+  tbody.querySelectorAll(".impl-currency-cell").forEach((el, idx) => {
+    const target = Number(el.dataset.target) || 0;
+    animateCounter(el, target, { isCurrency: true, duration: currDuration, delay: baseDelay + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+
+  // Attach live comma formatting to row inputs
+  tbody.querySelectorAll(".input-edit-office-budget").forEach(input => {
+    attachNumberCommaFormatter(input, { allowDecimals: false });
+  });
+
   tbody.querySelectorAll("tr[data-office-id]").forEach(row => {
     row.addEventListener("click", () => {
+      if (isInlineEditMode) return;
       const officeId = row.dataset.officeId;
       const officeName = row.dataset.officeName;
       switchToBatchesView(officeId, officeName);
+    });
+  });
+
+  // Individual Row-level Specific Save and Cancel Handlers
+  tbody.querySelectorAll(".btn-save-row-budget").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const officeId = btn.dataset.officeId;
+      const input = tbody.querySelector(`.input-edit-office-budget[data-office-id="${officeId}"]`);
+      if (input && officeId) {
+        const val = parseNumberFromCommas(input.value);
+        customOfficeBudgets[String(officeId)] = val;
+        preferenceStorage.saveCustomOfficeBudget(officeId, val);
+
+        const session = getSession();
+        upsertDbPayrollBudget(officeId, val, session?.id);
+
+        editingOfficeIds.delete(String(officeId));
+        checkAndSyncEditModeState();
+        updateExecutiveSummaryCards(allBeneficiaries);
+        renderImplementorsView(false, false);
+        modals.flowbiteToast("Office Budget Saved", `Office allocation updated to ${formatCurrency(val)}.`, "success");
+      }
+    });
+  });
+
+  tbody.querySelectorAll(".btn-reset-row-budget").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const officeId = btn.dataset.officeId;
+      if (officeId) {
+        editingOfficeIds.delete(String(officeId));
+        checkAndSyncEditModeState();
+        renderImplementorsView(false, false);
+      }
     });
   });
 }
 // --- END: RENDER VIEW 1 (IMPLEMENTORS / OFFICES SUMMARY WITH MULTI-TIER SEARCH) ---
 
 // --- START: RENDER VIEW 2 (SQUARE-TYPE 50-RECORD CHUNKED BATCHES & ET. AL) ---
-function switchToBatchesView(officeId, officeName) {
+function switchToBatchesView(officeId, officeName, updateUrl = true) {
   currentView = "batches";
   selectedOfficeId = officeId;
   selectedOfficeName = officeName;
   selectedBatchIndex = null;
+  selectedBeneficiaryIds.clear();
 
   const titleEl = document.getElementById("payroll-table-title");
   if (titleEl) titleEl.textContent = `Batches & ET.AL Payroll — ${officeName.toUpperCase()}`;
@@ -399,10 +418,13 @@ function switchToBatchesView(officeId, officeName) {
   if (beneView) beneView.classList.add("hidden");
   if (pagination) pagination.classList.add("hidden");
 
+  updateBulkDisburseButtonState();
+  if (updateUrl) syncUrlState(false);
+
   render50ItemChunkedBatchCards();
 }
 
-function render50ItemChunkedBatchCards() {
+function render50ItemChunkedBatchCards(isFirstVisit = false) {
   const grid = document.getElementById("payroll-batches-grid");
   if (!grid) return;
 
@@ -492,8 +514,8 @@ function render50ItemChunkedBatchCards() {
             
             <div class="text-right shrink-0">
               <span class="block text-xs font-extrabold uppercase tracking-widest text-spes-black/50 dark:text-white/50">Batch Principal</span>
-              <span class="font-mono text-xl sm:text-2xl font-black text-spes-blue dark:text-spes-yellow tabular-nums">
-                ${formatCurrency(batch.totalPrincipal)}
+              <span class="batch-principal-val font-mono text-xl sm:text-2xl font-black text-spes-blue dark:text-spes-yellow tabular-nums" data-target="${batch.totalPrincipal}">
+                ₱0.00
               </span>
             </div>
           </div>
@@ -501,8 +523,8 @@ function render50ItemChunkedBatchCards() {
           <!-- Progress Bar -->
           <div class="mt-5 space-y-2">
             <div class="flex justify-between text-xs font-black uppercase text-spes-black/60 dark:text-white/60">
-              <span>Disbursed: <span class="font-mono tabular-nums font-bold text-spes-black dark:text-white">${formatCurrency(batch.totalPaid)}</span></span>
-              <span class="text-emerald-600 dark:text-emerald-400 font-mono font-bold">${progress}%</span>
+              <span>Disbursed: <span class="batch-paid-val font-mono tabular-nums font-bold text-spes-black dark:text-white" data-target="${batch.totalPaid}">₱0.00</span></span>
+              <span class="batch-progress-val text-emerald-600 dark:text-emerald-400 font-mono font-bold" data-target="${progress}">0%</span>
             </div>
             <div class="h-2.5 w-full overflow-hidden bg-gray-200 dark:bg-black/40">
               <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${progress}%"></div>
@@ -513,15 +535,15 @@ function render50ItemChunkedBatchCards() {
           <div class="mt-4 grid grid-cols-3 gap-2.5 text-center">
             <div class="rounded-none bg-slate-100 dark:bg-[#141D26] p-3 border border-slate-300 dark:border-white/10">
               <span class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70">TOTAL</span>
-              <span class="font-mono font-black text-lg sm:text-xl text-spes-black dark:text-white tabular-nums">${totalCount}</span>
+              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-spes-black dark:text-white tabular-nums" data-target="${totalCount}">0</span>
             </div>
             <div class="rounded-none bg-emerald-50 dark:bg-emerald-950/40 p-3 border border-emerald-300 dark:border-emerald-500/40">
               <span class="block text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">PAID</span>
-              <span class="font-mono font-black text-lg sm:text-xl text-emerald-700 dark:text-emerald-300 tabular-nums">${paidCount}</span>
+              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-emerald-700 dark:text-emerald-300 tabular-nums" data-target="${paidCount}">0</span>
             </div>
             <div class="rounded-none bg-amber-50 dark:bg-amber-950/40 p-3 border border-amber-300 dark:border-amber-500/40">
               <span class="block text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">PENDING</span>
-              <span class="font-mono font-black text-lg sm:text-xl text-amber-700 dark:text-amber-300 tabular-nums">${pendingCount}</span>
+              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-amber-700 dark:text-amber-300 tabular-nums" data-target="${pendingCount}">0</span>
             </div>
           </div>
         </div>
@@ -543,6 +565,24 @@ function render50ItemChunkedBatchCards() {
     `;
   }).join("");
 
+  const batchDuration = isFirstVisit ? 1500 : 650;
+  const baseDelay = isFirstVisit ? 150 : 0;
+  const stepDelay = isFirstVisit ? 35 : 10;
+
+  // Animate batch cards metrics with adaptive delays
+  grid.querySelectorAll(".batch-principal-val").forEach((el, idx) => {
+    animateCounter(el, Number(el.dataset.target) || 0, { isCurrency: true, duration: batchDuration, delay: baseDelay + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+  grid.querySelectorAll(".batch-paid-val").forEach((el, idx) => {
+    animateCounter(el, Number(el.dataset.target) || 0, { isCurrency: true, duration: batchDuration, delay: baseDelay + 40 + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+  grid.querySelectorAll(".batch-progress-val").forEach((el, idx) => {
+    animateCounter(el, Number(el.dataset.target) || 0, { suffix: "%", duration: batchDuration - 100, delay: baseDelay + 60 + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+  grid.querySelectorAll(".batch-stat-count").forEach((el, idx) => {
+    animateCounter(el, Number(el.dataset.target) || 0, { duration: batchDuration - 100, delay: baseDelay + Math.min(idx * stepDelay, 300), forceFromZero: true });
+  });
+
   grid.querySelectorAll(".batch-card").forEach(card => {
     card.addEventListener("click", () => {
       const idx = Number(card.dataset.batchIdx);
@@ -554,7 +594,7 @@ function render50ItemChunkedBatchCards() {
 // --- END: RENDER VIEW 2 (SQUARE-TYPE 50-RECORD CHUNKED BATCHES & ET. AL) ---
 
 // --- START: RENDER VIEW 3 (INDIVIDUAL BENEFICIARY PAYROLL TABLE WITH LARGER FONTS) ---
-function switchToBeneficiariesView(batchIndex, batchName) {
+function switchToBeneficiariesView(batchIndex, batchName, updateUrl = true) {
   currentView = "beneficiaries";
   selectedBatchIndex = batchIndex;
   selectedBatchTitle = batchName;
@@ -582,6 +622,9 @@ function switchToBeneficiariesView(batchIndex, batchName) {
   if (batchView) batchView.classList.add("hidden");
   if (beneView) beneView.classList.remove("hidden");
   if (pagination) pagination.classList.remove("hidden");
+
+  updateBulkDisburseButtonState();
+  if (updateUrl) syncUrlState(false);
 
   applyBeneficiaryFiltersAndRender();
 }
@@ -611,7 +654,7 @@ function applyBeneficiaryFiltersAndRender() {
   renderBeneficiariesPaginatedTable();
 }
 
-function renderBeneficiariesPaginatedTable() {
+function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
   const tbody = document.getElementById("payroll-beneficiaries-tbody");
   if (!tbody) return;
 
@@ -673,10 +716,10 @@ function renderBeneficiariesPaginatedTable() {
             ${highlightMatchText(p.contract_period || "JULY 2026", searchQ)}
           </td>
           <td class="px-6 py-5 text-right font-bold text-sm text-spes-black dark:text-white whitespace-nowrap tabular-nums">
-            ${p.days_worked || DEFAULT_WORK_DAYS} Days
+            <span class="bene-days-val" data-target="${p.days_worked || DEFAULT_WORK_DAYS}">${p.days_worked || DEFAULT_WORK_DAYS}</span> Days
           </td>
           <td class="px-6 py-5 text-right font-black text-base text-spes-black dark:text-white whitespace-nowrap tabular-nums">
-            ${formatCurrency(p.stipend_amount || DEFAULT_STIPEND_RATE)}
+            <span class="bene-stipend-val" data-target="${p.stipend_amount || DEFAULT_STIPEND_RATE}">₱0.00</span>
           </td>
           <td class="px-6 py-5 text-center whitespace-nowrap">
             ${statusBadge}
@@ -698,6 +741,19 @@ function renderBeneficiariesPaginatedTable() {
         </tr>
       `;
     }).join("");
+
+    const rosterDuration = isFirstVisit ? 1000 : 500;
+    const rosterDelay = isFirstVisit ? 20 : 10;
+
+    // Animate stipend amounts and days in roster table with smooth roll
+    tbody.querySelectorAll(".bene-days-val").forEach((el, idx) => {
+      const target = Number(el.dataset.target) || 0;
+      animateCounter(el, target, { duration: rosterDuration, delay: Math.min(idx * rosterDelay, 250), forceFromZero: true });
+    });
+    tbody.querySelectorAll(".bene-stipend-val").forEach((el, idx) => {
+      const target = Number(el.dataset.target) || 0;
+      animateCounter(el, target, { isCurrency: true, duration: rosterDuration + 100, delay: Math.min(idx * rosterDelay, 250), forceFromZero: true });
+    });
   }
 
   // Update pagination info
@@ -707,6 +763,7 @@ function renderBeneficiariesPaginatedTable() {
   if (totalEl) totalEl.textContent = total.toLocaleString();
 
   updatePaginationIndicators(total);
+  updateBulkDisburseButtonState();
   wireTableActions();
 }
 // --- END: RENDER VIEW 3 (INDIVIDUAL BENEFICIARY PAYROLL TABLE WITH LARGER FONTS) ---
@@ -725,6 +782,7 @@ function wireTableActions() {
       } else {
         selectedBeneficiaryIds.delete(bId);
       }
+      updateBulkDisburseButtonState();
     });
   });
 
@@ -836,10 +894,13 @@ function openPayrollDrawer(beneficiary, mode = "view") {
     document.getElementById("pd-beneficiary-id").value = beneficiary.id;
     document.getElementById("pd-student-name").textContent = beneficiary.full_name || "—";
     document.getElementById("pd-contract-period").textContent = p.contract_period || "JULY 2026";
-    document.getElementById("pd-stipend-amount").value = p.stipend_amount || DEFAULT_STIPEND_RATE;
+    const rawStipend = p.stipend_amount || DEFAULT_STIPEND_RATE;
+    document.getElementById("pd-stipend-amount").value = formatNumberWithCommas(rawStipend, true);
     document.getElementById("pd-days-worked").value = p.days_worked || DEFAULT_WORK_DAYS;
-    document.getElementById("pd-payment-status").value = p.payment_status || "PENDING";
     document.getElementById("pd-notes").value = p.notes || "";
+    
+    // Set 3-Grid Payment Status Buttons State
+    setPayrollDrawerStatus(p.payment_status || "PENDING");
 
     viewContainer.classList.add("hidden");
     editForm.classList.remove("hidden");
@@ -873,6 +934,119 @@ function closePayrollDrawer() {
     drawer.classList.add("hidden");
   }, 300);
 }
+
+// --- START: SET PAYROLL DRAWER PAYMENT STATUS BUTTON STATE ---
+function setPayrollDrawerStatus(status = "PENDING") {
+  const normalizedStatus = (status || "PENDING").toUpperCase();
+  const hiddenInput = document.getElementById("pd-payment-status");
+  if (hiddenInput) hiddenInput.value = normalizedStatus;
+
+  const btnPaid = document.getElementById("pd-status-btn-paid");
+  const btnPending = document.getElementById("pd-status-btn-pending");
+  const btnUnpaid = document.getElementById("pd-status-btn-unpaid");
+
+  const configs = [
+    {
+      btn: btnPaid,
+      val: "PAID",
+      activeClasses: [
+        "bg-emerald-600",
+        "border-emerald-600",
+        "text-white",
+        "shadow-lg",
+        "shadow-emerald-600/25",
+        "ring-2",
+        "ring-emerald-500/40",
+        "dark:bg-emerald-600",
+        "dark:border-emerald-500"
+      ],
+      inactiveClasses: [
+        "bg-emerald-50/50",
+        "border-emerald-200/60",
+        "text-emerald-800",
+        "hover:bg-emerald-100/70",
+        "hover:border-emerald-400",
+        "dark:bg-emerald-950/20",
+        "dark:border-emerald-500/25",
+        "dark:text-emerald-300",
+        "dark:hover:bg-emerald-900/30"
+      ],
+      dotActive: "bg-white",
+      dotInactive: "bg-emerald-500"
+    },
+    {
+      btn: btnPending,
+      val: "PENDING",
+      activeClasses: [
+        "bg-amber-500",
+        "border-amber-500",
+        "text-white",
+        "shadow-lg",
+        "shadow-amber-500/25",
+        "ring-2",
+        "ring-amber-400/40",
+        "dark:bg-amber-600",
+        "dark:border-amber-500"
+      ],
+      inactiveClasses: [
+        "bg-amber-50/50",
+        "border-amber-200/60",
+        "text-amber-800",
+        "hover:bg-amber-100/70",
+        "hover:border-amber-400",
+        "dark:bg-amber-950/20",
+        "dark:border-amber-500/25",
+        "dark:text-amber-400",
+        "dark:hover:bg-amber-900/30"
+      ],
+      dotActive: "bg-white",
+      dotInactive: "bg-amber-500"
+    },
+    {
+      btn: btnUnpaid,
+      val: "UNPAID",
+      activeClasses: [
+        "bg-slate-700",
+        "border-slate-800",
+        "text-white",
+        "shadow-lg",
+        "shadow-slate-700/25",
+        "ring-2",
+        "ring-slate-500/40",
+        "dark:bg-slate-600",
+        "dark:border-slate-500"
+      ],
+      inactiveClasses: [
+        "bg-slate-100/60",
+        "border-slate-200",
+        "text-slate-700",
+        "hover:bg-slate-200/70",
+        "hover:border-slate-300",
+        "dark:bg-slate-800/30",
+        "dark:border-white/10",
+        "dark:text-slate-300",
+        "dark:hover:bg-slate-800/60"
+      ],
+      dotActive: "bg-white",
+      dotInactive: "bg-slate-400"
+    }
+  ];
+
+  configs.forEach(c => {
+    if (!c.btn) return;
+    const isSelected = c.val === normalizedStatus;
+    const dot = c.btn.querySelector(".pd-status-dot");
+
+    c.activeClasses.forEach(cls => c.btn.classList.toggle(cls, isSelected));
+    c.inactiveClasses.forEach(cls => c.btn.classList.toggle(cls, !isSelected));
+
+    if (dot) {
+      dot.classList.toggle(c.dotActive, isSelected);
+      dot.classList.toggle(c.dotInactive, !isSelected);
+    }
+  });
+}
+// --- END: SET PAYROLL DRAWER PAYMENT STATUS BUTTON STATE ---
 // --- END: OFFCANVAS DRAWER VIEW / EDIT LOGIC ---
 
 // --- START: PAGINATION CONTROLS & INDICATORS ---
@@ -987,6 +1161,231 @@ function renderImplementorsSkeleton() {
 }
 // --- END: SKELETON LOADERS ---
 
+// --- START: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
+function updateBulkDisburseButtonState() {
+  const btn = document.getElementById("btn-bulk-disburse");
+  const labelEl = document.getElementById("btn-bulk-disburse-label");
+  const editDataBtn = document.getElementById("btn-toggle-inline-edit");
+
+  // Edit Data button: STRICTLY visible only in View 1 (Implementors Root View)
+  if (editDataBtn) {
+    if (currentView === "implementors") {
+      editDataBtn.classList.remove("hidden");
+      editDataBtn.classList.add("inline-flex");
+    } else {
+      editDataBtn.classList.add("hidden");
+      editDataBtn.classList.remove("inline-flex");
+      if (isInlineEditMode) toggleInlineEditMode(false);
+    }
+  }
+
+  if (!btn) return;
+
+  // Only visible when in View 3 (Beneficiary Roster)
+  if (currentView !== "beneficiaries") {
+    btn.classList.add("hidden");
+    btn.classList.remove("inline-flex");
+    return;
+  }
+
+  btn.classList.remove("hidden");
+  btn.classList.add("inline-flex");
+
+  const count = selectedBeneficiaryIds.size;
+  if (count > 0) {
+    btn.disabled = false;
+    btn.removeAttribute("disabled");
+    btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
+    btn.classList.add("cursor-pointer");
+    if (labelEl) labelEl.textContent = `Mark Selected (${count}) Paid`;
+  } else {
+    btn.disabled = true;
+    btn.setAttribute("disabled", "true");
+    btn.classList.add("opacity-40", "cursor-not-allowed", "pointer-events-none");
+    btn.classList.remove("cursor-pointer");
+    if (labelEl) labelEl.textContent = "Mark Batch Paid";
+  }
+}
+// --- END: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
+
+// --- START: TOGGLE INLINE EDIT MODE FOR PAYROLL DIRECTORY & BUDGET ---
+function toggleInlineEditMode(forceActive = null) {
+  isInlineEditMode = forceActive !== null ? forceActive : !isInlineEditMode;
+
+  const btnToggle = document.getElementById("btn-toggle-inline-edit");
+  const labelEl = document.getElementById("btn-toggle-inline-edit-label");
+  const iconEl = document.getElementById("icon-inline-edit");
+  const displayBudgetContainer = document.getElementById("stat-total-budget-display-container");
+  const editBudgetContainer = document.getElementById("stat-total-budget-edit-container");
+  const inputBudget = document.getElementById("input-edit-total-budget");
+
+  if (isInlineEditMode) {
+    isBudgetCardEditing = true;
+    allOffices.forEach(o => editingOfficeIds.add(String(o.id)));
+
+    // Switch button to "SAVE DATA"
+    if (labelEl) labelEl.textContent = "Save Data";
+    if (btnToggle) {
+      btnToggle.className = "cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-emerald-400 bg-emerald-600 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-emerald-500 active:scale-95";
+    }
+    if (iconEl) {
+      iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />`;
+    }
+
+    if (displayBudgetContainer) displayBudgetContainer.classList.add("hidden");
+    if (editBudgetContainer) {
+      editBudgetContainer.classList.remove("hidden");
+      if (inputBudget) {
+        const customBudget = customGeneralBudget;
+        const stats = computePayrollExecutiveSummary(allBeneficiaries, customBudget);
+        inputBudget.value = formatNumberWithCommas(stats.totalBudget, false);
+        inputBudget.focus();
+      }
+    }
+  } else {
+    isBudgetCardEditing = false;
+    editingOfficeIds.clear();
+
+    // Revert button to "EDIT DATA"
+    if (labelEl) labelEl.textContent = "Edit Data";
+    if (btnToggle) {
+      btnToggle.className = "cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-cyan-400/40 bg-cyan-900/30 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-cyan-100 shadow-md transition-all duration-300 hover:rounded-xl hover:bg-cyan-600 hover:border-cyan-500 hover:text-white hover:shadow-lg hover:shadow-cyan-600/30 active:scale-95";
+    }
+    if (iconEl) {
+      iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />`;
+    }
+
+    if (displayBudgetContainer) displayBudgetContainer.classList.remove("hidden");
+    if (editBudgetContainer) editBudgetContainer.classList.add("hidden");
+  }
+
+  // Re-render implementors table to show/hide inline edit inputs
+  renderImplementorsView(false, false);
+}
+
+function checkAndSyncEditModeState() {
+  if (editingOfficeIds.size === 0 && !isBudgetCardEditing) {
+    isInlineEditMode = false;
+    const btnToggle = document.getElementById("btn-toggle-inline-edit");
+    const labelEl = document.getElementById("btn-toggle-inline-edit-label");
+    const iconEl = document.getElementById("icon-inline-edit");
+    if (labelEl) labelEl.textContent = "Edit Data";
+    if (btnToggle) {
+      btnToggle.className = "cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-cyan-400/40 bg-cyan-900/30 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-cyan-100 shadow-md transition-all duration-300 hover:rounded-xl hover:bg-cyan-600 hover:border-cyan-500 hover:text-white hover:shadow-lg hover:shadow-cyan-600/30 active:scale-95";
+    }
+    if (iconEl) {
+      iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />`;
+    }
+  }
+}
+
+function saveInlineDataChanges() {
+  let hasChanges = false;
+  const session = getSession();
+
+  if (isBudgetCardEditing) {
+    const inputBudget = document.getElementById("input-edit-total-budget");
+    const newBudgetVal = inputBudget ? parseNumberFromCommas(inputBudget.value) : null;
+    const prevCustomBudget = customGeneralBudget;
+
+    if (newBudgetVal !== null && Number.isFinite(newBudgetVal) && newBudgetVal > 0) {
+      if (newBudgetVal !== prevCustomBudget) {
+        customGeneralBudget = newBudgetVal;
+        preferenceStorage.saveCustomGeneralBudget(newBudgetVal);
+        upsertDbPayrollBudget(null, newBudgetVal, session?.id);
+        hasChanges = true;
+      }
+    }
+  }
+
+  // Collect all currently open office row edits
+  document.querySelectorAll(".input-edit-office-budget").forEach(input => {
+    const officeId = input.dataset.officeId;
+    const val = parseNumberFromCommas(input.value);
+    if (officeId && Number.isFinite(val) && val >= 0) {
+      customOfficeBudgets[String(officeId)] = val;
+      preferenceStorage.saveCustomOfficeBudget(officeId, val);
+      upsertDbPayrollBudget(officeId, val, session?.id);
+      hasChanges = true;
+    }
+  });
+
+  toggleInlineEditMode(false);
+  updateExecutiveSummaryCards(allBeneficiaries);
+  renderImplementorsView(false, false);
+
+  if (hasChanges) {
+    modals.flowbiteToast("Data Saved", "All active budget modifications saved successfully.", "success");
+  } else {
+    modals.flowbiteToast("No Changes", "Budget allocation remains unchanged.", "info");
+  }
+}
+// --- END: TOGGLE INLINE EDIT MODE FOR PAYROLL DIRECTORY & BUDGET ---
+
+// --- START: SYNC AND RESTORE VIEW STATE WITH URL QUERY PARAMETERS ---
+function syncUrlState(replace = false) {
+  const url = new URL(window.location);
+  if (currentView === "implementors") {
+    url.searchParams.delete("office");
+    url.searchParams.delete("batch");
+  } else if (currentView === "batches") {
+    if (selectedOfficeId) url.searchParams.set("office", selectedOfficeId);
+    url.searchParams.delete("batch");
+  } else if (currentView === "beneficiaries") {
+    if (selectedOfficeId) url.searchParams.set("office", selectedOfficeId);
+    if (selectedBatchIndex !== null && selectedBatchIndex !== undefined) {
+      url.searchParams.set("batch", selectedBatchIndex + 1);
+    }
+  }
+
+  const queryStr = url.searchParams.toString();
+  const newUrl = url.pathname + (queryStr ? `?${queryStr}` : "");
+  if (replace) {
+    window.history.replaceState({ view: currentView, officeId: selectedOfficeId, batchIdx: selectedBatchIndex }, "", newUrl);
+  } else {
+    window.history.pushState({ view: currentView, officeId: selectedOfficeId, batchIdx: selectedBatchIndex }, "", newUrl);
+  }
+}
+
+function restoreViewFromUrl(isFirstVisit = false) {
+  const params = new URLSearchParams(window.location.search);
+  const officeParam = params.get("office");
+  const batchParam = params.get("batch");
+
+  if (!officeParam) {
+    renderImplementorsView(isFirstVisit, false);
+    return;
+  }
+
+  // Find office by ID or name
+  const foundOffice = allOffices.find(o => 
+    String(o.id) === String(officeParam) || 
+    String(o.name || "").toLowerCase() === String(officeParam).toLowerCase()
+  );
+  const officeId = foundOffice ? foundOffice.id : officeParam;
+  const officeName = foundOffice ? foundOffice.name : String(officeParam).toUpperCase();
+
+  if (batchParam) {
+    const batchNumber = parseInt(batchParam, 10);
+    const batchIdx = !isNaN(batchNumber) && batchNumber > 0 ? batchNumber - 1 : 0;
+
+    selectedOfficeId = officeId;
+    selectedOfficeName = officeName;
+    const officeBeneficiaries = officeId === "ALL"
+      ? allBeneficiaries
+      : allBeneficiaries.filter(b => String(b.staffs?.office_id) === String(officeId));
+    currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE);
+
+    const targetBatch = currentOfficeBatches.find(b => b.batchIndex === batchIdx) || currentOfficeBatches[0];
+    const batchName = targetBatch ? targetBatch.batchName : `BATCH ${batchIdx + 1}`;
+
+    switchToBeneficiariesView(batchIdx, batchName, false);
+  } else {
+    switchToBatchesView(officeId, officeName, false);
+  }
+}
+// --- END: SYNC AND RESTORE VIEW STATE WITH URL QUERY PARAMETERS ---
+
 // --- START: MAIN PAYROLL INITIALIZATION ---
 export async function initPayroll() {
   const session = getSession();
@@ -994,48 +1393,134 @@ export async function initPayroll() {
   applyPermissions();
   initThemeToggle();
 
-  initMiniSparklineCharts();
-  renderImplementorsSkeleton();
+  _purgeLegacyPayrollStorage();
+
+  const isFirstVisit = !preferenceStorage.hasSeenPayrollIntro();
+  const cachedData = preferenceStorage.getPayrollCache();
+
+  // If cached data is available in session, load it instantly with snappy counter animation
+  if (cachedData && cachedData.beneficiaries) {
+    allBeneficiaries = cachedData.beneficiaries || [];
+    allOffices = cachedData.offices || [];
+    allImplementors = cachedData.implementors || [];
+    customGeneralBudget = preferenceStorage.getCustomGeneralBudget();
+    customOfficeBudgets = preferenceStorage.getCustomOfficeBudgets();
+
+    updateExecutiveSummaryCards(allBeneficiaries, false, isFirstVisit);
+    restoreViewFromUrl(isFirstVisit);
+    if (isFirstVisit) preferenceStorage.markPayrollIntroSeen();
+  } else {
+    renderImplementorsSkeleton();
+  }
 
   try {
-    const [beneRes, officeRes, implRes] = await Promise.all([
+    const [beneRes, officeRes, implRes, budgetRes] = await Promise.all([
       fetchBeneficiaryPayrollRoster({ forceRefresh: false }),
       fetchOffices({ forceRefresh: false }),
       fetchImplementorList({ forceRefresh: false }),
+      fetchDbPayrollBudgets({ forceRefresh: false }),
     ]);
 
     allBeneficiaries = beneRes.data || [];
     allOffices = officeRes.data || [];
     allImplementors = implRes || [];
 
-    updateExecutiveSummaryCards(allBeneficiaries);
-    renderImplementorsView();
+    if (budgetRes) {
+      if (budgetRes.generalBudget !== undefined && budgetRes.generalBudget !== null) {
+        customGeneralBudget = budgetRes.generalBudget;
+        preferenceStorage.saveCustomGeneralBudget(budgetRes.generalBudget);
+      } else {
+        customGeneralBudget = preferenceStorage.getCustomGeneralBudget();
+      }
 
+      if (budgetRes.officeBudgets && Object.keys(budgetRes.officeBudgets).length > 0) {
+        customOfficeBudgets = { ...preferenceStorage.getCustomOfficeBudgets(), ...budgetRes.officeBudgets };
+      } else {
+        customOfficeBudgets = preferenceStorage.getCustomOfficeBudgets();
+      }
+    }
+
+    // Save fetched data to session cache
+    preferenceStorage.savePayrollCache({
+      beneficiaries: allBeneficiaries,
+      offices: allOffices,
+      implementors: allImplementors,
+    });
+
+    const isStillFirstVisit = isFirstVisit && !cachedData;
+    updateExecutiveSummaryCards(allBeneficiaries, !cachedData, isStillFirstVisit);
+    restoreViewFromUrl(isStillFirstVisit);
+
+    if (isStillFirstVisit) {
+      preferenceStorage.markPayrollIntroSeen();
+    }
   } catch (err) {
     if (import.meta.env.DEV) console.error("[SPES Payroll] Init error:", err);
-    modals.error("Load Failed", "Could not load payroll data. Please refresh and try again.");
+    if (!cachedData) {
+      modals.error("Load Failed", "Could not load payroll data. Please refresh and try again.");
+    }
   }
 
   // Back button navigation
   document.getElementById("btn-back-to-payroll-implementors")?.addEventListener("click", () => {
     if (currentView === "beneficiaries") {
-      switchToBatchesView(selectedOfficeId, selectedOfficeName);
+      switchToBatchesView(selectedOfficeId, selectedOfficeName, true);
     } else {
-      renderImplementorsView();
+      renderImplementorsView(false, true);
     }
   });
 
+  // Browser forward / back history support
+  window.addEventListener("popstate", () => {
+    restoreViewFromUrl(false);
+  });
+
   // Search input - live dynamic auto filtering on ALL views
-  document.getElementById("payroll-search-input")?.addEventListener("input", () => {
+  const searchInput = document.getElementById("payroll-search-input");
+  const clearSearchBtn = document.getElementById("btn-clear-payroll-search");
+
+  const syncClearSearchVisibility = () => {
+    if (!clearSearchBtn) return;
+    if (searchInput && searchInput.value.length > 0) {
+      clearSearchBtn.classList.remove("hidden");
+      clearSearchBtn.classList.add("flex");
+    } else {
+      clearSearchBtn.classList.add("hidden");
+      clearSearchBtn.classList.remove("flex");
+    }
+  };
+
+  const executeSearch = () => {
+    syncClearSearchVisibility();
     if (currentView === "implementors") {
-      renderImplementorsView();
+      renderImplementorsView(false, false);
     } else if (currentView === "batches") {
       render50ItemChunkedBatchCards();
     } else if (currentView === "beneficiaries") {
       currentPage = 1;
       applyBeneficiaryFiltersAndRender();
     }
+  };
+
+  searchInput?.addEventListener("input", executeSearch);
+
+  clearSearchBtn?.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.value = "";
+      searchInput.focus();
+      executeSearch();
+    }
   });
+
+  // Attach live comma formatting to Card 1 Total Budget editor and Drawer Stipend editor
+  const inputBudgetEl = document.getElementById("input-edit-total-budget");
+  if (inputBudgetEl) {
+    attachNumberCommaFormatter(inputBudgetEl, { allowDecimals: false });
+  }
+  const inputStipendEl = document.getElementById("pd-stipend-amount");
+  if (inputStipendEl) {
+    attachNumberCommaFormatter(inputStipendEl, { allowDecimals: true });
+  }
 
   // Status dropdown filter
   document.getElementById("payroll-status-filter")?.addEventListener("change", () => {
@@ -1088,15 +1573,27 @@ export async function initPayroll() {
 
     if (!confirm.isConfirmed) return;
 
-    modals.loading("Processing Disbursements", "Updating payroll records...");
-    await bulkUpdatePayrollStatus(ids, "PAID");
+    modals.loading("Processing Disbursements", "Updating payroll records in database...");
+
+    const selectedItems = allBeneficiaries
+      .filter(b => ids.includes(String(b.id)))
+      .map(b => ({
+        beneficiaryId: b.id,
+        officeId: b.staffs?.office_id || null,
+        stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
+        days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
+      }));
+
+    const session = getSession();
+    await bulkUpdatePayrollStatus(selectedItems, "PAID", session?.id);
     modals.close();
 
     // Update memory
+    const nowStr = new Date().toISOString();
     allBeneficiaries.forEach(b => {
       if (ids.includes(String(b.id))) {
         b.payroll.payment_status = "PAID";
-        b.payroll.date_paid = new Date().toISOString();
+        b.payroll.date_paid = nowStr;
       }
     });
 
@@ -1105,6 +1602,46 @@ export async function initPayroll() {
     applyBeneficiaryFiltersAndRender();
 
     modals.flowbiteToast("Disbursement Recorded", `${ids.length} beneficiaries marked as PAID.`, "success");
+  });
+
+  // Edit Data / Save Data Button in Header
+  document.getElementById("btn-toggle-inline-edit")?.addEventListener("click", () => {
+    if (isInlineEditMode) {
+      saveInlineDataChanges();
+    } else {
+      toggleInlineEditMode(true);
+    }
+  });
+
+  // Card 1: Save Budget Icon Button (Specific Item Save)
+  document.getElementById("btn-save-inline-budget")?.addEventListener("click", () => {
+    const input = document.getElementById("input-edit-total-budget");
+    if (input) {
+      const val = parseNumberFromCommas(input.value);
+      if (Number.isFinite(val) && val > 0) {
+        customGeneralBudget = val;
+        preferenceStorage.saveCustomGeneralBudget(val);
+
+        const session = getSession();
+        upsertDbPayrollBudget(null, val, session?.id);
+
+        isBudgetCardEditing = false;
+        document.getElementById("stat-total-budget-edit-container")?.classList.add("hidden");
+        document.getElementById("stat-total-budget-display-container")?.classList.remove("hidden");
+        checkAndSyncEditModeState();
+        updateExecutiveSummaryCards(allBeneficiaries);
+        modals.flowbiteToast("Budget Saved", `Total allocated budget updated to ${formatCurrency(val)}.`, "success");
+      }
+    }
+  });
+
+  // Card 1: Cancel / Reset Budget Icon Button (Specific Item Cancel)
+  document.getElementById("btn-cancel-inline-budget")?.addEventListener("click", () => {
+    isBudgetCardEditing = false;
+    document.getElementById("stat-total-budget-edit-container")?.classList.add("hidden");
+    document.getElementById("stat-total-budget-display-container")?.classList.remove("hidden");
+    checkAndSyncEditModeState();
+    updateExecutiveSummaryCards(allBeneficiaries);
   });
 
   // Export report
@@ -1122,37 +1659,53 @@ export async function initPayroll() {
   document.getElementById("btn-cancel-payroll-drawer")?.addEventListener("click", closePayrollDrawer);
   document.getElementById("drawer-payroll-edit-overlay")?.addEventListener("click", closePayrollDrawer);
 
+  // Status button group in Edit Drawer
+  document.querySelectorAll(".pd-status-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const statusVal = btn.dataset.statusVal;
+      if (statusVal) setPayrollDrawerStatus(statusVal);
+    });
+  });
+
   // Drawer submit listener
   document.getElementById("form-payroll-drawer")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = document.getElementById("pd-beneficiary-id")?.value;
-    const stipendAmount = document.getElementById("pd-stipend-amount")?.value;
-    const daysWorked = document.getElementById("pd-days-worked")?.value;
+    const rawStipend = document.getElementById("pd-stipend-amount")?.value;
+    const stipendAmount = parseNumberFromCommas(rawStipend);
+    const daysWorked = Number(document.getElementById("pd-days-worked")?.value) || DEFAULT_WORK_DAYS;
     const paymentStatus = document.getElementById("pd-payment-status")?.value;
     const notes = document.getElementById("pd-notes")?.value;
 
     if (!id) return;
+
+    const targetBene = allBeneficiaries.find(b => String(b.id) === String(id));
+    const officeId = targetBene?.staffs?.office_id || null;
+    const session = getSession();
 
     await updateBeneficiaryPayrollRecord(id, {
       stipend_amount: stipendAmount,
       days_worked: daysWorked,
       payment_status: paymentStatus,
       notes: notes,
-    });
+      updated_by: session?.id || null,
+    }, officeId);
 
-    const targetBene = allBeneficiaries.find(b => String(b.id) === String(id));
     if (targetBene) {
-      targetBene.payroll.stipend_amount = Number(stipendAmount);
-      targetBene.payroll.days_worked = Number(daysWorked);
+      targetBene.payroll.stipend_amount = stipendAmount;
+      targetBene.payroll.days_worked = daysWorked;
       targetBene.payroll.payment_status = paymentStatus;
       targetBene.payroll.notes = notes;
+      if (paymentStatus === "PAID" && !targetBene.payroll.date_paid) {
+        targetBene.payroll.date_paid = new Date().toISOString();
+      }
     }
 
     closePayrollDrawer();
     updateExecutiveSummaryCards(allBeneficiaries);
     applyBeneficiaryFiltersAndRender();
 
-    modals.flowbiteToast("Record Saved", "Disbursement details updated successfully.", "success");
+    modals.flowbiteToast("Record Saved", "Disbursement details updated successfully in database.", "success");
   });
 }
 // --- END: MAIN PAYROLL INITIALIZATION ---

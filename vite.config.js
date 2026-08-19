@@ -112,39 +112,46 @@ function spesVercelApiDev(env) {
     if (!process.env[name] && env[name]) process.env[name] = env[name];
   }
 
+  const attachApiMiddleware = (server) => {
+    server.middlewares.use(async (req, res, next) => {
+      const pathname = new URL(req.url || "/", "http://localhost").pathname;
+      const loadRoute = routes[pathname];
+      if (!loadRoute) return next();
+
+      try {
+        if (req.method !== "GET" && req.method !== "HEAD") {
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
+          const rawBody = Buffer.concat(chunks).toString("utf8");
+          req.body = rawBody ? JSON.parse(rawBody) : {};
+        }
+
+        res.status = (code) => {
+          res.statusCode = code;
+          return res;
+        };
+        res.json = (value) => {
+          if (!res.headersSent) res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify(value));
+        };
+
+        const module = await loadRoute();
+        await module.default(req, res);
+      } catch (error) {
+        console.error("[SPES API Middleware]", error.message);
+        if (!res.headersSent) res.statusCode = 500;
+        res.end(JSON.stringify({ error: "Local API request failed." }));
+      }
+    });
+  };
+
   return {
     name: "spes-vercel-api-dev",
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        const pathname = new URL(req.url || "/", "http://localhost").pathname;
-        const loadRoute = routes[pathname];
-        if (!loadRoute) return next();
-
-        try {
-          if (req.method !== "GET" && req.method !== "HEAD") {
-            const chunks = [];
-            for await (const chunk of req) chunks.push(chunk);
-            const rawBody = Buffer.concat(chunks).toString("utf8");
-            req.body = rawBody ? JSON.parse(rawBody) : {};
-          }
-
-          res.status = (code) => {
-            res.statusCode = code;
-            return res;
-          };
-          res.json = (value) => {
-            if (!res.headersSent) res.setHeader("Content-Type", "application/json; charset=utf-8");
-            res.end(JSON.stringify(value));
-          };
-
-          const module = await loadRoute();
-          await module.default(req, res);
-        } catch (error) {
-          console.error("[SPES Dev API]", error.message);
-          if (!res.headersSent) res.statusCode = 500;
-          res.end(JSON.stringify({ error: "Local API request failed." }));
-        }
-      });
+      attachApiMiddleware(server);
+    },
+    configurePreviewServer(server) {
+      attachApiMiddleware(server);
     },
   };
 }

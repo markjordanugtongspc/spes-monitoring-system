@@ -645,3 +645,109 @@ export function initPasswordConfirmReveal() {
   });
 }
 // --- FUNCTION: DYNAMIC PASSWORD REVEAL (END) ---
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION 8 — NUMBER & MONEY COUNTER ANIMATION (TAILWINDCSS TABULAR NUMS)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// --- FUNCTION: ANIMATE NUMBER & MONEY COUNTER (START) ---
+/**
+ * Smoothly animates numeric and currency values with easing from 0 (or start value) to target.
+ * Optimized for executive dashboard stats and cards with TailwindCSS tabular-nums.
+ *
+ * @param {HTMLElement} element - Target DOM element containing or receiving the counter
+ * @param {number} endVal - The target number to count up to
+ * @param {Object} options - Configuration options (duration, delay, isCurrency, prefix, suffix, decimals, forceFromZero)
+ */
+export function animateCounter(element, endVal, options = {}) {
+  if (!element) return;
+
+  const {
+    duration = 2000,
+    delay = 0,
+    isCurrency = false,
+    prefix = isCurrency ? "₱" : "",
+    suffix = "",
+    decimals = isCurrency ? 2 : 0,
+    forceFromZero = false,
+  } = options;
+
+  const target = Number(endVal) || 0;
+  
+  // Read current value from dataset or fallback to 0
+  let start = 0;
+  if (!forceFromZero && element.dataset.currentVal !== undefined) {
+    start = Number(element.dataset.currentVal) || 0;
+  }
+
+  // Cancel any running animation or pending delay on this element
+  if (element._counterTimeoutId) {
+    clearTimeout(element._counterTimeoutId);
+    element._counterTimeoutId = null;
+  }
+  if (element._counterAnimId) {
+    cancelAnimationFrame(element._counterAnimId);
+    element._counterAnimId = null;
+  }
+
+  // Formatting helper
+  const formatVal = (num) => {
+    if (isCurrency) {
+      return new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(num);
+    }
+    const formatted = num.toLocaleString("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return `${prefix}${formatted}${suffix}`;
+  };
+
+  // Set initial formatted value immediately
+  element.textContent = formatVal(start);
+
+  if (start === target && element.dataset.currentVal !== undefined && !forceFromZero) {
+    element.textContent = formatVal(target);
+    return;
+  }
+
+  const startAnimation = () => {
+    let startTime = null;
+    // Ultra-smooth easeOutCubic/Expo hybrid curve for visible rolling count
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = easeOutCubic(progress);
+      const current = start + (target - start) * eased;
+
+      element.textContent = formatVal(current);
+
+      if (progress < 1) {
+        element._counterAnimId = requestAnimationFrame(step);
+      } else {
+        element.textContent = formatVal(target);
+        element.dataset.currentVal = String(target);
+        element._counterAnimId = null;
+      }
+    }
+
+    element._counterAnimId = requestAnimationFrame(step);
+  };
+
+  if (delay > 0) {
+    element._counterTimeoutId = setTimeout(() => {
+      element._counterTimeoutId = null;
+      startAnimation();
+    }, delay);
+  } else {
+    startAnimation();
+  }
+}
+// --- FUNCTION: ANIMATE NUMBER & MONEY COUNTER (END) ---
+

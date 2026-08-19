@@ -49,21 +49,35 @@
 
           <!-- Quick Action Buttons -->
           <div class="flex flex-wrap items-center gap-3">
+            <!-- Export Report: Premium Purple with zero-radius morphing to rounded on hover -->
             <button type="button" id="btn-export-payroll-summary"
-              class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md transition-all hover:bg-white/20 active:scale-95 sm:w-auto">
+              class="cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-purple-400/40 bg-purple-900/30 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-purple-100 shadow-md transition-all duration-300 hover:rounded-xl hover:bg-purple-600 hover:border-purple-500 hover:text-white hover:shadow-lg hover:shadow-purple-600/30 active:scale-95">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Export Report
             </button>
+
+            <!-- Edit Data / Save Data: Premium Cyan with zero-radius morphing to rounded on hover (Root View Only) -->
+            <button type="button" id="btn-toggle-inline-edit"
+              class="cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-cyan-400/40 bg-cyan-900/30 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-cyan-100 shadow-md transition-all duration-300 hover:rounded-xl hover:bg-cyan-600 hover:border-cyan-500 hover:text-white hover:shadow-lg hover:shadow-cyan-600/30 active:scale-95">
+              <svg id="icon-inline-edit" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span id="btn-toggle-inline-edit-label">Edit Data</span>
+            </button>
+
+            <!-- Mark Batch Paid: Fresh Green with zero-radius morphing to rounded on hover, hidden until batch is active -->
             <button type="button" id="btn-bulk-disburse"
-              class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-xl bg-spes-yellow px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-widest text-spes-dark-blue shadow-lg transition-all hover:bg-yellow-400 hover:scale-[1.02] active:scale-95 sm:w-auto">
+              class="hidden items-center justify-center gap-2 rounded-none border border-green-500/50 bg-green-600 px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-green-500 hover:border-green-400 hover:shadow-green-500/30 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+              disabled>
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Mark Batch Paid
+              <span id="btn-bulk-disburse-label">Mark Batch Paid</span>
             </button>
           </div>
         </div>
@@ -97,21 +111,45 @@
           </div>
 
           <div class="relative z-10 mt-4">
-            <p class="text-xs font-black uppercase tracking-widest text-blue-100 dark:text-blue-200/90">Total Budget</p>
-            <h3 id="stat-total-budget" class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">
-              ₱0.00</h3>
-            <div class="flex items-center justify-between mt-1 text-xs">
-              <span class="font-bold text-spes-yellow dark:text-yellow-300" id="stat-beneficiary-count">0 Beneficiaries</span>
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-black uppercase tracking-widest text-blue-100 dark:text-blue-200/90">Total Budget</p>
+            </div>
+            <!-- Normal Counter Display -->
+            <div id="stat-total-budget-display-container">
+              <h3 id="stat-total-budget" data-counter="currency" data-value="0"
+                class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+            </div>
+            <!-- Inline Edit Input Container -->
+            <div id="stat-total-budget-edit-container" class="hidden mt-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono text-lg font-black text-white">₱</span>
+                <input type="text" id="input-edit-total-budget" inputmode="numeric"
+                  class="w-full rounded-none border border-white/40 bg-white/20 px-2.5 py-1 font-mono text-base sm:text-lg font-black text-white placeholder:text-white/50 focus:border-spes-yellow focus:bg-white/30 focus:outline-none"
+                  placeholder="Set Budget..." />
+                <!-- Quick Mini Inline Save / Cancel -->
+                <button type="button" id="btn-save-inline-budget"
+                  class="cursor-pointer inline-flex items-center justify-center p-1.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-none shadow transition active:scale-95"
+                  title="Save Budget">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button type="button" id="btn-cancel-inline-budget"
+                  class="cursor-pointer inline-flex items-center justify-center p-1.5 bg-white/20 hover:bg-rose-500 text-white rounded-none shadow transition active:scale-95"
+                  title="Reset to Default">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-2 text-xs">
+              <span class="font-bold text-spes-yellow dark:text-yellow-300 tabular-nums" id="stat-beneficiary-count" data-counter="number" data-value="0">0 Beneficiaries</span>
               <span class="inline-flex items-center gap-1 font-semibold text-blue-100/90 dark:text-blue-200 text-[11px]">
                 <svg class="h-3 w-3 text-spes-yellow dark:text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 Allocated
               </span>
             </div>
-          </div>
-
-          <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-2 -mx-2 h-10">
-            <div id="sparkline-budget" class="h-full w-full"></div>
           </div>
         </div>
 
@@ -137,20 +175,15 @@
 
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-teal-100 dark:text-teal-200/90">Total Paid (Disbursed)</p>
-            <h3 id="stat-total-paid"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
-            <div class="flex items-center justify-between mt-1 text-xs">
-              <span class="font-bold text-emerald-200 dark:text-emerald-300" id="stat-paid-count">0 Paid Accounts</span>
+            <h3 id="stat-total-paid" data-counter="currency" data-value="0"
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+            <div class="flex items-center justify-between mt-2 text-xs">
+              <span class="font-bold text-emerald-200 dark:text-emerald-300 tabular-nums" id="stat-paid-count" data-counter="number" data-value="0">0 Paid Accounts</span>
               <span class="inline-flex items-center gap-1 font-semibold text-teal-100/90 dark:text-teal-200 text-[11px]">
                 <svg class="h-3 w-3 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                 Disbursed
               </span>
             </div>
-          </div>
-
-          <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-2 -mx-2 h-10">
-            <div id="sparkline-paid" class="h-full w-full"></div>
           </div>
         </div>
 
@@ -176,20 +209,15 @@
 
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-amber-100 dark:text-amber-200/90">Total Pending</p>
-            <h3 id="stat-total-pending"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
-            <div class="flex items-center justify-between mt-1 text-xs">
-              <span class="font-bold text-amber-200 dark:text-amber-300" id="stat-pending-count">0 In Processing</span>
+            <h3 id="stat-total-pending" data-counter="currency" data-value="0"
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+            <div class="flex items-center justify-between mt-2 text-xs">
+              <span class="font-bold text-amber-200 dark:text-amber-300 tabular-nums" id="stat-pending-count" data-counter="number" data-value="0">0 In Processing</span>
               <span class="inline-flex items-center gap-1 font-semibold text-amber-100/90 dark:text-amber-200 text-[11px]">
                 <svg class="h-3 w-3 text-amber-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3"/></svg>
                 Processing
               </span>
             </div>
-          </div>
-
-          <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-2 -mx-2 h-10">
-            <div id="sparkline-pending" class="h-full w-full"></div>
           </div>
         </div>
 
@@ -216,20 +244,15 @@
 
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-rose-100 dark:text-rose-200/90">Remaining Balance</p>
-            <h3 id="stat-remaining-balance"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums">₱0.00</h3>
-            <div class="flex items-center justify-between mt-1 text-xs">
-              <span class="font-bold text-rose-200 dark:text-rose-300" id="stat-disbursement-rate">0% Disbursed</span>
+            <h3 id="stat-remaining-balance" data-counter="currency" data-value="0"
+              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+            <div class="flex items-center justify-between mt-2 text-xs">
+              <span class="font-bold text-rose-200 dark:text-rose-300 tabular-nums" id="stat-disbursement-rate" data-counter="percent" data-value="0">0% Disbursed</span>
               <span class="inline-flex items-center gap-1 font-semibold text-rose-100/90 dark:text-rose-200 text-[11px]">
                 <svg class="h-3 w-3 text-rose-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
                 Balance
               </span>
             </div>
-          </div>
-
-          <!-- Mini Sparkline Graph -->
-          <div class="relative z-10 mt-2 -mx-2 h-10">
-            <div id="sparkline-remaining" class="h-full w-full"></div>
           </div>
         </div>
       </section>
@@ -262,7 +285,7 @@
 
           <!-- Search & Filter Controls (EXPANDED SPACIOUS WIDTH) -->
           <div class="flex flex-wrap items-center gap-3 ml-auto w-full sm:w-auto">
-            <!-- Spacious Search input -->
+            <!-- Spacious Search input with Clear (X) UX & Tooltip -->
             <div class="relative w-full sm:w-80 md:w-96 flex-1 sm:flex-initial">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                 <svg class="h-4 w-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -271,8 +294,23 @@
                 </svg>
               </div>
               <input type="text" id="payroll-search-input"
-                class="h-10 w-full rounded-xl border border-white/30 bg-white/15 pl-10 pr-3.5 text-xs sm:text-sm text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/25 focus:outline-none transition-all shadow-inner"
+                class="h-10 w-full rounded-xl border border-white/30 bg-white/15 pl-10 pr-9 text-xs sm:text-sm text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/25 focus:outline-none transition-all shadow-inner"
                 placeholder="Search beneficiary, ID, or contract..." autocomplete="off" />
+              <!-- Clear Search "X" Button -->
+              <button type="button" id="btn-clear-payroll-search"
+                class="hidden cursor-pointer absolute inset-y-0 right-0 items-center pr-3 text-white/70 hover:text-white transition-colors active:scale-95"
+                data-tooltip-target="tooltip-clear-search"
+                title="Clear Search"
+                aria-label="Clear Search">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div id="tooltip-clear-search" role="tooltip"
+                class="absolute z-50 invisible inline-block px-2.5 py-1 text-xs font-semibold text-white bg-slate-900 rounded-lg shadow-lg opacity-0 tooltip dark:bg-slate-800 transition-opacity duration-200">
+                Clear search query
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
             </div>
 
             <!-- Payment Status Filter -->
@@ -557,7 +595,7 @@
               class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
               Stipend Amount (₱) <span class="text-red-500">*</span>
             </label>
-            <input type="number" step="0.01" id="pd-stipend-amount" required
+            <input type="text" inputmode="decimal" id="pd-stipend-amount" required
               class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm sm:text-base font-mono font-black text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white transition" />
           </div>
 
@@ -571,21 +609,68 @@
           </div>
         </div>
 
-        <!-- Payment Status -->
+        <!-- Payment Status (3-Grid Button Group with Colorful Badges & Tooltips) -->
         <div>
-          <label for="pd-payment-status"
-            class="mb-1.5 block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
-            Payment Status <span class="text-red-500">*</span>
-          </label>
-          <select id="pd-payment-status" required
-            class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-4 py-3 text-sm sm:text-base font-bold text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-white transition">
-            <option value="PAID" class="text-emerald-700 font-bold bg-white dark:bg-spes-dark-primary">PAID (Disbursed
-              to Beneficiary)</option>
-            <option value="PENDING" class="text-amber-700 font-bold bg-white dark:bg-spes-dark-primary">PENDING (In
-              Processing / Awaiting Release)</option>
-            <option value="UNPAID" class="text-slate-700 font-bold bg-white dark:bg-spes-dark-primary">UNPAID (Not Yet
-              Prepared)</option>
-          </select>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+              Payment Status <span class="text-red-500">*</span>
+            </label>
+            <span class="text-[11px] font-semibold text-spes-black/40 dark:text-white/40 italic">Select one</span>
+          </div>
+
+          <!-- Hidden Input for Native Form Handling -->
+          <input type="hidden" id="pd-payment-status" name="payment_status" value="PENDING" required />
+
+          <!-- 3-Column Grid of Sharp Rectangle Action Buttons (No Radius / Rounded-None) -->
+          <div class="grid grid-cols-3 gap-2.5 sm:gap-3" id="pd-status-btn-group">
+            <!-- 1. PAID BUTTON -->
+            <button type="button"
+              id="pd-status-btn-paid"
+              data-status-val="PAID"
+              data-tooltip-target="tooltip-status-paid"
+              title="Disbursed to Beneficiary"
+              class="cursor-pointer pd-status-toggle group relative flex flex-row items-center justify-center gap-2 h-10 sm:h-11 px-2.5 sm:px-3.5 rounded-none border-2 transition-all duration-200 focus:outline-none select-none text-center">
+              <span class="pd-status-dot h-2.5 w-2.5 rounded-full shrink-0 transition-colors"></span>
+              <span class="font-montserrat text-xs sm:text-sm font-black uppercase tracking-wider">PAID</span>
+            </button>
+            <div id="tooltip-status-paid" role="tooltip"
+              class="absolute z-50 invisible inline-block px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg shadow-lg opacity-0 tooltip dark:bg-slate-800 transition-opacity duration-200">
+              Disbursed to Beneficiary
+              <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+
+            <!-- 2. PENDING BUTTON -->
+            <button type="button"
+              id="pd-status-btn-pending"
+              data-status-val="PENDING"
+              data-tooltip-target="tooltip-status-pending"
+              title="In Processing / Awaiting Release"
+              class="cursor-pointer pd-status-toggle group relative flex flex-row items-center justify-center gap-2 h-10 sm:h-11 px-2.5 sm:px-3.5 rounded-none border-2 transition-all duration-200 focus:outline-none select-none text-center">
+              <span class="pd-status-dot h-2.5 w-2.5 rounded-full shrink-0 transition-colors"></span>
+              <span class="font-montserrat text-xs sm:text-sm font-black uppercase tracking-wider">PENDING</span>
+            </button>
+            <div id="tooltip-status-pending" role="tooltip"
+              class="absolute z-50 invisible inline-block px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg shadow-lg opacity-0 tooltip dark:bg-slate-800 transition-opacity duration-200">
+              In Processing / Awaiting Release
+              <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+
+            <!-- 3. UNPAID BUTTON -->
+            <button type="button"
+              id="pd-status-btn-unpaid"
+              data-status-val="UNPAID"
+              data-tooltip-target="tooltip-status-unpaid"
+              title="Not Yet Prepared"
+              class="cursor-pointer pd-status-toggle group relative flex flex-row items-center justify-center gap-2 h-10 sm:h-11 px-2.5 sm:px-3.5 rounded-none border-2 transition-all duration-200 focus:outline-none select-none text-center">
+              <span class="pd-status-dot h-2.5 w-2.5 rounded-full shrink-0 transition-colors"></span>
+              <span class="font-montserrat text-xs sm:text-sm font-black uppercase tracking-wider">UNPAID</span>
+            </button>
+            <div id="tooltip-status-unpaid" role="tooltip"
+              class="absolute z-50 invisible inline-block px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 rounded-lg shadow-lg opacity-0 tooltip dark:bg-slate-800 transition-opacity duration-200">
+              Not Yet Prepared
+              <div class="tooltip-arrow" data-popper-arrow></div>
+            </div>
+          </div>
         </div>
 
         <!-- Remarks -->

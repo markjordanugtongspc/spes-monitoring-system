@@ -118,6 +118,117 @@ class PreferenceStorage {
     }
   }
   // --- FUNCTION: READ PAGINATION PAGE FROM LOCALSTORAGE (END) ---
+
+  // --- FUNCTION: SAVE PAYROLL DATA TO CACHE (START) ---
+  savePayrollCache(data) {
+    if (!data) return;
+    try {
+      const payload = {
+        data,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem("spes-payroll-cache", JSON.stringify(payload));
+    } catch (e) {
+      console.warn("Failed to save payroll cache", e);
+    }
+  }
+  // --- FUNCTION: SAVE PAYROLL DATA TO CACHE (END) ---
+
+  // --- FUNCTION: READ PAYROLL DATA FROM CACHE (START) ---
+  getPayrollCache(maxAgeMs = 5 * 60 * 1000) {
+    try {
+      const raw = sessionStorage.getItem("spes-payroll-cache");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.data) return null;
+      if (Date.now() - parsed.timestamp > maxAgeMs) {
+        sessionStorage.removeItem("spes-payroll-cache");
+        return null;
+      }
+      return parsed.data;
+    } catch {
+      return null;
+    }
+  }
+  // --- FUNCTION: READ PAYROLL DATA FROM CACHE (END) ---
+
+  // --- FUNCTION: HAS SEEN PAYROLL INTRO ANIMATION (START) ---
+  hasSeenPayrollIntro() {
+    try {
+      return sessionStorage.getItem("spes-payroll-intro-seen") === "true";
+    } catch {
+      return false;
+    }
+  }
+  // --- FUNCTION: HAS SEEN PAYROLL INTRO ANIMATION (END) ---
+
+  // --- FUNCTION: MARK PAYROLL INTRO ANIMATION AS SEEN (START) ---
+  markPayrollIntroSeen() {
+    try {
+      sessionStorage.setItem("spes-payroll-intro-seen", "true");
+    } catch (e) {
+      console.warn("Failed to mark payroll intro seen", e);
+    }
+  }
+  // --- FUNCTION: MARK PAYROLL INTRO ANIMATION AS SEEN (END) ---
+
+  // --- FUNCTION: SAVE CUSTOM GENERAL BUDGET ALLOCATION (START) ---
+  saveCustomGeneralBudget(amount) {
+    try {
+      const num = Number(amount);
+      if (Number.isFinite(num) && num >= 0) {
+        localStorage.setItem("spes_payroll_custom_general_budget", String(num));
+      } else {
+        localStorage.removeItem("spes_payroll_custom_general_budget");
+      }
+    } catch (e) {
+      console.warn("Failed to save custom general budget", e);
+    }
+  }
+  // --- FUNCTION: SAVE CUSTOM GENERAL BUDGET ALLOCATION (END) ---
+
+  // --- FUNCTION: READ CUSTOM GENERAL BUDGET ALLOCATION (START) ---
+  getCustomGeneralBudget() {
+    try {
+      const raw = localStorage.getItem("spes_payroll_custom_general_budget");
+      if (!raw) return null;
+      const num = Number(raw);
+      return Number.isFinite(num) && num > 0 ? num : null;
+    } catch {
+      return null;
+    }
+  }
+  // --- FUNCTION: READ CUSTOM GENERAL BUDGET ALLOCATION (END) ---
+
+  // --- FUNCTION: SAVE CUSTOM OFFICE BUDGET OVERRIDES (START) ---
+  saveCustomOfficeBudget(officeId, amount) {
+    if (!officeId) return;
+    try {
+      const raw = localStorage.getItem("spes_payroll_custom_office_budgets");
+      const data = raw ? JSON.parse(raw) : {};
+      const num = Number(amount);
+      if (Number.isFinite(num) && num >= 0) {
+        data[String(officeId)] = num;
+      } else {
+        delete data[String(officeId)];
+      }
+      localStorage.setItem("spes_payroll_custom_office_budgets", JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to save custom office budget", e);
+    }
+  }
+  // --- FUNCTION: SAVE CUSTOM OFFICE BUDGET OVERRIDES (END) ---
+
+  // --- FUNCTION: READ CUSTOM OFFICE BUDGET OVERRIDES (START) ---
+  getCustomOfficeBudgets() {
+    try {
+      const raw = localStorage.getItem("spes_payroll_custom_office_budgets");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+  // --- FUNCTION: READ CUSTOM OFFICE BUDGET OVERRIDES (END) ---
 }
 
 export const preferenceStorage = new PreferenceStorage();
