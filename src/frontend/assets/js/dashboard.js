@@ -196,11 +196,14 @@ async function init(user) {
     }
   }
 
-  if (path.includes("/roles/") && !isAdmin) {
-    modals.error("Access Denied", "Only administrators can manage roles and permissions.").then(() => {
-      window.location.href = "/src/frontend/pages/dashboard/";
-    });
-    return;
+  if (path.includes("/roles/")) {
+    const canManageRoles = isAdmin || (user.permissions && (user.permissions.edit_users || user.permissions.view_users || user.permissions.create_users));
+    if (!canManageRoles) {
+      modals.error("Access Denied", "You do not have permission to view or manage roles and permissions.").then(() => {
+        window.location.href = "/src/frontend/pages/dashboard/";
+      });
+      return;
+    }
   }
 
   if      (path.includes("/implementors/"))  setActiveSidebarLink("implementor-list");

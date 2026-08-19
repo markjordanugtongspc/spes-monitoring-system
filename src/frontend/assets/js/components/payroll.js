@@ -32,6 +32,7 @@ import {
 } from "../../../../backend/api/payroll.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices } from "../../../../backend/api/staff.js";
+import { initPayrollExportModal, openPayrollExportModal, updatePayrollExportData } from "./payroll-export.js";
 
 const ROWS_PER_PAGE = 10;
 
@@ -715,9 +716,7 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       const datePaidFormatted = isPaid && p.date_paid ? formatPhilippineTimestamp(p.date_paid) : "";
       const tooltipText = isPaid
         ? (datePaidFormatted ? `Disbursed on: ${datePaidFormatted}` : `Disbursed to Beneficiary (PAID)`)
-        : isPending
-        ? `In Processing / Awaiting Release (PENDING)`
-        : `Not Yet Prepared (UNPAID)`;
+        : "";
 
       const statusBadge = isPaid
         ? `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 cursor-help transition-all duration-200 hover:bg-emerald-500/25 hover:shadow-md hover:shadow-emerald-500/20"
@@ -737,26 +736,13 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
              </div>` : ''}
            </span>`
         : isPending
-        ? `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400 cursor-help transition-all duration-200 hover:bg-amber-500/25"
-             title="${escHtml(tooltipText)}">
+        ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400 transition-all duration-200">
              <span class="h-2 w-2 rounded-full bg-amber-500"></span>
              PENDING
-             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-amber-500/30 flex items-center gap-2">
-               <svg class="h-3.5 w-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-               </svg>
-               <span>In Processing / Awaiting Release</span>
-               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
-             </div>
            </span>`
-        : `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400 cursor-help transition-all duration-200 hover:bg-gray-500/25"
-             title="${escHtml(tooltipText)}">
+        : `<span class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400 transition-all duration-200">
              <span class="h-2 w-2 rounded-full bg-gray-400"></span>
              UNPAID
-             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-white/10">
-               <span>Not Yet Prepared</span>
-               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
-             </div>
            </span>`;
 
       const studentStatusBadge = String(b.return_status || "NEW").toUpperCase() === "SPES BABY"
@@ -1188,43 +1174,19 @@ function updatePaginationIndicators(totalCount) {
 // --- END: PAGINATION CONTROLS & INDICATORS ---
 
 // --- START: EXPORT PAYROLL REPORT SUMMARY ---
-function exportPayrollReport() {
-  const rows = filteredBeneficiaries.map((b, i) => {
-    const p = b.payroll || {};
-    return {
-      "No.": i + 1,
-      "Beneficiary Name": b.full_name || "",
-      "Office": b.staffs?.office_id ? (allOffices.find(o => String(o.id) === String(b.staffs.office_id))?.name || "N/A") : "N/A",
-      "Contract Period": p.contract_period || "JULY 2026",
-      "Days Worked": p.days_worked || DEFAULT_WORK_DAYS,
-      "Stipend Amount": p.stipend_amount || DEFAULT_STIPEND_RATE,
-      "Payment Status": p.payment_status || "PENDING",
-      "Date Paid": p.date_paid || "",
-    };
-  });
-
-  if (rows.length === 0) {
-    modals.warning("Export Payroll", "No records available to export.");
-    return;
+function exportPayrollReport(e) {
+  if (e) {
+    e.preventDefault();
   }
-
-  const headers = Object.keys(rows[0]).join(",");
-  const csvContent = [
-    headers,
-    ...rows.map(row => Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `SPES_Payroll_Export_${new Date().toISOString().slice(0, 10)}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  modals.flowbiteToast("Export Successful", "Payroll summary CSV file downloaded.", "success");
+  updatePayrollExportData({
+    allBeneficiaries,
+    allOffices,
+    formatCurrency,
+    formatPhilippineTimestamp
+  });
+  openPayrollExportModal(selectedOfficeId || null);
 }
+// --- END: EXPORT PAYROLL REPORT SUMMARY ---
 // --- START: SKELETON LOADERS ---
 function renderImplementorsSkeleton() {
   const tbody = document.getElementById("payroll-implementors-tbody");
@@ -1576,6 +1538,14 @@ export async function initPayroll() {
     const isStillFirstVisit = isFirstVisit && !cachedData;
     updateExecutiveSummaryCards(allBeneficiaries, !cachedData, isStillFirstVisit);
     restoreViewFromUrl(isStillFirstVisit);
+
+    // Initialize Payroll Export Modal setup once
+    initPayrollExportModal({
+      allBeneficiaries,
+      allOffices,
+      formatCurrency,
+      formatPhilippineTimestamp
+    });
 
     if (isStillFirstVisit) {
       preferenceStorage.markPayrollIntroSeen();

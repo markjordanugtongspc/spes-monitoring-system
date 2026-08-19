@@ -51,6 +51,7 @@
           <div class="flex flex-wrap items-center gap-3">
             <!-- Export Report: Premium Purple with zero-radius morphing to rounded on hover -->
             <button type="button" id="btn-export-payroll-summary"
+              data-modal-target="modal-export-payroll" data-modal-toggle="modal-export-payroll"
               class="cursor-pointer inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-none border border-purple-400/40 bg-purple-900/30 px-4 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider text-purple-100 shadow-md transition-all duration-300 hover:rounded-xl hover:bg-purple-600 hover:border-purple-500 hover:text-white hover:shadow-lg hover:shadow-purple-600/30 active:scale-95">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -699,6 +700,258 @@
         </svg>
         Save Changes
       </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- EXPORT PAYROLL REPORT MODAL (FLOWBITE / TAILWINDCSS) -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="modal-export-payroll" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 right-0 left-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto md:inset-0 bg-spes-black/60 backdrop-blur-xs">
+    <div class="relative max-h-full w-full max-w-2xl mx-auto my-auto p-4">
+      <!-- Modal content -->
+      <div class="relative bg-white rounded-none sm:rounded-2xl shadow-2xl dark:bg-spes-dark-primary border border-spes-blue/15 dark:border-white/10 overflow-hidden">
+        
+        <!-- Modal header with gradient banner -->
+        <div class="flex items-center justify-between border-b border-spes-blue/10 bg-gradient-to-r from-spes-blue via-spes-blue to-[#002878] p-5 dark:border-white/10">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 text-spes-yellow shadow-inner">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-montserrat text-base sm:text-lg font-black uppercase text-white tracking-tight">
+                Export Payroll Report
+              </h3>
+              <p class="text-xs text-white/75 font-medium">
+                Configure format, office scope, payment statuses, and column outputs.
+              </p>
+            </div>
+          </div>
+          <button type="button" id="btn-close-export-payroll-modal"
+            class="cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
+            data-modal-hide="modal-export-payroll">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <span class="sr-only">Close modal</span>
+          </button>
+        </div>
+
+        <!-- Modal body -->
+        <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          
+          <!-- 1. Export Format Selection (Cards with Radio) -->
+          <div>
+            <label class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70 mb-2">
+              1. Choose Export Format <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="export-format-group">
+              
+              <!-- Option A: Excel Spreadsheet (.xlsx) -->
+              <label class="cursor-pointer relative flex flex-col p-4 border-2 border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-500 rounded-xl transition-all shadow-md format-card" data-format="xlsx">
+                <input type="radio" name="payroll-export-format" value="xlsx" checked class="sr-only export-format-radio" />
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500 text-white font-black text-xs shadow-sm">
+                      XL
+                    </span>
+                    <span class="font-montserrat text-sm font-black text-emerald-800 dark:text-emerald-300">Excel (.xlsx)</span>
+                  </div>
+                  <span class="inline-flex items-center rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300 uppercase">
+                    Recommended
+                  </span>
+                </div>
+                <p class="text-xs text-spes-black/70 dark:text-white/60 leading-relaxed font-medium">
+                  Full color highlights, DOLE banner header, status badge colors, currency formatting, and totals.
+                </p>
+              </label>
+
+              <!-- Option B: CSV File (.csv) -->
+              <label class="cursor-pointer relative flex flex-col p-4 border-2 border-gray-200 dark:border-white/15 bg-white dark:bg-spes-dark-secondary rounded-xl transition-all hover:shadow-md format-card" data-format="csv">
+                <input type="radio" name="payroll-export-format" value="csv" class="sr-only export-format-radio" />
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-600 text-white font-black text-xs shadow-sm">
+                      CSV
+                    </span>
+                    <span class="font-montserrat text-sm font-black text-spes-black dark:text-white">CSV (.csv)</span>
+                  </div>
+                </div>
+                <p class="text-xs text-spes-black/70 dark:text-white/60 leading-relaxed font-medium">
+                  Lightweight raw comma-separated data with report header and developer credits footer.
+                </p>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- 2. Scope & Office Filter -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="export-office-scope" class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70 mb-1.5">
+                2. Implementor / Office Scope
+              </label>
+              <select id="export-office-scope"
+                class="cursor-pointer w-full rounded-xl border border-spes-blue/20 bg-gray-50/50 p-2.5 text-xs sm:text-sm font-bold text-spes-black focus:border-spes-blue focus:bg-white focus:outline-none dark:border-white/15 dark:bg-spes-dark-secondary dark:text-white transition">
+                <option value="all">All Implementors & Offices</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="export-status-filter" class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70 mb-1.5">
+                3. Payment Status Filter
+              </label>
+              <select id="export-status-filter"
+                class="cursor-pointer w-full rounded-xl border border-spes-blue/20 bg-gray-50/50 p-2.5 text-xs sm:text-sm font-bold text-spes-black focus:border-spes-blue focus:bg-white focus:outline-none dark:border-white/15 dark:bg-spes-dark-secondary dark:text-white transition">
+                <option value="all">All Statuses (Paid, Pending, Unpaid)</option>
+                <option value="PAID">PAID Only (Disbursed)</option>
+                <option value="PENDING">PENDING Only (In Processing)</option>
+                <option value="UNPAID">UNPAID Only</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 3. Columns Output Selector -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70">
+                4. Select Columns to Include
+              </label>
+              <div class="flex items-center gap-2 text-xs">
+                <button type="button" id="btn-export-select-all-cols" class="cursor-pointer font-bold text-spes-blue dark:text-spes-yellow hover:underline">Select All</button>
+                <span class="text-gray-300 dark:text-white/20">|</span>
+                <button type="button" id="btn-export-reset-cols" class="cursor-pointer font-bold text-spes-black/60 dark:text-white/60 hover:underline">Default</button>
+              </div>
+            </div>
+            <div class="space-y-3" id="export-columns-container">
+              <!-- Payroll Core Columns Group -->
+              <div>
+                <p class="text-[11px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow mb-1.5 flex items-center gap-1.5">
+                  <span class="h-1.5 w-1.5 rounded-full bg-spes-blue dark:bg-spes-yellow"></span>
+                  Payroll Financial Fields
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-spes-dark-secondary/50">
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="id_display" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>ID No.</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="full_name" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Beneficiary Name</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="office_name" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Office / Implementor</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="contract_period" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Contract Period</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="days_worked" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Days Worked</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="stipend_amount" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Stipend Amount (₱)</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="payment_status" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Payment Status</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="date_paid" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Date Paid (GMT+08)</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="notes" checked class="export-col-cb h-4 w-4 rounded border-spes-blue/30 text-spes-blue focus:ring-spes-blue" />
+                    <span>Remarks / Notes</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Extra Demographics & Profile Group -->
+              <div>
+                <p class="text-[11px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 mb-1.5 flex items-center gap-1.5">
+                  <span class="h-1.5 w-1.5 rounded-full bg-purple-500"></span>
+                  Beneficiary Demographics & Profile (Extra)
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-spes-dark-secondary/50">
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="gender" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Gender</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="age" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Age</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="birthday" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Birthday</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="contact_number" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Contact Number</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="address" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Address</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="education" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Education Level</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="designated" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Designated Position</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="return_status" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>SPES Baby / New</span>
+                  </label>
+                  <label class="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-spes-black dark:text-white">
+                    <input type="checkbox" value="relationship" class="export-col-cb h-4 w-4 rounded border-purple-400/50 text-purple-600 focus:ring-purple-500" />
+                    <span>Relationship</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Output Estimate & Developer Credit Notice -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl bg-spes-blue/5 dark:bg-white/5 border border-spes-blue/15 dark:border-white/10 text-xs">
+            <div class="flex items-center gap-2 font-bold text-spes-blue dark:text-spes-yellow">
+              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Estimated Outputs: <strong id="export-preview-count" class="font-mono text-sm">0</strong> records</span>
+            </div>
+            <span class="text-[10px] text-spes-black/50 dark:text-white/40 font-medium">
+              Developed by <strong class="text-spes-black/80 dark:text-white/80">Mark Jordan Ugtong</strong>
+            </span>
+          </div>
+
+        </div>
+
+        <!-- Modal footer -->
+        <div class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-secondary px-6 py-4">
+          <button type="button" id="btn-cancel-export-modal"
+            class="cursor-pointer rounded-xl border border-gray-300 dark:border-white/15 px-4 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5 transition-all"
+            data-modal-hide="modal-export-payroll">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-export-payroll"
+            class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl bg-spes-blue px-6 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-lg hover:bg-spes-blue/90 active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span id="btn-confirm-export-label">Download Report</span>
+          </button>
+        </div>
+
+      </div>
     </div>
   </div>
 

@@ -19,7 +19,9 @@ export function getOfficeAccessScope(session = {}) {
     canViewOtherOffices: isAdmin || Boolean(permissions.view_other_offices),
     canManageOffice(targetOfficeId) {
       if (isAdmin) return true;
-      if (ownOfficeId == null || targetOfficeId == null) return false;
+      if (Boolean(permissions.view_other_offices)) return true;
+      if (targetOfficeId == null) return true;
+      if (ownOfficeId == null) return false;
       return String(ownOfficeId) === String(targetOfficeId);
     },
   };
