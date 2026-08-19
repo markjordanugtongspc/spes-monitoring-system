@@ -29,6 +29,13 @@ CREATE INDEX IF NOT EXISTS payroll_records_office_idx
 CREATE INDEX IF NOT EXISTS payroll_records_status_idx
   ON public.payroll_records (payment_status);
 
+CREATE INDEX IF NOT EXISTS payroll_records_date_paid_idx
+  ON public.payroll_records (date_paid);
+
+-- Documentation:
+-- date_paid stores full timezone-aware timestamp (TIMESTAMPTZ) with seconds
+-- when beneficiary is marked as PAID (e.g. Asia/Manila GMT+08). Set to NULL when reverted to PENDING.
+
 -- Enable RLS and permissive policy for app-level RBAC
 ALTER TABLE public.payroll_records ENABLE ROW LEVEL SECURITY;
 

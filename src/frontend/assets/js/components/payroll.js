@@ -53,6 +53,35 @@ function formatCurrency(amount) {
 }
 // --- END: FORMAT CURRENCY HELPER ---
 
+// --- START: FORMAT PHILIPPINE TIMESTAMP HELPER ---
+export function formatPhilippineTimestamp(isoOrDateString) {
+  if (!isoOrDateString) return "";
+  try {
+    const d = new Date(isoOrDateString);
+    if (isNaN(d.getTime())) return "";
+
+    const formattedDate = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Manila",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(d);
+
+    const formattedTime = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Manila",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(d);
+
+    return `${formattedDate}, ${formattedTime} (GMT+08)`;
+  } catch {
+    return "";
+  }
+}
+// --- END: FORMAT PHILIPPINE TIMESTAMP HELPER ---
+
 // --- START: ESCAPE HTML HELPER ---
 function escHtml(str) {
   const div = document.createElement("div");
@@ -683,16 +712,51 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       const isPaid = p.payment_status === "PAID";
       const isPending = p.payment_status === "PENDING";
 
+      const datePaidFormatted = isPaid && p.date_paid ? formatPhilippineTimestamp(p.date_paid) : "";
+      const tooltipText = isPaid
+        ? (datePaidFormatted ? `Disbursed on: ${datePaidFormatted}` : `Disbursed to Beneficiary (PAID)`)
+        : isPending
+        ? `In Processing / Awaiting Release (PENDING)`
+        : `Not Yet Prepared (UNPAID)`;
+
       const statusBadge = isPaid
-        ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400">
-             <span class="h-2 w-2 rounded-full bg-emerald-500"></span> PAID
+        ? `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 cursor-help transition-all duration-200 hover:bg-emerald-500/25 hover:shadow-md hover:shadow-emerald-500/20"
+             title="${escHtml(tooltipText)}">
+             <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+             PAID
+             ${datePaidFormatted ? `
+             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-emerald-500/30 flex items-center gap-2">
+               <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <div>
+                 <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-black block">Disbursement Timestamp</span>
+                 <span class="font-mono text-white text-xs">${escHtml(datePaidFormatted)}</span>
+               </div>
+               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+             </div>` : ''}
            </span>`
         : isPending
-        ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400">
-             <span class="h-2 w-2 rounded-full bg-amber-500"></span> PENDING
+        ? `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400 cursor-help transition-all duration-200 hover:bg-amber-500/25"
+             title="${escHtml(tooltipText)}">
+             <span class="h-2 w-2 rounded-full bg-amber-500"></span>
+             PENDING
+             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-amber-500/30 flex items-center gap-2">
+               <svg class="h-3.5 w-3.5 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <span>In Processing / Awaiting Release</span>
+               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+             </div>
            </span>`
-        : `<span class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400">
-             <span class="h-2 w-2 rounded-full bg-gray-400"></span> UNPAID
+        : `<span class="group/status relative inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400 cursor-help transition-all duration-200 hover:bg-gray-500/25"
+             title="${escHtml(tooltipText)}">
+             <span class="h-2 w-2 rounded-full bg-gray-400"></span>
+             UNPAID
+             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-white/10">
+               <span>Not Yet Prepared</span>
+               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+             </div>
            </span>`;
 
       const studentStatusBadge = String(b.return_status || "NEW").toUpperCase() === "SPES BABY"
@@ -731,7 +795,7 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button type="button" class="btn-toggle-pay-row cursor-pointer rounded-xl p-2 ${isPaid ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-500/10'} transition-colors" title="${isPaid ? 'Mark as Unpaid' : 'Quick Disburse / Mark Paid'}">
+              <button type="button" class="btn-toggle-pay-row cursor-pointer rounded-xl p-2 ${isPaid ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-500/10'} transition-colors" title="${isPaid ? 'Mark as Pending / Unpaid' : 'Quick Disburse / Mark Paid'}">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -754,6 +818,23 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       const target = Number(el.dataset.target) || 0;
       animateCounter(el, target, { isCurrency: true, duration: rosterDuration + 100, delay: Math.min(idx * rosterDelay, 250), forceFromZero: true });
     });
+  }
+
+  // Sync Select All checkbox state (checked, unchecked, or indeterminate)
+  const selectAllCb = document.getElementById("payroll-checkbox-all");
+  if (selectAllCb) {
+    const totalFiltered = filteredBeneficiaries.length;
+    const selectedInFiltered = filteredBeneficiaries.filter(b => selectedBeneficiaryIds.has(String(b.id))).length;
+    if (totalFiltered > 0 && selectedInFiltered === totalFiltered) {
+      selectAllCb.checked = true;
+      selectAllCb.indeterminate = false;
+    } else if (selectedInFiltered > 0) {
+      selectAllCb.checked = false;
+      selectAllCb.indeterminate = true;
+    } else {
+      selectAllCb.checked = false;
+      selectAllCb.indeterminate = false;
+    }
   }
 
   // Update pagination info
@@ -817,15 +898,23 @@ function wireTableActions() {
 
       const currentStatus = bene.payroll?.payment_status || "PENDING";
       const nextStatus = currentStatus === "PAID" ? "PENDING" : "PAID";
+      const nowStr = new Date().toISOString();
+      const nextDatePaid = nextStatus === "PAID" ? nowStr : null;
+      const session = getSession();
 
       await updateBeneficiaryPayrollRecord(bene.id, {
         payment_status: nextStatus,
-      });
+        date_paid: nextDatePaid,
+        updated_by: session?.id || null,
+      }, bene.staffs?.office_id || null);
 
       bene.payroll.payment_status = nextStatus;
+      bene.payroll.date_paid = nextDatePaid;
+
+      const timestampLog = nextStatus === "PAID" ? ` (Logged: ${formatPhilippineTimestamp(nowStr)})` : "";
       modals.flowbiteToast(
         "Payroll Updated",
-        `${bene.full_name} status is now ${nextStatus}.`,
+        `${bene.full_name} status is now ${nextStatus}.${timestampLog}`,
         nextStatus === "PAID" ? "success" : "warning"
       );
 
@@ -866,10 +955,21 @@ function openPayrollDrawer(beneficiary, mode = "view") {
     document.getElementById("pd-view-notes").textContent = p.notes || "No notes recorded.";
 
     const pStatus = p.payment_status || "PENDING";
+    const datePaidFormatted = pStatus === "PAID" && p.date_paid ? formatPhilippineTimestamp(p.date_paid) : null;
+
     const statusBadgeHtml = pStatus === "PAID"
-      ? `<span class="inline-flex items-center gap-1.5 rounded-none bg-emerald-500/15 px-3.5 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-           <span class="h-2 w-2 rounded-full bg-emerald-500"></span> PAID (Disbursed)
-         </span>`
+      ? `<div>
+           <span class="inline-flex items-center gap-1.5 rounded-none bg-emerald-500/15 px-3.5 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+             <span class="h-2 w-2 rounded-full bg-emerald-500"></span> PAID (Disbursed)
+           </span>
+           ${datePaidFormatted ? `
+           <p class="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+             <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+             Logged: <span class="font-mono">${escHtml(datePaidFormatted)}</span>
+           </p>` : ''}
+         </div>`
       : pStatus === "PENDING"
       ? `<span class="inline-flex items-center gap-1.5 rounded-none bg-amber-500/15 px-3.5 py-1 text-xs font-black text-amber-600 dark:text-amber-400 border border-amber-500/20">
            <span class="h-2 w-2 rounded-full bg-amber-500"></span> PENDING (In Processing)
@@ -1165,6 +1265,7 @@ function renderImplementorsSkeleton() {
 function updateBulkDisburseButtonState() {
   const btn = document.getElementById("btn-bulk-disburse");
   const labelEl = document.getElementById("btn-bulk-disburse-label");
+  const iconEl = document.getElementById("btn-bulk-disburse-icon");
   const editDataBtn = document.getElementById("btn-toggle-inline-edit");
 
   // Edit Data button: STRICTLY visible only in View 1 (Implementors Root View)
@@ -1191,19 +1292,44 @@ function updateBulkDisburseButtonState() {
   btn.classList.remove("hidden");
   btn.classList.add("inline-flex");
 
-  const count = selectedBeneficiaryIds.size;
+  const selectedItems = allBeneficiaries.filter(b => selectedBeneficiaryIds.has(String(b.id)));
+  const count = selectedItems.length;
+
   if (count > 0) {
     btn.disabled = false;
     btn.removeAttribute("disabled");
     btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
     btn.classList.add("cursor-pointer");
-    if (labelEl) labelEl.textContent = `Mark Selected (${count}) Paid`;
+
+    // Auto-detect: if ALL selected beneficiaries are already marked as PAID, switch button to Pending/Unpaid
+    const allSelectedArePaid = selectedItems.every(b => (b.payroll?.payment_status || "PENDING") === "PAID");
+
+    if (allSelectedArePaid) {
+      // Morph button to Amber / UNPAID (Revert to Pending)
+      btn.dataset.batchMode = "pending";
+      btn.className = "cursor-pointer inline-flex items-center justify-center gap-2 rounded-none border border-amber-500/50 bg-amber-600 px-4 sm:px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-amber-500 hover:border-amber-400 hover:shadow-amber-500/30 active:scale-95";
+      if (labelEl) labelEl.textContent = `Mark Selected (${count}) Pending`;
+      if (iconEl) {
+        iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+      }
+    } else {
+      // Morph button to Emerald / MARK PAID
+      btn.dataset.batchMode = "paid";
+      btn.className = "cursor-pointer inline-flex items-center justify-center gap-2 rounded-none border border-emerald-500/50 bg-emerald-600 px-4 sm:px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-emerald-500 hover:border-emerald-400 hover:shadow-emerald-500/30 active:scale-95";
+      if (labelEl) labelEl.textContent = `Mark Selected (${count}) Paid`;
+      if (iconEl) {
+        iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+      }
+    }
   } else {
     btn.disabled = true;
     btn.setAttribute("disabled", "true");
-    btn.classList.add("opacity-40", "cursor-not-allowed", "pointer-events-none");
-    btn.classList.remove("cursor-pointer");
+    btn.dataset.batchMode = "paid";
+    btn.className = "hidden items-center justify-center gap-2 rounded-none border border-emerald-500/50 bg-emerald-600 px-4 sm:px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-emerald-500 hover:border-emerald-400 hover:shadow-emerald-500/30 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none inline-flex";
     if (labelEl) labelEl.textContent = "Mark Batch Paid";
+    if (iconEl) {
+      iconEl.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+    }
   }
 }
 // --- END: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
@@ -1556,52 +1682,97 @@ export async function initPayroll() {
     renderBeneficiariesPaginatedTable();
   });
 
-  // Bulk Disburse / Mark Paid Button
+  // Smart Dynamic Bulk Action (Auto-toggles between Mark Paid and Mark Pending based on selection)
   document.getElementById("btn-bulk-disburse")?.addEventListener("click", async () => {
     const ids = [...selectedBeneficiaryIds];
     if (ids.length === 0) {
-      modals.warning("Bulk Disbursement", "Please select at least one beneficiary to mark as PAID.");
+      modals.warning("Bulk Action", "Please select at least one beneficiary.");
       return;
     }
 
-    const confirm = await modals.confirm(
-      "Disburse Payroll",
-      `Mark ${ids.length} selected beneficiar${ids.length === 1 ? "y" : "ies"} as PAID?`,
-      "Confirm Paid",
-      "Cancel"
-    );
+    const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
+    const allSelectedArePaid = selectedItems.every(b => (b.payroll?.payment_status || "PENDING") === "PAID");
+    const session = getSession();
 
-    if (!confirm.isConfirmed) return;
+    if (allSelectedArePaid) {
+      // ── REVERT TO PENDING / UNPAID FLOW ──
+      const confirm = await modals.confirm(
+        "Revert Payment Status",
+        `Unmark ${ids.length} selected beneficiar${ids.length === 1 ? "y" : "ies"} and revert status to PENDING?`,
+        "Confirm Revert",
+        "Cancel"
+      );
 
-    modals.loading("Processing Disbursements", "Updating payroll records in database...");
+      if (!confirm.isConfirmed) return;
 
-    const selectedItems = allBeneficiaries
-      .filter(b => ids.includes(String(b.id)))
-      .map(b => ({
+      modals.loading("Reverting Status", "Updating payroll records to PENDING in database...");
+
+      const payloadItems = selectedItems.map(b => ({
         beneficiaryId: b.id,
         officeId: b.staffs?.office_id || null,
         stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
         days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
       }));
 
-    const session = getSession();
-    await bulkUpdatePayrollStatus(selectedItems, "PAID", session?.id);
-    modals.close();
+      await bulkUpdatePayrollStatus(payloadItems, "PENDING", session?.id);
+      modals.close();
 
-    // Update memory
-    const nowStr = new Date().toISOString();
-    allBeneficiaries.forEach(b => {
-      if (ids.includes(String(b.id))) {
-        b.payroll.payment_status = "PAID";
-        b.payroll.date_paid = nowStr;
-      }
-    });
+      // Update memory
+      allBeneficiaries.forEach(b => {
+        if (ids.includes(String(b.id))) {
+          b.payroll.payment_status = "PENDING";
+          b.payroll.date_paid = null;
+        }
+      });
 
-    selectedBeneficiaryIds.clear();
-    updateExecutiveSummaryCards(allBeneficiaries);
-    applyBeneficiaryFiltersAndRender();
+      selectedBeneficiaryIds.clear();
+      updateExecutiveSummaryCards(allBeneficiaries);
+      applyBeneficiaryFiltersAndRender();
 
-    modals.flowbiteToast("Disbursement Recorded", `${ids.length} beneficiaries marked as PAID.`, "success");
+      modals.flowbiteToast(
+        "Status Reverted",
+        `${ids.length} beneficiaries reverted to PENDING status.`,
+        "warning"
+      );
+    } else {
+      // ── MARK AS PAID FLOW ──
+      const confirm = await modals.confirm(
+        "Disburse Payroll",
+        `Mark ${ids.length} selected beneficiar${ids.length === 1 ? "y" : "ies"} as PAID? An audit timestamp (Asia/Manila GMT+08) will be recorded.`,
+        "Confirm Paid",
+        "Cancel"
+      );
+
+      if (!confirm.isConfirmed) return;
+
+      modals.loading("Processing Disbursements", "Recording payments with Philippine GMT+08 timestamp logs in database...");
+
+      const payloadItems = selectedItems.map(b => ({
+        beneficiaryId: b.id,
+        officeId: b.staffs?.office_id || null,
+        stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
+        days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
+      }));
+
+      const nowStr = new Date().toISOString();
+      await bulkUpdatePayrollStatus(payloadItems, "PAID", session?.id);
+      modals.close();
+
+      // Update memory
+      allBeneficiaries.forEach(b => {
+        if (ids.includes(String(b.id))) {
+          b.payroll.payment_status = "PAID";
+          b.payroll.date_paid = nowStr;
+        }
+      });
+
+      selectedBeneficiaryIds.clear();
+      updateExecutiveSummaryCards(allBeneficiaries);
+      applyBeneficiaryFiltersAndRender();
+
+      const timestampLabel = formatPhilippineTimestamp(nowStr);
+      modals.flowbiteToast("Disbursement Recorded", `${ids.length} beneficiaries marked as PAID at ${timestampLabel}.`, "success");
+    }
   });
 
   // Edit Data / Save Data Button in Header
@@ -1683,10 +1854,16 @@ export async function initPayroll() {
     const officeId = targetBene?.staffs?.office_id || null;
     const session = getSession();
 
+    let targetDatePaid = null;
+    if (paymentStatus === "PAID") {
+      targetDatePaid = targetBene?.payroll?.date_paid || new Date().toISOString();
+    }
+
     await updateBeneficiaryPayrollRecord(id, {
       stipend_amount: stipendAmount,
       days_worked: daysWorked,
       payment_status: paymentStatus,
+      date_paid: targetDatePaid,
       notes: notes,
       updated_by: session?.id || null,
     }, officeId);
@@ -1695,17 +1872,16 @@ export async function initPayroll() {
       targetBene.payroll.stipend_amount = stipendAmount;
       targetBene.payroll.days_worked = daysWorked;
       targetBene.payroll.payment_status = paymentStatus;
+      targetBene.payroll.date_paid = targetDatePaid;
       targetBene.payroll.notes = notes;
-      if (paymentStatus === "PAID" && !targetBene.payroll.date_paid) {
-        targetBene.payroll.date_paid = new Date().toISOString();
-      }
     }
 
     closePayrollDrawer();
     updateExecutiveSummaryCards(allBeneficiaries);
     applyBeneficiaryFiltersAndRender();
 
-    modals.flowbiteToast("Record Saved", "Disbursement details updated successfully in database.", "success");
+    const loggedTs = paymentStatus === "PAID" && targetDatePaid ? ` (Logged: ${formatPhilippineTimestamp(targetDatePaid)})` : "";
+    modals.flowbiteToast("Record Saved", `Disbursement details updated successfully in database.${loggedTs}`, "success");
   });
 }
 // --- END: MAIN PAYROLL INITIALIZATION ---

@@ -69,11 +69,11 @@
               <span id="btn-toggle-inline-edit-label">Edit Data</span>
             </button>
 
-            <!-- Mark Batch Paid: Fresh Green with zero-radius morphing to rounded on hover, hidden until batch is active -->
+            <!-- Dynamic Smart Batch Action Button (Auto transforms between Mark Paid and Mark Pending based on selection) -->
             <button type="button" id="btn-bulk-disburse"
-              class="hidden items-center justify-center gap-2 rounded-none border border-green-500/50 bg-green-600 px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-green-500 hover:border-green-400 hover:shadow-green-500/30 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+              class="hidden items-center justify-center gap-2 rounded-none border border-emerald-500/50 bg-emerald-600 px-4 sm:px-5 py-2.5 text-center text-xs sm:text-sm font-black uppercase tracking-wider sm:tracking-widest text-white shadow-lg transition-all duration-300 hover:rounded-xl hover:bg-emerald-500 hover:border-emerald-400 hover:shadow-emerald-500/30 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
               disabled>
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg id="btn-bulk-disburse-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
