@@ -139,7 +139,7 @@ function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFir
   const inputBudget = document.getElementById("input-edit-total-budget");
 
   if (inputBudget && !isInlineEditMode) {
-    inputBudget.value = formatNumberWithCommas(stats.totalBudget, false);
+    inputBudget.value = formatNumberWithCommas(stats.totalBudget, true);
   }
 
   const paidCount = beneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
@@ -309,9 +309,9 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
     const budgetCellContent = isRowEditing
       ? `<div class="flex items-center justify-end gap-1.5" onclick="event.stopPropagation()">
            <span class="text-xs font-bold text-spes-blue dark:text-spes-yellow">₱</span>
-           <input type="text" inputmode="numeric" data-office-id="${escHtml(String(r.officeId))}"
+           <input type="text" inputmode="decimal" data-office-id="${escHtml(String(r.officeId))}"
              class="input-edit-office-budget w-28 rounded-none border border-spes-blue/30 bg-white px-2 py-1 font-mono text-xs font-bold text-spes-black focus:border-spes-blue focus:outline-none dark:border-white/20 dark:bg-spes-dark-secondary dark:text-white"
-             value="${formatNumberWithCommas(r.stats.totalBudget, false)}" />
+             value="${formatNumberWithCommas(r.stats.totalBudget, true)}" />
            <button type="button" class="btn-save-row-budget cursor-pointer inline-flex items-center justify-center p-1 bg-emerald-500 hover:bg-emerald-400 text-white rounded-none shadow transition" title="Save Office Budget" data-office-id="${escHtml(String(r.officeId))}">
              <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
            </button>
@@ -371,7 +371,7 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
 
   // Attach live comma formatting to row inputs
   tbody.querySelectorAll(".input-edit-office-budget").forEach(input => {
-    attachNumberCommaFormatter(input, { allowDecimals: false });
+    attachNumberCommaFormatter(input, { allowDecimals: true });
   });
 
   tbody.querySelectorAll("tr[data-office-id]").forEach(row => {
@@ -1326,7 +1326,7 @@ function toggleInlineEditMode(forceActive = null) {
       if (inputBudget) {
         const customBudget = customGeneralBudget;
         const stats = computePayrollExecutiveSummary(allBeneficiaries, customBudget);
-        inputBudget.value = formatNumberWithCommas(stats.totalBudget, false);
+        inputBudget.value = formatNumberWithCommas(stats.totalBudget, true);
         inputBudget.focus();
       }
     }
@@ -1611,7 +1611,7 @@ export async function initPayroll() {
   // Attach live comma formatting to Card 1 Total Budget editor and Drawer Stipend editor
   const inputBudgetEl = document.getElementById("input-edit-total-budget");
   if (inputBudgetEl) {
-    attachNumberCommaFormatter(inputBudgetEl, { allowDecimals: false });
+    attachNumberCommaFormatter(inputBudgetEl, { allowDecimals: true });
   }
   const inputStipendEl = document.getElementById("pd-stipend-amount");
   if (inputStipendEl) {
