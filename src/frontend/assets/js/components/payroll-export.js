@@ -13,6 +13,7 @@ export const PAYROLL_EXPORT_COLUMNS = [
   // Core Payroll
   { key: "id_display",     label: "ID No.",                 default: true,  group: "payroll" },
   { key: "full_name",      label: "Beneficiary Name",       default: true,  group: "payroll" },
+  { key: "batch_name",     label: "Batch Assignment",       default: true,  group: "payroll" },
   { key: "office_name",    label: "Office / Implementor",   default: true,  group: "payroll" },
   { key: "contract_period",label: "Contract Period",        default: true,  group: "payroll" },
   { key: "days_worked",    label: "Days Worked",            default: true,  group: "payroll" },
@@ -329,6 +330,11 @@ export async function generateExcelPayrollReport(beneficiaries, selectedCols = [
         cell.value = String(b.full_name || "—").toUpperCase();
         cell.font = { name: "Calibri", size: 10, bold: true, color: { argb: _XL.ink } };
         cell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+      } else if (c.key === "batch_name") {
+        const batchLabel = b.batch?.batch_name ? String(b.batch.batch_name).toUpperCase() : (b.batch_id ? `BATCH ${b.batch_id}` : "UNASSIGNED");
+        cell.value = batchLabel;
+        cell.font = { name: "Calibri", size: 9.5, bold: true, color: { argb: _XL.blue } };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
       } else if (c.key === "office_name") {
         cell.value = officeName;
         cell.font = { name: "Calibri", size: 9.5, color: { argb: _XL.ink } };
@@ -483,6 +489,7 @@ export function generateCsvPayrollReport(beneficiaries, selectedCols = []) {
     const row = colsToExport.map(c => {
       if (c.key === "id_display") return escCsvField(b.id || "");
       if (c.key === "full_name") return escCsvField(b.full_name || "");
+      if (c.key === "batch_name") return escCsvField(b.batch?.batch_name ? String(b.batch.batch_name).toUpperCase() : (b.batch_id ? `BATCH ${b.batch_id}` : "UNASSIGNED"));
       if (c.key === "office_name") return escCsvField(officeName);
       if (c.key === "contract_period") return escCsvField(p.contract_period || "JULY 2026");
       if (c.key === "days_worked") return escCsvField(p.days_worked || 20);

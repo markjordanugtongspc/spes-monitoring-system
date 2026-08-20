@@ -343,3 +343,61 @@ export async function upsertDbPayrollBudget(officeId = null, amount = 0, staffId
   }
 }
 // --- END: UPSERT PAYROLL BUDGET ALLOCATION ---
+
+// --- START: REALTIME PAYROLL SYNCHRONIZATION SERVICE ---
+/**
+ * Sets up Supabase Realtime subscription on `payroll_records`, `payroll_budgets`,
+ * `beneficiary`, and `batch` tables, along with cross-tab Storage and window focus listeners.
+ * 
+ * @param {Function} onDataChange - Callback invoked when remote or local data changes
+ * @returns {Function} Unsubscribe / teardown cleanup function
+ */
+export function subscribeToPayrollRealtime(onDataChange) {
+  if (typeof onDataChange !== "function") return () => {};
+
+  let debounceTimer = null;
+  const triggerSync = (origin = "realtime") => {
+    invalidatePayrollCache();
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      onDataChange({ origin });
+    }, 200);
+  };
+
+  const channelId = `spes-payroll-sync-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const channel = supabase
+    .channel(channelId)
+    .on("postgres_changes", { event: "*", schema: "public", table: "payroll_records" }, () => triggerSync("payroll_records"))
+    .on("postgres_changes", { event: "*", schema: "public", table: "payroll_budgets" }, () => triggerSync("payroll_budgets"))
+    .on("postgres_changes", { event: "*", schema: "public", table: "beneficiary" }, () => triggerSync("beneficiary"))
+    .on("postgres_changes", { event: "*", schema: "public", table: "batch" }, () => triggerSync("batch"))
+    .subscribe((status) => {
+      if (import.meta.env.DEV) {
+        console.info("[SPES Payroll Realtime] Channel status:", status);
+      }
+    });
+
+  // Cross-tab storage synchronization
+  const handleStorageChange = (e) => {
+    if (e.key && (e.key.startsWith("spes_payroll_") || e.key.startsWith("spes_beneficiaries_") || e.key.startsWith("spes_batches_"))) {
+      triggerSync("storage");
+    }
+  };
+  window.addEventListener("storage", handleStorageChange);
+
+  // Tab visibility reconciliation
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      triggerSync("visibility");
+    }
+  };
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    window.removeEventListener("storage", handleStorageChange);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    supabase.removeChannel(channel);
+  };
+}
+// --- END: REALTIME PAYROLL SYNCHRONIZATION SERVICE ---

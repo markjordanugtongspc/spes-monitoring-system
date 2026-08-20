@@ -5,7 +5,7 @@
  * dynamic 50-item chunked BATCH grouping with ET.AL headers, and database persistence.
  */
 
-import { fetchBeneficiaries } from "./beneficiary.js";
+import { fetchBeneficiaries, fetchBatches } from "./beneficiary.js";
 import {
   fetchDbPayrollRecords,
   upsertDbPayrollRecord,
@@ -13,6 +13,7 @@ import {
   fetchDbPayrollBudgets,
   upsertDbPayrollBudget,
   invalidatePayrollCache,
+  subscribeToPayrollRealtime,
 } from "./payroll-db.js";
 
 // Standard SPES stipend baseline
@@ -20,8 +21,8 @@ export const DEFAULT_STIPEND_RATE = 5133.00;
 export const DEFAULT_WORK_DAYS = 20;
 export const BATCH_CHUNK_SIZE = 50;
 
-// Re-export budget & cache functions for components
-export { fetchDbPayrollBudgets, upsertDbPayrollBudget, invalidatePayrollCache };
+// Re-export budget, cache & realtime functions for components
+export { fetchDbPayrollBudgets, upsertDbPayrollBudget, invalidatePayrollCache, subscribeToPayrollRealtime, fetchBatches };
 
 // --- START: ATTACH PAYROLL METADATA TO BENEFICIARY RECORD ---
 /**
@@ -158,69 +159,139 @@ export function computePayrollExecutiveSummary(beneficiariesList = [], customGen
 }
 // --- END: COMPUTE PAYROLL EXECUTIVE SUMMARY STATS ---
 
-// --- START: DYNAMIC 50-ITEM CHUNKED BATCH GROUPING WITH ET. AL HEADERS ---
+// --- START: DYNAMIC SOFT-API BATCH & PAYROLL 50-ITEM CHUNKING ---
 /**
- * Chunks office beneficiaries into standard 50-item batches with alphabetical ET.AL titling.
+ * Groups office beneficiaries by their assigned database Batch (from beneficiary API)
+ * sorted alphabetically A-Z, chunking every 50 records into structured Payroll sheets:
+ * e.g. "BATCH 1 - PAYROLL 1", "BATCH 1 - PAYROLL 1.2", "BATCH 2 - PAYROLL 2", "BATCH 2 - PAYROLL 2.2".
  *
- * @param {Array} officeBeneficiaries
- * @param {number} chunkSize
- * @returns {Array}
+ * @param {Array} officeBeneficiaries - Beneficiaries belonging to the selected office
+ * @param {number} chunkSize - Maximum records per payroll sheet (default 50)
+ * @returns {Array} List of structured payroll batch chunk cards
  */
 export function groupOfficeBeneficiariesIntoChunks(officeBeneficiaries = [], chunkSize = BATCH_CHUNK_SIZE) {
-  const sorted = [...officeBeneficiaries].sort((a, b) =>
-    String(a.full_name || "").localeCompare(String(b.full_name || ""))
-  );
-
-  const batches = [];
-  const total = sorted.length;
-
-  if (total === 0) {
+  if (!Array.isArray(officeBeneficiaries) || officeBeneficiaries.length === 0) {
     return [];
   }
 
-  let batchNumber = 1;
-  for (let i = 0; i < total; i += chunkSize) {
-    const chunk = sorted.slice(i, i + chunkSize);
-    const firstBene = chunk[0];
-    const rawFirstName = String(firstBene.full_name || "").trim().toUpperCase();
-    const etAlName = chunk.length > 1 ? `${rawFirstName} ET. AL.` : rawFirstName;
-    const contractPeriod = firstBene.payroll?.contract_period || "JULY 2026";
+  // 1. Group beneficiaries by assigned batch_id
+  const batchGroupsMap = new Map();
 
-    let totalPrincipal = 0;
-    let totalPaid = 0;
-    let totalPending = 0;
+  officeBeneficiaries.forEach((bene) => {
+    const rawBatchId = bene.batch_id ?? bene.batch?.id ?? null;
+    const rawBatchName = bene.batch?.batch_name
+      ? String(bene.batch.batch_name).trim()
+      : (rawBatchId !== null && rawBatchId !== undefined ? `BATCH ${rawBatchId}` : "UNASSIGNED");
 
-    chunk.forEach(b => {
-      const amt = Number(b.payroll?.stipend_amount) || DEFAULT_STIPEND_RATE;
-      totalPrincipal += amt;
-      if (b.payroll?.payment_status === "PAID") {
-        totalPaid += amt;
-      } else {
-        totalPending += amt;
-      }
-    });
+    const groupKey = rawBatchId !== null && rawBatchId !== undefined ? String(rawBatchId) : "unassigned";
 
-    batches.push({
-      batchId: `batch_${batchNumber}`,
-      batchIndex: batchNumber,
-      batchName: `BATCH ${batchNumber}`,
-      etAlName,
-      firstBeneficiary: firstBene,
-      beneficiaries: chunk,
-      totalPrincipal,
-      totalPaid,
-      totalPending,
-      contractPeriod,
-      startIndex: i,
-      endIndex: Math.min(i + chunkSize, total)
-    });
+    if (!batchGroupsMap.has(groupKey)) {
+      batchGroupsMap.set(groupKey, {
+        batchId: rawBatchId,
+        batchName: rawBatchName,
+        beneficiaries: [],
+      });
+    }
 
-    batchNumber++;
-  }
+    batchGroupsMap.get(groupKey).beneficiaries.push(bene);
+  });
 
-  return batches;
+  // 2. Sort batches in logical sequence (Batch 1, Batch 2, ..., Unassigned at end)
+  const sortedBatchGroups = Array.from(batchGroupsMap.values()).sort((a, b) => {
+    if (a.batchId === null) return 1;
+    if (b.batchId === null) return -1;
+    const numA = Number(a.batchId);
+    const numB = Number(b.batchId);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numA - numB;
+    }
+    return String(a.batchName).localeCompare(String(b.batchName), undefined, { numeric: true, sensitivity: "base" });
+  });
+
+  // 3. For each DB Batch, sort beneficiaries A-Z by full_name and chunk into 50-item sheets
+  const resultBatches = [];
+  let globalSequentialIndex = 1;
+
+  sortedBatchGroups.forEach((group) => {
+    // Sort beneficiaries in this batch A to Z
+    const sortedBene = [...group.beneficiaries].sort((a, b) =>
+      String(a.full_name || "").localeCompare(String(b.full_name || ""))
+    );
+
+    const totalInBatch = sortedBene.length;
+    if (totalInBatch === 0) return;
+
+    // Parse base batch number for naming (e.g. "BATCH 1" -> 1, "Batch 2" -> 2)
+    const matchNum = group.batchName.match(/\d+/);
+    const baseBatchNum = matchNum ? parseInt(matchNum[0], 10) : (group.batchId ? parseInt(group.batchId, 10) : globalSequentialIndex);
+    const normalizedBatchLabel = group.batchName.toUpperCase();
+
+    let chunkIndex = 1;
+    for (let i = 0; i < totalInBatch; i += chunkSize) {
+      const chunk = sortedBene.slice(i, i + chunkSize);
+      const firstBene = chunk[0];
+      const rawFirstName = String(firstBene.full_name || "").trim().toUpperCase();
+      const etAlName = chunk.length > 1 ? `${rawFirstName} ET. AL.` : rawFirstName;
+      const contractPeriod = firstBene.payroll?.contract_period || "JULY 2026";
+
+      let totalPrincipal = 0;
+      let totalPaid = 0;
+      let totalPending = 0;
+
+      chunk.forEach((b) => {
+        const amt = Number(b.payroll?.stipend_amount) || DEFAULT_STIPEND_RATE;
+        totalPrincipal += amt;
+        if (b.payroll?.payment_status === "PAID") {
+          totalPaid += amt;
+        } else {
+          totalPending += amt;
+        }
+      });
+
+      // Payroll numbering logic:
+      // First chunk (1-50): "PAYROLL 1" / "P1" (or "PAYROLL 2" / "P2" for Batch 2)
+      // Second chunk (51-100): "PAYROLL 1.2" / "P1.2" (or "PAYROLL 2.2" / "P2.2")
+      // Third chunk (101-150): "PAYROLL 1.3" / "P1.3" (or "PAYROLL 2.3" / "P2.3")
+      const payrollNum = chunkIndex === 1
+        ? `${baseBatchNum || globalSequentialIndex}`
+        : `${baseBatchNum || globalSequentialIndex}.${chunkIndex}`;
+
+      const payrollLabel = `PAYROLL ${payrollNum}`;
+      const shortPayrollLabel = `P${payrollNum}`;
+      const shortBatchLabel = `B${baseBatchNum || globalSequentialIndex}`;
+      const shortCode = `${shortBatchLabel} - ${shortPayrollLabel}`;
+      const fullCardName = `${normalizedBatchLabel} - ${payrollLabel}`;
+
+      resultBatches.push({
+        batchId: `batch_${group.batchId ?? 'unassigned'}_p${chunkIndex}`,
+        batchIndex: globalSequentialIndex,
+        dbBatchId: group.batchId,
+        dbBatchName: normalizedBatchLabel,
+        payrollLabel,
+        shortCode,
+        shortLabel: shortCode,
+        batchName: fullCardName,
+        fullBatchTitle: fullCardName,
+        etAlName,
+        firstBeneficiary: firstBene,
+        beneficiaries: chunk,
+        totalPrincipal,
+        totalPaid,
+        totalPending,
+        contractPeriod,
+        startIndex: i,
+        endIndex: Math.min(i + chunkSize, totalInBatch),
+        totalInDbBatch: totalInBatch,
+      });
+
+      globalSequentialIndex++;
+      chunkIndex++;
+    }
+  });
+
+  return resultBatches;
 }
-// --- END: DYNAMIC 50-ITEM CHUNKED BATCH GROUPING WITH ET. AL HEADERS ---
+// --- END: DYNAMIC SOFT-API BATCH & PAYROLL 50-ITEM CHUNKING ---
 
 // --- START: UPDATE BENEFICIARY PAYROLL RECORD IN DATABASE ---
 /**

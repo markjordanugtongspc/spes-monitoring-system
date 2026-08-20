@@ -28,7 +28,8 @@ import {
   updateBeneficiaryPayrollRecord,
   bulkUpdatePayrollStatus,
   fetchDbPayrollBudgets,
-  upsertDbPayrollBudget
+  upsertDbPayrollBudget,
+  subscribeToPayrollRealtime,
 } from "../../../../backend/api/payroll.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices } from "../../../../backend/api/staff.js";
@@ -478,14 +479,16 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
   let batchesToDisplay = currentOfficeBatches;
   if (searchQ) {
     batchesToDisplay = currentOfficeBatches.filter(b => {
-      const bNameMatch = b.batchName.toLowerCase().includes(searchQ);
-      const etAlMatch = b.etAlName.toLowerCase().includes(searchQ);
-      const periodMatch = b.contractPeriod.toLowerCase().includes(searchQ);
+      const bNameMatch = String(b.batchName || "").toLowerCase().includes(searchQ);
+      const dbBatchMatch = String(b.dbBatchName || "").toLowerCase().includes(searchQ);
+      const payrollLabelMatch = String(b.payrollLabel || "").toLowerCase().includes(searchQ);
+      const etAlMatch = String(b.etAlName || "").toLowerCase().includes(searchQ);
+      const periodMatch = String(b.contractPeriod || "").toLowerCase().includes(searchQ);
       const beneMatch = b.beneficiaries.some(bene => 
         String(bene.full_name || "").toLowerCase().includes(searchQ) ||
         String(bene.id || "").includes(searchQ)
       );
-      return bNameMatch || etAlMatch || periodMatch || beneMatch;
+      return bNameMatch || dbBatchMatch || payrollLabelMatch || etAlMatch || periodMatch || beneMatch;
     });
   }
 
@@ -520,17 +523,26 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
 
     return `
       <!-- SQUARE TYPE ENTERPRISE CARD WITH SOLID BACKGROUND -->
-      <div class="batch-card group relative cursor-pointer overflow-hidden rounded-none border-2 border-spes-blue/20 bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-spes-blue hover:shadow-xl dark:border-white/15 dark:bg-spes-dark-primary dark:hover:border-spes-yellow flex flex-col justify-between ${highlightBatchClass}"
-           data-batch-idx="${batch.batchIndex}" data-batch-name="${escHtml(batch.batchName)}">
+      <div class="batch-card group relative cursor-pointer overflow-visible rounded-none border-2 border-spes-blue/20 bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-spes-blue hover:shadow-xl dark:border-white/15 dark:bg-spes-dark-primary dark:hover:border-spes-yellow flex flex-col justify-between hover:z-30 ${highlightBatchClass}"
+           data-batch-idx="${batch.batchIndex}" data-batch-id="${escHtml(batch.batchId)}" data-batch-name="${escHtml(batch.batchName)}">
         
         <div>
           <!-- Card Header & Badge -->
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="flex items-center">
-                <span class="inline-flex items-center gap-1.5 rounded-none bg-spes-blue/10 px-3 py-1 text-xs font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/30">
-                  ${escHtml(batch.batchName)} (Max ${BATCH_CHUNK_SIZE})
-                </span>
+              <div class="flex items-center flex-wrap gap-1.5">
+                <!-- Compact Badge (e.g. B1 - P1) with Interactive Hover Tooltip (BATCH 1 - PAYROLL 1) -->
+                <div class="group/batchtip relative inline-flex z-20 hover:z-50">
+                  <span class="cursor-pointer inline-flex items-center gap-1.5 rounded-none bg-spes-blue/10 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/30 hover:bg-spes-blue/20 dark:hover:bg-spes-yellow/25 transition-colors">
+                    ${escHtml(batch.shortCode || batch.batchName)} (Max ${BATCH_CHUNK_SIZE})
+                  </span>
+                  <div role="tooltip"
+                    class="pointer-events-none absolute bottom-full left-0 mb-2.5 z-50 invisible opacity-0 group-hover/batchtip:visible group-hover/batchtip:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-black text-white shadow-2xl dark:bg-slate-800 border border-spes-blue/40 dark:border-spes-yellow/40 flex items-center gap-2 drop-shadow-2xl">
+                    <span class="inline-block h-2 w-2 rounded-full bg-spes-blue dark:bg-spes-yellow shrink-0"></span>
+                    <span class="tracking-wide">${escHtml(batch.batchName)} — Max ${BATCH_CHUNK_SIZE}</span>
+                    <div class="absolute -bottom-1 left-4 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+                  </div>
+                </div>
                 ${matchBadge}
               </div>
               <!-- ET. AL Main Principal Header (e.g. ABA-A, CARLIA ANN P. ET. AL.) -->
@@ -615,7 +627,7 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
 
   grid.querySelectorAll(".batch-card").forEach(card => {
     card.addEventListener("click", () => {
-      const idx = Number(card.dataset.batchIdx);
+      const idx = Number(card.dataset.batchIdx) || card.dataset.batchIdx;
       const batchName = card.dataset.batchName;
       switchToBeneficiariesView(idx, batchName);
     });
@@ -663,7 +675,11 @@ function applyBeneficiaryFiltersAndRender() {
   const searchQ = (document.getElementById("payroll-search-input")?.value || "").trim().toLowerCase();
   const statusFilter = document.getElementById("payroll-status-filter")?.value || "all";
 
-  const targetBatch = currentOfficeBatches.find(b => b.batchIndex === selectedBatchIndex);
+  const targetBatch = currentOfficeBatches.find(b => 
+    b.batchIndex === selectedBatchIndex ||
+    b.batchId === selectedBatchIndex ||
+    String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
+  );
   let list = targetBatch ? targetBatch.beneficiaries : [];
 
   if (statusFilter !== "all") {
@@ -1422,7 +1438,7 @@ function syncUrlState(replace = false) {
   } else if (currentView === "beneficiaries") {
     if (selectedOfficeId) url.searchParams.set("office", selectedOfficeId);
     if (selectedBatchIndex !== null && selectedBatchIndex !== undefined) {
-      url.searchParams.set("batch", selectedBatchIndex + 1);
+      url.searchParams.set("batch", selectedBatchIndex);
     }
   }
 
@@ -1435,6 +1451,7 @@ function syncUrlState(replace = false) {
   }
 }
 
+// --- START: SYNC AND RESTORE VIEW STATE WITH URL QUERY PARAMETERS ---
 function restoreViewFromUrl(isFirstVisit = false) {
   const params = new URLSearchParams(window.location.search);
   const officeParam = params.get("office");
@@ -1454,9 +1471,6 @@ function restoreViewFromUrl(isFirstVisit = false) {
   const officeName = foundOffice ? foundOffice.name : String(officeParam).toUpperCase();
 
   if (batchParam) {
-    const batchNumber = parseInt(batchParam, 10);
-    const batchIdx = !isNaN(batchNumber) && batchNumber > 0 ? batchNumber - 1 : 0;
-
     selectedOfficeId = officeId;
     selectedOfficeName = officeName;
     const officeBeneficiaries = officeId === "ALL"
@@ -1464,8 +1478,14 @@ function restoreViewFromUrl(isFirstVisit = false) {
       : allBeneficiaries.filter(b => String(b.staffs?.office_id) === String(officeId));
     currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE);
 
-    const targetBatch = currentOfficeBatches.find(b => b.batchIndex === batchIdx) || currentOfficeBatches[0];
-    const batchName = targetBatch ? targetBatch.batchName : `BATCH ${batchIdx + 1}`;
+    const targetBatch = currentOfficeBatches.find(b =>
+      String(b.batchIndex) === String(batchParam) ||
+      String(b.batchId) === String(batchParam) ||
+      String(b.batchName).toLowerCase() === String(batchParam).toLowerCase()
+    ) || currentOfficeBatches[0];
+
+    const batchIdx = targetBatch ? targetBatch.batchIndex : 1;
+    const batchName = targetBatch ? targetBatch.batchName : `BATCH ${batchParam}`;
 
     switchToBeneficiariesView(batchIdx, batchName, false);
   } else {
@@ -1473,6 +1493,74 @@ function restoreViewFromUrl(isFirstVisit = false) {
   }
 }
 // --- END: SYNC AND RESTORE VIEW STATE WITH URL QUERY PARAMETERS ---
+
+// --- START: REFRESH PAYROLL DATA HELPER ---
+/**
+ * Silently or explicitly synchronizes the entire payroll state with remote database.
+ * Preserves current navigation view and sub-views without UI flashes.
+ *
+ * @param {{ silent?: boolean }} options
+ */
+async function refreshPayrollData({ silent = true } = {}) {
+  try {
+    const [beneRes, officeRes, implRes, budgetRes] = await Promise.all([
+      fetchBeneficiaryPayrollRoster({ forceRefresh: true }),
+      fetchOffices({ forceRefresh: true }),
+      fetchImplementorList({ forceRefresh: true }),
+      fetchDbPayrollBudgets({ forceRefresh: true }),
+    ]);
+
+    if (!beneRes.error && Array.isArray(beneRes.data)) {
+      allBeneficiaries = beneRes.data;
+    }
+    if (!officeRes.error && Array.isArray(officeRes.data)) {
+      allOffices = officeRes.data;
+    }
+    if (implRes && Array.isArray(implRes)) {
+      allImplementors = implRes;
+    }
+
+    if (budgetRes) {
+      if (budgetRes.generalBudget !== undefined && budgetRes.generalBudget !== null) {
+        customGeneralBudget = budgetRes.generalBudget;
+        preferenceStorage.saveCustomGeneralBudget(budgetRes.generalBudget);
+      }
+      if (budgetRes.officeBudgets && Object.keys(budgetRes.officeBudgets).length > 0) {
+        customOfficeBudgets = { ...preferenceStorage.getCustomOfficeBudgets(), ...budgetRes.officeBudgets };
+      }
+    }
+
+    preferenceStorage.savePayrollCache({
+      beneficiaries: allBeneficiaries,
+      offices: allOffices,
+      implementors: allImplementors,
+    });
+
+    updateExecutiveSummaryCards(allBeneficiaries, false, false);
+
+    if (currentView === "implementors") {
+      renderImplementorsView(false, false);
+    } else if (currentView === "batches") {
+      render50ItemChunkedBatchCards(false);
+    } else if (currentView === "beneficiaries") {
+      const officeBeneficiaries = selectedOfficeId === "ALL"
+        ? allBeneficiaries
+        : allBeneficiaries.filter(b => String(b.staffs?.office_id) === String(selectedOfficeId));
+      currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE);
+      applyBeneficiaryFiltersAndRender();
+    }
+
+    updatePayrollExportData({
+      allBeneficiaries,
+      allOffices,
+      formatCurrency,
+      formatPhilippineTimestamp
+    });
+  } catch (err) {
+    if (import.meta.env.DEV) console.error("[SPES Payroll Realtime] Sync error:", err);
+  }
+}
+// --- END: REFRESH PAYROLL DATA HELPER ---
 
 // --- START: MAIN PAYROLL INITIALIZATION ---
 export async function initPayroll() {
@@ -1556,6 +1644,15 @@ export async function initPayroll() {
       modals.error("Load Failed", "Could not load payroll data. Please refresh and try again.");
     }
   }
+
+  // Realtime Supabase live syncing for multi-tab and remote data changes
+  const unsubscribeRealtime = subscribeToPayrollRealtime(async () => {
+    await refreshPayrollData({ silent: true });
+  });
+
+  window.addEventListener("beforeunload", () => {
+    unsubscribeRealtime();
+  }, { once: true });
 
   // Back button navigation
   document.getElementById("btn-back-to-payroll-implementors")?.addEventListener("click", () => {
