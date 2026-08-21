@@ -1,4 +1,4 @@
-﻿import { readFileSync } from "node:fs";
+﻿import { readFileSync, existsSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
@@ -23,6 +23,40 @@ function applyHeaderFooterTokens(fragment, tokens) {
     .replaceAll("@@NAV_CONTACT_ACTIVE@@", tokens.NAV_CONTACT_ACTIVE);
 }
 
+function copyStaticAssets() {
+  const srcAssetsDir = resolve(__dirname, "src/frontend/assets");
+  const distAssetsDir = resolve(__dirname, "dist/src/frontend/assets");
+
+  function copyDir(src, dest) {
+    mkdirSync(dest, { recursive: true });
+    for (const entry of readdirSync(src, { withFileTypes: true })) {
+      const srcPath = join(src, entry.name);
+      const destPath = join(dest, entry.name);
+      if (entry.isDirectory()) {
+        copyDir(srcPath, destPath);
+      } else {
+        copyFileSync(srcPath, destPath);
+      }
+    }
+  }
+
+  return {
+    name: "copy-static-assets",
+    apply: "build",
+    closeBundle() {
+      const subfolders = ["img", "vids"];
+      for (const folder of subfolders) {
+        const src = join(srcAssetsDir, folder);
+        const dest = join(distAssetsDir, folder);
+        if (existsSync(src)) {
+          copyDir(src, dest);
+          console.log(`[copy-static-assets] Copied src/frontend/assets/${folder} -> dist/src/frontend/assets/${folder}`);
+        }
+      }
+    }
+  };
+}
+
 function spesSitePartials() {
   const componentsDir = join(__dirname, "src/frontend/components");
   const headerPath = join(componentsDir, "header.html");
@@ -40,13 +74,13 @@ function spesSitePartials() {
 
       let result = html;
 
-      // ── Sidebar injection ──
+      // Sidebar injection
       if (hasSidebar) {
         const sidebar = readFileSync(sidebarPath, "utf8");
         result = result.replace("<!-- SPES:SIDEBAR -->", sidebar);
       }
 
-      // ── Header + Footer injection ──
+      // Header + Footer injection
       if (hasHeader) {
         const filename = String(ctx.filename || ctx.path || "").replace(/\\/g, "/");
         const isContact =
@@ -167,6 +201,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       spesSitePartials(), 
+      copyStaticAssets(),
       spesVercelApiDev(env),
       tailwindcss(),
       {
@@ -208,4 +243,3 @@ export default defineConfig(({ mode }) => {
   }
   };
 });
-
