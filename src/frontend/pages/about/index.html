@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Contributors | SPES Portal</title>
+  <link rel="icon" type="image/png" href="/c_spes.png" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    if (localStorage.getItem('color-theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+</head>
+
+<body
+  class="bg-gray-50 font-inter text-spes-black transition-colors duration-300 dark:bg-spes-dark-secondary dark:text-spes-white min-h-screen">
+  <!-- SPES:SIDEBAR -->
+
+  <!-- Main Viewport without top header, shifted up for optimal visual balance -->
+  <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80 px-4 py-8 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-start items-center">
+    <div id="about-component-slot" class="w-full max-w-6xl mx-auto"></div>
+  </main>
+
+  <script type="module" src="../../assets/js/about.js"></script>
+</body>
+
+</html>

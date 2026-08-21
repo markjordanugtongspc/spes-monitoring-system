@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -80,14 +80,14 @@
   <!-- Main Content -->
   <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
     <!-- Top Enterprise Banner -->
-    <header class="relative overflow-visible bg-spes-blue dark:bg-spes-dark-primary p-6 pb-8 lg:pb-24 shadow-lg">
+    <header class="relative overflow-hidden -mt-px bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
       <!-- Background Image Layer -->
       <div
-        class="absolute inset-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
+        class="absolute -top-12 inset-x-0 bottom-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
       </div>
       <!-- Primary Color Overlay (Reduced Opacity) -->
       <div
-        class="absolute inset-0 z-0 bg-linear-to-br from-spes-blue/80 to-[#002878]/90 dark:from-spes-dark-primary/85 dark:to-[#0A0A0A]/90">
+        class="absolute -top-12 inset-x-0 bottom-0 z-0 bg-gradient-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
       </div>
 
       <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
@@ -145,7 +145,7 @@
     </header>
 
     <!-- Dashboard Grid -->
-    <div id="main-dashboard-container" class="relative z-20 mx-auto mt-4 lg:-mt-16 max-w-7xl 2xl:max-w-[2200px] px-6 pb-12 flex flex-col">
+    <div id="main-dashboard-container" class="relative z-20 mx-auto mt-4 lg:-mt-16 max-w-7xl 2xl:max-w-[2200px] px-4 sm:px-6 pb-12 flex flex-col">
       <!-- Top Row: Metric Cards -->
       <div id="dashboard-metrics-container" class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3 order-2 lg:order-1 transition-all duration-300">
         <!-- Card 1: Total Implementors -->
@@ -490,7 +490,7 @@
       <!-- ════════════════════════════════════════════════════ -->
       <!-- QUICK ACCESS HUB (PARALLELOGRAM QUICK ACCESS) -->
       <!-- ════════════════════════════════════════════════════ -->
-      <div id="quick-access-hub-section" class="mt-0 mb-8 lg:mt-0 lg:mb-8 transition-all duration-300 order-1 lg:order-2">
+      <div id="quick-access-hub-section" class="mt-0 mb-6 lg:mt-0 lg:mb-8 transition-all duration-300 order-1 lg:order-2">
         <h3 class="mb-6 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Quick Access Hub</h3>
         
         <!-- 1. Normal View (Shown when stats are visible) -->
@@ -1037,3 +1037,7 @@
 </body>
 
 </html>
+
+
+
+
