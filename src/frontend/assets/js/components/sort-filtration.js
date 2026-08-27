@@ -229,7 +229,10 @@ export function setupSortFiltration({
           <svg class="h-4 w-4" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
           </svg>
-          <span class="pointer-events-none absolute bottom-full end-0 mb-1 whitespace-nowrap bg-red-600 px-2 py-1 text-[0.625rem] font-bold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">Clear</span>
+          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-800">
+            Clear
+            <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+          </span>
         `;
         searchWrap.appendChild(searchClearButton);
       }

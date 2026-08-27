@@ -222,15 +222,70 @@ function initAnimatedBadgePanel(config) {
   // Wire search to filter visible badges
   const searchInput = document.getElementById(config.searchInputId);
   if (searchInput) {
+    const searchWrap = searchInput.parentElement;
+    let clearBtn = null;
+    if (searchWrap) {
+      searchWrap.classList.add("relative");
+      searchInput.classList.add("pr-7");
+      clearBtn = searchWrap.querySelector(`[data-clear-for="${config.searchInputId}"]`);
+      if (!clearBtn) {
+        clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.dataset.clearFor = config.searchInputId;
+        clearBtn.className = "group absolute inset-y-0 end-1.5 hidden cursor-pointer items-center justify-center px-1 text-white/70 transition-colors hover:text-white focus-visible:outline-none";
+        clearBtn.setAttribute("aria-label", "Clear search");
+        clearBtn.title = "Clear search";
+        clearBtn.innerHTML = `
+          <svg class="h-3.5 w-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-800">
+            Clear
+            <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+          </span>
+        `;
+        searchWrap.appendChild(clearBtn);
+      }
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        searchInput.value = "";
+        searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        searchInput.focus();
+      });
+    }
+
+    const syncClearBtn = () => {
+      if (!clearBtn) return;
+      const hasVal = searchInput.value.length > 0;
+      clearBtn.classList.toggle("hidden", !hasVal);
+      clearBtn.classList.toggle("flex", hasVal);
+    };
+
     searchInput.addEventListener("input", (e) => {
       const q = e.target.value.toLowerCase();
       badgesList.querySelectorAll(".anim-badge").forEach(b => {
         const label = (b.dataset.label || "").toLowerCase();
         b.style.display = label.includes(q) ? "" : "none";
       });
+      syncClearBtn();
+    });
+    // Support pressing Enter to automatically select the first matching search result
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const visibleBadges = Array.from(badgesList.querySelectorAll(".anim-badge")).filter(b => b.style.display !== "none");
+        if (visibleBadges.length > 0) {
+          // If the first is 'all' and there are other filtered results, pick the first specific match
+          const targetBadge = (visibleBadges.length > 1 && visibleBadges[0].dataset.badgeId === "all" && searchInput.value.trim()) 
+            ? visibleBadges[1] 
+            : visibleBadges[0];
+          targetBadge.click();
+        }
+      }
     });
     // Stop panel close on input click
     searchInput.addEventListener("click", e => e.stopPropagation());
+    syncClearBtn();
   }
 
   const CHECK_ICON = `<svg class="h-2.5 w-2.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
@@ -1088,7 +1143,52 @@ export function initBeneficiaries() {
       destinationsPanel.classList.add("hidden");
       actionsPanel.classList.remove("hidden");
     });
-    destinationSearch.addEventListener("input", renderDestinations);
+    if (destinationSearch) {
+      const destWrap = destinationSearch.parentElement;
+      let clearDestBtn = null;
+      if (destWrap) {
+        destWrap.classList.add("relative");
+        destinationSearch.classList.add("pr-8");
+        clearDestBtn = destWrap.querySelector('[data-clear-for="beneficiary-transfer-search"]');
+        if (!clearDestBtn) {
+          clearDestBtn = document.createElement("button");
+          clearDestBtn.type = "button";
+          clearDestBtn.dataset.clearFor = "beneficiary-transfer-search";
+          clearDestBtn.className = "group absolute inset-y-0 end-2 hidden cursor-pointer items-center justify-center px-1 text-spes-black/50 hover:text-spes-black dark:text-white/50 dark:hover:text-white transition-colors focus-visible:outline-none";
+          clearDestBtn.setAttribute("aria-label", "Clear search");
+          clearDestBtn.title = "Clear search";
+          clearDestBtn.innerHTML = `
+            <svg class="h-3.5 w-3.5" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
+            </svg>
+            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-800">
+              Clear
+              <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+            </span>
+          `;
+          destWrap.appendChild(clearDestBtn);
+        }
+        clearDestBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          destinationSearch.value = "";
+          destinationSearch.dispatchEvent(new Event("input", { bubbles: true }));
+          destinationSearch.focus();
+        });
+      }
+
+      const syncDestClear = () => {
+        if (!clearDestBtn) return;
+        const hasVal = destinationSearch.value.length > 0;
+        clearDestBtn.classList.toggle("hidden", !hasVal);
+        clearDestBtn.classList.toggle("flex", hasVal);
+      };
+
+      destinationSearch.addEventListener("input", () => {
+        renderDestinations();
+        syncDestClear();
+      });
+      syncDestClear();
+    }
     destinationList.addEventListener("click", (event) => {
       const batchButton = event.target.closest("[data-transfer-batch-id]");
       if (batchButton) {
@@ -2015,12 +2115,10 @@ export function initBeneficiaries() {
 
       if (selectedBatchId === null) {
         // Show Batch Cards Grid
-
-
-  if (addBtn) {
-      addBtn.classList.remove("inline-flex");
-      addBtn.classList.add("hidden");
-    }
+        if (addBtn) {
+          addBtn.classList.remove("inline-flex");
+          addBtn.classList.add("hidden");
+        }
         if (createBatchBtn) {
           if (canManageCurrentOffice()) {
             createBatchBtn.classList.remove("hidden");
@@ -2034,6 +2132,11 @@ export function initBeneficiaries() {
           sortBatchPanel.classList.remove("hidden");
           sortBatchPanel.classList.add("flex");
         }
+        // In batch cards overview, hide the search bar and filter tool to prevent layout overlaps
+        document.getElementById("staff-search-wrap")?.classList.add("hidden");
+        document.getElementById("sortfilter-wrap")?.classList.add("hidden");
+        document.getElementById("beneficiary-bulk-tools")?.classList.add("hidden");
+
         if (tableWrap) tableWrap.classList.add("hidden");
         if (paginationControls) paginationControls.classList.add("hidden");
         if (kanbanWrap) {
@@ -2056,6 +2159,10 @@ export function initBeneficiaries() {
           sortBatchPanel.classList.add("hidden");
           sortBatchPanel.classList.remove("flex");
         }
+        // Inside a batch table, restore search bar and filter tools
+        document.getElementById("staff-search-wrap")?.classList.remove("hidden");
+        document.getElementById("sortfilter-wrap")?.classList.remove("hidden");
+
         if (kanbanWrap) kanbanWrap.classList.add("hidden");
         document.getElementById("global-spes-total-summary")?.classList.add("hidden");
         if (tableWrap) tableWrap.classList.remove("hidden");
@@ -2931,6 +3038,45 @@ export function initBeneficiaries() {
   };
 
   if (eduSubSearchInput && eduSubOptionsList) {
+    const wrap = eduSubSearchInput.parentElement;
+    let clearBtn = null;
+    if (wrap) {
+      wrap.classList.add("relative");
+      eduSubSearchInput.classList.add("pr-7");
+      clearBtn = wrap.querySelector('[data-clear-for="edulevel-search-input"]');
+      if (!clearBtn) {
+        clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.dataset.clearFor = "edulevel-search-input";
+        clearBtn.className = "group absolute inset-y-0 end-1.5 hidden cursor-pointer items-center justify-center px-1 text-spes-black/40 hover:text-spes-black dark:text-white/40 dark:hover:text-white transition-colors focus-visible:outline-none";
+        clearBtn.setAttribute("aria-label", "Clear search");
+        clearBtn.title = "Clear search";
+        clearBtn.innerHTML = `
+          <svg class="h-3 w-3" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-800">
+            Clear
+            <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+          </span>
+        `;
+        wrap.appendChild(clearBtn);
+      }
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        eduSubSearchInput.value = "";
+        eduSubSearchInput.dispatchEvent(new Event("input", { bubbles: true }));
+        eduSubSearchInput.focus();
+      });
+    }
+
+    const syncClearEdu = () => {
+      if (!clearBtn) return;
+      const hasVal = eduSubSearchInput.value.length > 0;
+      clearBtn.classList.toggle("hidden", !hasVal);
+      clearBtn.classList.toggle("flex", hasVal);
+    };
+
     eduSubSearchInput.addEventListener("input", (e) => {
       const q = e.target.value.toLowerCase().trim();
       const items = eduSubOptionsList.querySelectorAll("li");
@@ -2938,7 +3084,9 @@ export function initBeneficiaries() {
         const text = li.textContent.toLowerCase();
         li.style.display = text.includes(q) ? "" : "none";
       });
+      syncClearEdu();
     });
+    syncClearEdu();
   }
 
   if (eduSubBtn && eduSubMenu) {

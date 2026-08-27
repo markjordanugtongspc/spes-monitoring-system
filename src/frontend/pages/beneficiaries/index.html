@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -90,21 +90,19 @@
             <!-- Table Header Bar -->
             <div
               class="flex flex-col gap-3 bg-gradient-to-r from-spes-blue to-[#002878] p-4 border-b border-white/10 rounded-t-xl overflow-visible sm:flex-row sm:items-center sm:justify-between">
-              <div class="flex flex-col gap-2 min-w-0">
-                <div class="flex items-center gap-3 min-w-0">
-                  <button id="btn-back-to-implementors"
-                    class="cursor-pointer hidden items-center justify-center rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-[0.625rem] font-black uppercase tracking-wider text-white hover:bg-white/20 transition-all shrink-0"
-                    title="Back to Implementors">
-                    <svg class="mr-1.5 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back
-                  </button>
-                  <h3 id="table-title"
-                    class="font-montserrat text-xs font-black uppercase tracking-widest text-white transition-all duration-300">Total
-                    SPES List</h3>
-                </div>
+              <div class="flex items-center gap-3 min-w-0">
+                <button id="btn-back-to-implementors"
+                  class="cursor-pointer hidden items-center justify-center rounded-md border border-rose-600 bg-rose-600 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400/80 active:scale-95 dark:border-rose-500 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-500/20 dark:hover:text-rose-300 dark:hover:border-rose-400/60 shrink-0"
+                  title="Back to Implementors">
+                  <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                      d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back
+                </button>
+                <h3 id="table-title"
+                  class="font-montserrat text-xs font-black uppercase tracking-widest text-white transition-all duration-300">Total
+                  SPES List</h3>
               </div>
 
               <!-- Sort Offices Button + Animated Badge Panel (Admin only, implementors view) -->
@@ -120,7 +118,7 @@
                       </svg>
                     </div>
                     <input type="text" id="office-search-input"
-                      class="h-8 w-full rounded border sm:w-36 border-white/40 bg-white/15 pl-7 pr-2 text-[0.625rem] text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/20 focus:outline-none transition-all"
+                      class="h-9 w-full rounded-md border sm:w-36 border-white/40 bg-white/15 pl-7 pr-2 text-xs text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/20 focus:outline-none transition-all"
                       placeholder="Search offices…" autocomplete="off" />
                   </div>
                   <!-- Badge list: drag-scrollable single row -->
@@ -129,7 +127,7 @@
                     style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                 </div>
                 <button id="btn-sort-offices" data-dropdown-placement="bottom"
-                  class="order-1 ml-auto inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-[0.625rem] font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
+                  class="order-1 ml-auto inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
                   <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
@@ -139,17 +137,17 @@
               </div>
 
               <!-- Controls: Sort + Filter + Search + Sort Batch toggle (beneficiary/implementors) -->
-              <div id="table-controls-container" class="relative z-30 ml-auto flex w-full flex-wrap items-end justify-end gap-2 overflow-visible sm:w-auto">
+              <div id="table-controls-container" class="relative z-30 ml-auto flex w-full flex-wrap items-center justify-end gap-2.5 overflow-visible sm:w-auto sm:flex-nowrap">
                 <!-- Sort Batch — restored for cards/beneficiary sorting -->
                 <div id="sort-batch-panel" class="order-1 hidden w-full basis-full flex-wrap items-center justify-end gap-2 shrink-0 sm:w-auto sm:flex-nowrap">
                   <div id="batch-badges-container"
                     class="order-3 basis-full flex w-full items-center justify-end overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out sm:order-none sm:basis-auto sm:w-auto">
                     <div id="batch-badges-list"
-                      class="flex w-full max-w-[min(390px,calc(100vw-2rem))] flex-nowrap snap-x snap-mandatory items-center gap-1.5 overflow-x-auto touch-pan-x cursor-grab active:cursor-grabbing select-none sm:w-auto sm:max-w-[390px]"
+                      class="flex w-full max-w-[min(340px,calc(100vw-3rem))] flex-nowrap snap-x snap-mandatory items-center gap-1.5 overflow-x-auto touch-pan-x cursor-grab active:cursor-grabbing select-none sm:w-auto sm:max-w-[340px]"
                       style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                   </div>
                   <button id="btn-sort-batch" data-dropdown-placement="bottom-start"
-                    class="order-1 ml-auto inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-[0.625rem] font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
+                    class="order-1 ml-auto inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

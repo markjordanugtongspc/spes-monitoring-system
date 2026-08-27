@@ -525,13 +525,20 @@ function renderDifferenceDetails(row, rowIndex) {
   if (row.action === "invalid" || row.action === "ambiguous") return renderBlockedDetails(row);
 
   if (row.action === "insert") {
+    const isIncluded = isSelected(row);
     return `
       ${renderWarnings(row)}
-      <div class="rounded-none border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-400/20 dark:bg-emerald-400/10">
-        <div class="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-200">New Supabase record payload</div>
+      <div class="rounded-none border ${isIncluded ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-400/20 dark:bg-emerald-400/10" : "border-slate-200 bg-slate-50 opacity-60 dark:border-white/10 dark:bg-white/5"} p-3 transition">
+        <label class="flex cursor-pointer items-center justify-between gap-2 border-b ${isIncluded ? "border-emerald-200/70 dark:border-emerald-400/20" : "border-slate-200 dark:border-white/10"} pb-2">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" data-row-checkbox data-row-index="${rowIndex}" ${isIncluded ? "checked" : ""} class="size-4 cursor-pointer rounded-none border-emerald-400 text-emerald-600 focus:ring-emerald-500" />
+            <span class="text-[10px] font-black uppercase tracking-wider ${isIncluded ? "text-emerald-800 dark:text-emerald-200" : "text-slate-500 dark:text-white/60"}">New Supabase record payload</span>
+          </div>
+          <span class="text-[10px] font-bold ${isIncluded ? "text-emerald-700 dark:text-emerald-300" : "text-slate-400"}">${isIncluded ? "Included" : "Excluded"}</span>
+        </label>
         <div class="mt-2 grid gap-2 sm:grid-cols-2">
           ${INSERT_FIELDS.map(field => `
-            <div class="rounded-none border border-emerald-200/70 bg-white/80 p-2 dark:border-emerald-400/20 dark:bg-white/5">
+            <div class="rounded-none border ${isIncluded ? "border-emerald-200/70 bg-white/80 dark:border-emerald-400/20 dark:bg-white/5" : "border-slate-200 bg-white/40 dark:border-white/5 dark:bg-white/5"} p-2">
               <span class="block text-[9px] font-black uppercase tracking-wider text-slate-400">${FIELD_LABELS[field]}</span>
               <span class="block truncate text-xs font-bold text-slate-800 dark:text-white">${escapeHtml(formatValue(field, row.payload[field]))}</span>
             </div>`).join("")}
@@ -805,6 +812,23 @@ async function applyPlan() {
 
 // --- START: DOM EVENT LISTENERS REGISTRATION ---
 elements.tbody?.addEventListener("change", event => {
+  const checkbox = event.target.closest("[data-row-checkbox]");
+  if (checkbox && currentPlan && !applying) {
+    const row = currentPlan.rows[Number(checkbox.dataset.rowIndex)];
+    if (row && isActionable(row)) {
+      row.included = checkbox.checked;
+      if (row.action === "update") {
+        row.differences.forEach(difference => { difference.included = checkbox.checked; });
+      }
+      console.log("[SPES CSV Converter] Row checkbox changed", {
+        name: row.payload.full_name,
+        included: row.included,
+      });
+      resetApprovalAndRender();
+      return;
+    }
+  }
+
   const input = event.target.closest("[data-difference-toggle]");
   if (!input || !currentPlan || applying) return;
   const row = currentPlan.rows[Number(input.dataset.rowIndex)];
