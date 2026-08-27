@@ -90,22 +90,49 @@ function _setActiveSidebarLink(navId) {
   });
 }
 
+// --- START: SIDEBAR DROPDOWN INITIALIZER ---
 function _initSidebarDropdown() {
-  const btn = document.querySelector('[aria-controls="sidebar-dropdown-users"]');
-  const ul  = document.getElementById("sidebar-dropdown-users");
-  if (!btn || !ul) return;
-  const isOpen = document.cookie.includes("spes_user_management_open=true");
-  if (isOpen) {
-    ul.classList.remove("hidden");
-    btn.setAttribute("aria-expanded", "true");
-    btn.querySelector("svg:last-child")?.classList.add("rotate-180");
+  const beneBtn = document.querySelector('[aria-controls="sidebar-dropdown-beneficiaries"]');
+  const beneUl  = document.getElementById("sidebar-dropdown-beneficiaries");
+  if (beneBtn && beneUl) {
+    const isBeneOpen = !document.cookie.includes("spes_beneficiaries_open=false");
+    if (isBeneOpen) {
+      beneUl.classList.remove("hidden");
+      beneBtn.setAttribute("aria-expanded", "true");
+      beneBtn.querySelector("svg:last-child")?.classList.add("rotate-180");
+    } else {
+      beneUl.classList.add("hidden");
+      beneBtn.setAttribute("aria-expanded", "false");
+      beneBtn.querySelector("svg:last-child")?.classList.remove("rotate-180");
+    }
+    beneBtn.addEventListener("click", () => {
+      setTimeout(() => {
+        document.cookie = `spes_beneficiaries_open=${!beneUl.classList.contains("hidden")}; path=/; max-age=31536000`;
+      }, 50);
+    });
   }
-  btn.addEventListener("click", () => {
-    setTimeout(() => {
-      document.cookie = `spes_user_management_open=${!ul.classList.contains("hidden")}; path=/; max-age=31536000`;
-    }, 50);
-  });
+
+  const userBtn = document.querySelector('[aria-controls="sidebar-dropdown-users"]');
+  const userUl  = document.getElementById("sidebar-dropdown-users");
+  if (userBtn && userUl) {
+    const isUserOpen = document.cookie.includes("spes_user_management_open=true");
+    if (isUserOpen) {
+      userUl.classList.remove("hidden");
+      userBtn.setAttribute("aria-expanded", "true");
+      userBtn.querySelector("svg:last-child")?.classList.add("rotate-180");
+    } else {
+      userUl.classList.add("hidden");
+      userBtn.setAttribute("aria-expanded", "false");
+      userBtn.querySelector("svg:last-child")?.classList.remove("rotate-180");
+    }
+    userBtn.addEventListener("click", () => {
+      setTimeout(() => {
+        document.cookie = `spes_user_management_open=${!userUl.classList.contains("hidden")}; path=/; max-age=31536000`;
+      }, 50);
+    });
+  }
 }
+// --- END: SIDEBAR DROPDOWN INITIALIZER ---
 
 function _initClock() {
   const el = document.getElementById("real-time-clock");

@@ -1323,7 +1323,27 @@ function _setActiveSidebarLink(navId) {
         "bg-spes-blue/8", "dark:bg-spes-white/8");
     }
   });
-  // Keep sidebar dropdown open if previously open
+  // Keep sidebar dropdown open state
+  const beneUl  = document.getElementById("sidebar-dropdown-beneficiaries");
+  const beneBtn = document.querySelector('[aria-controls="sidebar-dropdown-beneficiaries"]');
+  if (beneUl && beneBtn) {
+    const isBeneOpen = !document.cookie.includes("spes_beneficiaries_open=false");
+    if (isBeneOpen) {
+      beneUl.classList.remove("hidden");
+      beneBtn.setAttribute("aria-expanded", "true");
+      beneBtn.querySelector("svg:last-child")?.classList.add("rotate-180");
+    } else {
+      beneUl.classList.add("hidden");
+      beneBtn.setAttribute("aria-expanded", "false");
+      beneBtn.querySelector("svg:last-child")?.classList.remove("rotate-180");
+    }
+    beneBtn.addEventListener("click", () => {
+      setTimeout(() => {
+        document.cookie = `spes_beneficiaries_open=${!beneUl.classList.contains("hidden")}; path=/; max-age=31536000`;
+      }, 50);
+    });
+  }
+
   const ul  = document.getElementById("sidebar-dropdown-users");
   const btn = document.querySelector('[aria-controls="sidebar-dropdown-users"]');
   if (ul && btn) {
@@ -1332,6 +1352,10 @@ function _setActiveSidebarLink(navId) {
       ul.classList.remove("hidden");
       btn.setAttribute("aria-expanded", "true");
       btn.querySelector("svg:last-child")?.classList.add("rotate-180");
+    } else {
+      ul.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+      btn.querySelector("svg:last-child")?.classList.remove("rotate-180");
     }
     btn.addEventListener("click", () => {
       setTimeout(() => {
