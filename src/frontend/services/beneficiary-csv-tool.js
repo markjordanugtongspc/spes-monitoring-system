@@ -97,7 +97,10 @@ function isActionable(row) {
 // --- START: SELECTED ROW CHECKER ---
 function isSelected(row) {
   if (!isActionable(row) || row.included === false) return false;
-  if (row.action === "insert") return true;
+  if (row.action === "insert") {
+    if (!row.fieldSelections) return true;
+    return INSERT_FIELDS.some(field => row.fieldSelections[field] !== false);
+  }
   return row.differences.some(difference => difference.included !== false);
 }
 // --- END: SELECTED ROW CHECKER ---
@@ -110,10 +113,16 @@ function getSelectionSummary(plan = currentPlan) {
     actionable: actionable.length,
     selected: selected.length,
     excluded: actionable.length - selected.length,
-    selectedFields: selected.reduce((total, row) =>
-      total + (row.action === "update"
-        ? row.differences.filter(difference => difference.included !== false).length
-        : INSERT_FIELDS.length), 0),
+    selectedFields: selected.reduce((total, row) => {
+      if (row.action === "update") {
+        return total + row.differences.filter(difference => difference.included !== false).length;
+      }
+      if (row.action === "insert") {
+        if (!row.fieldSelections) return total + INSERT_FIELDS.length;
+        return total + INSERT_FIELDS.filter(field => row.fieldSelections[field] !== false).length;
+      }
+      return total;
+    }, 0),
   };
 }
 // --- END: SELECTION SUMMARY CALCULATOR ---
@@ -336,10 +345,10 @@ function renderDuplicateGroups(groups) {
   elements.duplicatesBody.innerHTML = `
     <div class="space-y-4">
       ${groups.map((group, groupIndex) => {
-        const [primary, ...others] = group.records;
-        const targetId = `duplicate-group-others-${groupIndex}`;
-        const hasOthers = others.length > 0;
-        return `
+    const [primary, ...others] = group.records;
+    const targetId = `duplicate-group-others-${groupIndex}`;
+    const hasOthers = others.length > 0;
+    return `
           <div class="rounded-none border border-violet-200 bg-white/90 p-4 shadow-sm dark:border-violet-400/20 dark:bg-[#0d1d35]">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -360,7 +369,7 @@ function renderDuplicateGroups(groups) {
                 </div>` : ""}
             </div>
           </div>`;
-      }).join("")}
+  }).join("")}
     </div>
     <div class="space-y-4">
       <div class="rounded-none border border-violet-200 bg-white/90 p-4 shadow-sm dark:border-violet-400/20 dark:bg-[#0d1d35]">
@@ -526,6 +535,10 @@ function renderDifferenceDetails(row, rowIndex) {
 
   if (row.action === "insert") {
     const isIncluded = isSelected(row);
+    if (!row.fieldSelections) {
+      row.fieldSelections = {};
+      INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = true; });
+    }
     return `
       ${renderWarnings(row)}
       <div class="rounded-none border ${isIncluded ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-400/20 dark:bg-emerald-400/10" : "border-slate-200 bg-slate-50 opacity-60 dark:border-white/10 dark:bg-white/5"} p-3 transition">
@@ -537,11 +550,30 @@ function renderDifferenceDetails(row, rowIndex) {
           <span class="text-[10px] font-bold ${isIncluded ? "text-emerald-700 dark:text-emerald-300" : "text-slate-400"}">${isIncluded ? "Included" : "Excluded"}</span>
         </label>
         <div class="mt-2 grid gap-2 sm:grid-cols-2">
-          ${INSERT_FIELDS.map(field => `
-            <div class="rounded-none border ${isIncluded ? "border-emerald-200/70 bg-white/80 dark:border-emerald-400/20 dark:bg-white/5" : "border-slate-200 bg-white/40 dark:border-white/5 dark:bg-white/5"} p-2">
-              <span class="block text-[9px] font-black uppercase tracking-wider text-slate-400">${FIELD_LABELS[field]}</span>
-              <span class="block truncate text-xs font-bold text-slate-800 dark:text-white">${escapeHtml(formatValue(field, row.payload[field]))}</span>
-            </div>`).join("")}
+          ${INSERT_FIELDS.map((field, fIdx) => {
+      const fieldIncluded = isIncluded && row.fieldSelections[field] !== false;
+      const isLeftCol = fIdx % 2 === 0;
+      return `
+              <div class="group/field relative flex items-start gap-2 rounded-none border ${fieldIncluded ? "border-emerald-200/90 bg-white dark:border-emerald-400/30 dark:bg-white/5" : "border-rose-300/60 bg-rose-50/40 opacity-75 dark:border-rose-500/20 dark:bg-rose-950/15"} p-2 transition">
+                <input type="checkbox" data-insert-field-toggle data-row-index="${rowIndex}" data-field="${field}" ${fieldIncluded ? "checked" : ""} class="mt-0.5 size-3.5 cursor-pointer rounded-none border-emerald-400 text-emerald-600 focus:ring-emerald-500 shrink-0" />
+                <label class="min-w-0 flex-1 cursor-pointer">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="block text-[9px] font-black uppercase tracking-wider text-slate-400">${FIELD_LABELS[field]}</span>
+                    <span class="text-[8px] font-bold ${fieldIncluded ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">${fieldIncluded ? "Included" : "Excluded"}</span>
+                  </div>
+                  <span class="block truncate text-xs font-bold text-slate-800 dark:text-white">${escapeHtml(formatValue(field, row.payload[field]))}</span>
+                </label>
+                ${!fieldIncluded ? `
+                  <button type="button" data-field-bulk-toggle="${field}" data-field-action="exclude" data-action-type="insert" class="group/bulk absolute -top-2.5 ${isLeftCol ? "-left-1.5" : "-right-1.5"} z-20 inline-flex cursor-pointer items-center justify-center rounded-none border border-rose-600 bg-rose-600 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow-sm transition-all hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400 active:scale-95">
+                    Exclude All
+                    <span class="pointer-events-none absolute bottom-full ${isLeftCol ? "left-0" : "right-0"} mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover/bulk:opacity-100 group-focus-visible/bulk:opacity-100 z-30 dark:bg-slate-800">
+                      Exclude remaining same data across all records?
+                      <span class="absolute ${isLeftCol ? "left-3" : "right-3"} top-full border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+                    </span>
+                  </button>
+                ` : ""}
+              </div>`;
+    }).join("")}
         </div>
       </div>`;
   }
@@ -558,14 +590,14 @@ function renderDifferenceDetails(row, rowIndex) {
     ${renderWarnings(row)}
     <div class="space-y-2">
       ${row.differences.map(difference => {
-        const isIncluded = difference.included !== false;
-        return `
-          <label class="flex cursor-pointer items-start gap-3 rounded-none border p-2.5 transition dark:border-white/10 ${isIncluded ? "border-amber-200 bg-amber-50/60 dark:border-amber-400/20 dark:bg-amber-400/10" : "border-slate-200 bg-slate-50 opacity-60 dark:bg-white/5"}">
-            <input type="checkbox" data-difference-toggle data-row-index="${rowIndex}" data-field="${difference.field}" ${isIncluded ? "checked" : ""} class="mt-1 size-4 rounded-none border-amber-400 text-amber-600 focus:ring-amber-500" />
-            <div class="min-w-0 flex-1 text-xs">
+    const isIncluded = difference.included !== false;
+    return `
+          <div class="group/field relative flex items-start gap-3 rounded-none border p-2.5 transition dark:border-white/10 ${isIncluded ? "border-amber-200 bg-amber-50/60 dark:border-amber-400/20 dark:bg-amber-400/10" : "border-rose-300/60 bg-rose-50/40 opacity-75 dark:border-rose-500/20 dark:bg-rose-950/15"}">
+            <input type="checkbox" data-difference-toggle data-row-index="${rowIndex}" data-field="${difference.field}" ${isIncluded ? "checked" : ""} class="mt-1 size-4 cursor-pointer rounded-none border-amber-400 text-amber-600 focus:ring-amber-500 shrink-0" />
+            <label class="min-w-0 flex-1 cursor-pointer text-xs">
               <div class="flex items-center justify-between gap-2">
                 <span class="font-black uppercase tracking-wider text-slate-700 dark:text-white">${FIELD_LABELS[difference.field] || difference.field}</span>
-                <span class="text-[10px] font-bold ${isIncluded ? "text-amber-700 dark:text-amber-300" : "text-slate-400"}">${isIncluded ? "Included" : "Excluded"}</span>
+                <span class="text-[10px] font-bold ${isIncluded ? "text-amber-700 dark:text-amber-300" : "text-rose-600 dark:text-rose-400"}">${isIncluded ? "Included" : "Excluded"}</span>
               </div>
               <div class="mt-1 grid gap-2 sm:grid-cols-2">
                 <div class="rounded-none bg-red-100/70 p-1.5 text-red-900 dark:bg-red-400/15 dark:text-red-200">
@@ -577,9 +609,18 @@ function renderDifferenceDetails(row, rowIndex) {
                   <span class="block truncate font-bold">${escapeHtml(formatValue(difference.field, difference.incoming))}</span>
                 </div>
               </div>
-            </div>
-          </label>`;
-      }).join("")}
+            </label>
+            ${!isIncluded ? `
+              <button type="button" data-field-bulk-toggle="${difference.field}" data-field-action="exclude" data-action-type="update" class="group/bulk absolute -top-2.5 right-2 z-20 inline-flex cursor-pointer items-center justify-center rounded-none border border-rose-600 bg-rose-600 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white shadow-sm transition-all hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400 active:scale-95">
+                Exclude All
+                <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 whitespace-nowrap rounded bg-slate-900 px-2 py-0.5 text-[0.625rem] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover/bulk:opacity-100 group-focus-visible/bulk:opacity-100 z-30 dark:bg-slate-800">
+                  Exclude remaining same data across all records?
+                  <span class="absolute right-3 top-full border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
+                </span>
+              </button>
+            ` : ""}
+          </div>`;
+  }).join("")}
     </div>`;
 }
 // --- END: DIFFERENCE DETAILS RENDERER ---
@@ -812,12 +853,37 @@ async function applyPlan() {
 
 // --- START: DOM EVENT LISTENERS REGISTRATION ---
 elements.tbody?.addEventListener("change", event => {
+  const insertFieldToggle = event.target.closest("[data-insert-field-toggle]");
+  if (insertFieldToggle && currentPlan && !applying) {
+    const row = currentPlan.rows[Number(insertFieldToggle.dataset.rowIndex)];
+    if (row && row.action === "insert") {
+      if (!row.fieldSelections) {
+        row.fieldSelections = {};
+        INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = true; });
+      }
+      row.fieldSelections[insertFieldToggle.dataset.field] = insertFieldToggle.checked;
+      const anyFieldSelected = INSERT_FIELDS.some(field => row.fieldSelections[field] !== false);
+      row.included = anyFieldSelected;
+      console.log("[SPES CSV Converter] Insert field selection changed", {
+        name: row.payload.full_name,
+        field: insertFieldToggle.dataset.field,
+        included: insertFieldToggle.checked,
+        rowIncluded: row.included,
+      });
+      resetApprovalAndRender();
+      return;
+    }
+  }
+
   const checkbox = event.target.closest("[data-row-checkbox]");
   if (checkbox && currentPlan && !applying) {
     const row = currentPlan.rows[Number(checkbox.dataset.rowIndex)];
     if (row && isActionable(row)) {
       row.included = checkbox.checked;
-      if (row.action === "update") {
+      if (row.action === "insert") {
+        if (!row.fieldSelections) row.fieldSelections = {};
+        INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = checkbox.checked; });
+      } else if (row.action === "update") {
         row.differences.forEach(difference => { difference.included = checkbox.checked; });
       }
       console.log("[SPES CSV Converter] Row checkbox changed", {
@@ -845,13 +911,51 @@ elements.tbody?.addEventListener("change", event => {
 });
 
 elements.tbody?.addEventListener("click", event => {
+  const bulkFieldBtn = event.target.closest("[data-field-bulk-toggle]");
+  if (bulkFieldBtn && currentPlan && !applying) {
+    const field = bulkFieldBtn.dataset.fieldBulkToggle;
+    const action = bulkFieldBtn.dataset.fieldAction; // "exclude" or "include"
+    const targetState = action === "include";
+
+    currentPlan.rows.forEach(row => {
+      if (row.action === "insert") {
+        if (!row.fieldSelections) {
+          row.fieldSelections = {};
+          INSERT_FIELDS.forEach(f => { row.fieldSelections[f] = true; });
+        }
+        row.fieldSelections[field] = targetState;
+        const anyFieldSelected = INSERT_FIELDS.some(f => row.fieldSelections[f] !== false);
+        row.included = anyFieldSelected;
+      } else if (row.action === "update") {
+        const diff = row.differences.find(d => d.field === field);
+        if (diff) {
+          diff.included = targetState;
+          if (targetState) row.included = true;
+        }
+      }
+    });
+
+    console.log("[SPES CSV Converter] Bulk field toggle executed", {
+      field,
+      action,
+      targetState,
+    });
+    resetApprovalAndRender();
+    return;
+  }
+
   const button = event.target.closest("[data-row-toggle]");
   if (!button || !currentPlan || applying) return;
   const row = currentPlan.rows[Number(button.dataset.rowIndex)];
   if (!row || !isActionable(row)) return;
   const shouldInclude = !isSelected(row);
   row.included = shouldInclude;
-  if (row.action === "update") row.differences.forEach(difference => { difference.included = shouldInclude; });
+  if (row.action === "insert") {
+    if (!row.fieldSelections) row.fieldSelections = {};
+    INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = shouldInclude; });
+  } else if (row.action === "update") {
+    row.differences.forEach(difference => { difference.included = shouldInclude; });
+  }
   console.log("[SPES CSV Converter] Record selection changed", {
     name: row.payload.full_name,
     action: row.action,
@@ -863,13 +967,26 @@ elements.tbody?.addEventListener("click", event => {
 elements.includeAll?.addEventListener("click", () => {
   currentPlan?.rows.filter(isActionable).forEach(row => {
     row.included = true;
-    row.differences.forEach(difference => { difference.included = true; });
+    if (row.action === "insert") {
+      if (!row.fieldSelections) row.fieldSelections = {};
+      INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = true; });
+    } else {
+      row.differences.forEach(difference => { difference.included = true; });
+    }
   });
   resetApprovalAndRender();
 });
 
 elements.excludeAll?.addEventListener("click", () => {
-  currentPlan?.rows.filter(isActionable).forEach(row => { row.included = false; });
+  currentPlan?.rows.filter(isActionable).forEach(row => {
+    row.included = false;
+    if (row.action === "insert") {
+      if (!row.fieldSelections) row.fieldSelections = {};
+      INSERT_FIELDS.forEach(field => { row.fieldSelections[field] = false; });
+    } else {
+      row.differences.forEach(difference => { difference.included = false; });
+    }
+  });
   resetApprovalAndRender();
 });
 

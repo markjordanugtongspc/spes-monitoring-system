@@ -575,9 +575,12 @@ function summarizePlan(rows) {
 // --- END: PLAN SUMMARY AGGREGATOR ---
 
 // --- START: EXECUTABLE ROW VALIDATOR ---
-function isExecutableRow(row) {
-  if (row.included === false) return false;
-  if (row.action === "insert") return true;
+export function isExecutableRow(row) {
+  if (!row || row.included === false) return false;
+  if (row.action === "insert") {
+    if (!row.fieldSelections) return true;
+    return Object.values(row.fieldSelections).some(val => val !== false);
+  }
   if (row.action !== "update") return false;
   return row.differences.some(difference => difference.included !== false);
 }
@@ -591,6 +594,16 @@ export function getExecutableRows(plan) {
 
 // --- START: EFFECTIVE PAYLOAD BUILDER ---
 export function buildEffectivePayload(row) {
+  if (row.action === "insert") {
+    if (!row.fieldSelections) return { ...row.payload };
+    const payload = { ...row.payload };
+    Object.entries(row.fieldSelections).forEach(([field, isSelected]) => {
+      if (isSelected === false && field !== "full_name" && field !== "batch_id" && field !== "staff_id") {
+        payload[field] = null;
+      }
+    });
+    return payload;
+  }
   if (row.action !== "update") return { ...row.payload };
   return row.differences.reduce((payload, difference) => {
     if (difference.included === false) payload[difference.field] = difference.current;
@@ -798,7 +811,7 @@ export async function executeImportPlan(plan, { onProgress } = {}) {
 
     const result = row.action === "update"
       ? await updateBeneficiary(row.existingId, effectivePayload)
-      : await addBeneficiary(row.payload);
+      : await addBeneficiary(effectivePayload);
     const outcome = {
       sourceRow: row.sourceRow,
       name: row.payload.full_name,
