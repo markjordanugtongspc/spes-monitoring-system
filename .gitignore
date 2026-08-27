@@ -29,5 +29,5 @@ src/backend/.env
 *.sln
 *.sw?
 
-/src/frontend/services/
+# /src/frontend/services/
 .vercel
