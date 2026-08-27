@@ -48,6 +48,8 @@ const roles = {
       "reports:export",
       "beneficiaries:edit",
       "beneficiaries:delete",
+      "services:manage",
+      "services:access",
       "system:*"
     ],
     inherits: ["officer"]

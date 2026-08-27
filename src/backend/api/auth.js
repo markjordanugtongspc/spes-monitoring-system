@@ -327,3 +327,33 @@ function _mapToRbacRole(role) {
   if (lower.includes("officer")) return "officer";
   return "officer";
 }
+
+// --- START: ADMIN ACCESS VALIDATOR ---
+/**
+ * Validates whether the active session has administrator authority.
+ * @param {object} [customSession] Optional session override
+ * @returns {{ allowed: boolean, session: object | null, error?: string }}
+ */
+export function validateAdminAccess(customSession = null) {
+  let session = customSession;
+  if (!session) {
+    try {
+      const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
+      session = raw ? JSON.parse(raw) : null;
+    } catch {
+      session = null;
+    }
+  }
+
+  if (!session || !session.role) {
+    return { allowed: false, session: null, error: "Authentication required." };
+  }
+
+  const role = String(session.role || "").toLowerCase();
+  if (role !== "admin") {
+    return { allowed: false, session, error: "Access denied. Administrator privileges required." };
+  }
+
+  return { allowed: true, session };
+}
+// --- END: ADMIN ACCESS VALIDATOR ---

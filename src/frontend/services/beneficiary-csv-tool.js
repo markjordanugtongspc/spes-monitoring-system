@@ -1,11 +1,11 @@
 // --- START: BENEFICIARY CSV TOOL IMPORTS ---
 import "../assets/styles/tailwind.css";
-import { requireAuth } from "../assets/js/rbac/guard.js";
+import { requireAdmin } from "../assets/js/rbac/guard.js";
 import { buildImportPlan, executeImportPlan, loadConverterContext } from "./beneficiary-csv-converter.js";
 import { bulkDeleteBeneficiaries, fetchBeneficiaryDuplicateGroups } from "../../backend/api/beneficiary.js";
 // --- END: BENEFICIARY CSV TOOL IMPORTS ---
 
-const session = requireAuth();
+const session = requireAdmin();
 const elements = {
   session: document.getElementById("converter-session"),
   batch: document.getElementById("bdf-batch-id"),
@@ -49,6 +49,7 @@ const FIELD_LABELS = Object.freeze({
   month_period: "Employment month",
   year_period: "Employment year",
   designated: "GSIS Beneficiary",
+  relationship: "Relationship",
   birthday: "Birthday",
   age: "Age",
   educ_id: "Education category",
@@ -143,9 +144,18 @@ function setBusy(busy) {
 // --- START: BATCH AND STAFF OPTIONS RENDERER ---
 function renderOptions(preferred = {}) {
   const batchPalettes = [
-    { idle: "border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 dark:border-sky-400/25 dark:bg-sky-400/10 dark:text-sky-200 dark:hover:bg-sky-400/20", active: "border-sky-600 bg-transparent text-sky-800 ring-1 ring-sky-600/25 dark:border-sky-300 dark:text-sky-100" },
-    { idle: "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/20", active: "border-amber-600 bg-transparent text-amber-800 ring-1 ring-amber-600/25 dark:border-amber-300 dark:text-amber-100" },
-    { idle: "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200 dark:hover:bg-emerald-400/20", active: "border-emerald-600 bg-transparent text-emerald-800 ring-1 ring-emerald-600/25 dark:border-emerald-300 dark:text-emerald-100" },
+    {
+      idle: "border-sky-500 bg-transparent text-sky-700 hover:bg-sky-600 hover:text-white dark:border-sky-400 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500 dark:hover:text-white",
+      active: "border-sky-600 bg-sky-600 !text-white shadow-md ring-2 ring-sky-600/30 dark:border-sky-500 dark:bg-sky-500 dark:!text-white dark:ring-sky-400/40",
+    },
+    {
+      idle: "border-amber-500 bg-transparent text-amber-700 hover:bg-amber-500 hover:text-white dark:border-amber-400 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500 dark:hover:text-white",
+      active: "border-amber-600 bg-amber-600 !text-white shadow-md ring-2 ring-amber-600/30 dark:border-amber-500 dark:bg-amber-500 dark:!text-white dark:ring-amber-400/40",
+    },
+    {
+      idle: "border-emerald-500 bg-transparent text-emerald-700 hover:bg-emerald-600 hover:text-white dark:border-emerald-400 dark:bg-transparent dark:text-emerald-300 dark:hover:bg-emerald-500 dark:hover:text-white",
+      active: "border-emerald-600 bg-emerald-600 !text-white shadow-md ring-2 ring-emerald-600/30 dark:border-emerald-500 dark:bg-emerald-500 dark:!text-white dark:ring-emerald-400/40",
+    },
   ];
   const defaultBatch = context.batches.find(batch => Number(batch.id) === 2) ?? context.batches[0];
   const preferredBatchExists = preferred.batchId && context.batches.some(batch => String(batch.id) === String(preferred.batchId));
@@ -155,7 +165,7 @@ function renderOptions(preferred = {}) {
     const palette = batchPalettes[index % batchPalettes.length];
     const isSelectedBatch = String(batch.id) === String(elements.batch.value);
     const classes = isSelectedBatch ? palette.active : palette.idle;
-    return `<button type="button" data-batch-option value="${batch.id}" class="cursor-pointer rounded-none border px-3 py-2 text-xs font-bold transition ${classes}">${label}</button>`;
+    return `<button type="button" data-batch-option value="${batch.id}" class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-none border-2 px-4 py-2.5 text-sm font-bold transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${classes}">${label}</button>`;
   }).join("");
 
   const activeStaff = context.implementors.filter(item => !item.archive_at);
@@ -478,6 +488,7 @@ function renderBlockedDetails(row) {
     ["gender_id", "Gender"],
     ["address", "Address"],
     ["designated", "GSIS Beneficiary"],
+    ["relationship", "Relationship"],
     ["month_period", "Employment month"],
     ["year_period", "Employment year"],
     ["return_status", "Beneficiary status"],

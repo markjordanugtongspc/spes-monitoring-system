@@ -35,6 +35,7 @@ const DB_PERM_MAP = {
   "reports:export":(_p, session) => session?.approved === true,
   "reports:view":  (p) => p.view_users || p.export_reports,
   "beneficiaries:view": () => true,  // officers can always view beneficiaries
+  "services:manage": (_p, session) => String(session?.role || "").toLowerCase() === "admin",
 };
 
 /**
@@ -127,6 +128,21 @@ export function requireAuth() {
   const session = getSession();
   if (!session || !session.role) {
     window.location.href = "/src/frontend/login/";
+    return null;
+  }
+  return session;
+}
+
+/**
+ * Require an authenticated admin role.
+ * Redirects non-admins to the dashboard and unauthenticated users to login.
+ */
+export function requireAdmin() {
+  const session = requireAuth();
+  if (!session) return null;
+  const role = String(session.role || "").toLowerCase();
+  if (role !== "admin") {
+    window.location.href = "/src/frontend/pages/dashboard/";
     return null;
   }
   return session;

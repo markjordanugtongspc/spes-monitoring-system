@@ -28,7 +28,7 @@ const FALLBACK_EDUCATION_LEVELS = [
 
 const MANAGED_FIELDS = [
   "full_name", "gender_id", "address", "contact_number",
-  "month_period", "year_period", "designated", "birthday", "age", "educ_id",
+  "month_period", "year_period", "designated", "relationship", "birthday", "age", "educ_id",
   "education_level_id", "batch_id", "staff_id", "return_status",
 ];
 
@@ -45,6 +45,7 @@ const CSV_COLUMN = Object.freeze({
   occupationalCodePosition: 9,
   employmentPeriod: 11,
   designated: 12,
+  relationship: 13,
   birthday: 18,
 });
 
@@ -71,7 +72,8 @@ function resolveCsvColumns(headerRow = []) {
     educationLevel: first(["EDUCATIONAL LEVEL"], CSV_COLUMN.educationLevel),
     returnStatus: first(["NEW SPES BABY", "NEW SPES BABY STATUS"], CSV_COLUMN.returnStatus),
     employmentPeriod: first(["EMPLOYMENT PERIOD"], CSV_COLUMN.employmentPeriod),
-    designated: first(["GSIS BENEFICIARY", "DESIGNATED"], CSV_COLUMN.designated),
+    designated: first(["GSIS BENEFICIARY", "DESIGNATED", "DESIGNATED BENEFICIARY"], CSV_COLUMN.designated),
+    relationship: first(["RELATION TO THE ASSURED", "RELATION TO ASSURED", "RELATIONSHIP TO THE ASSURED", "RELATIONSHIP TO ASSURED", "RELATIONSHIP", "RELATION", "RELATIONSHIP TO BENEFICIARY"], CSV_COLUMN.relationship),
     birthday: first(["BIRTHDATE", "BIRTH DATE"], CSV_COLUMN.birthday),
   };
 }
@@ -428,6 +430,15 @@ function createPayload(csvRow, context) {
   const rawPeriod = cleanText(csvRow.row[columns.employmentPeriod]);
   const period = parsePeriod(rawPeriod);
   const rawDesignated = cleanText(csvRow.row[columns.designated]);
+  // Prioritize resolved column for RELATION TO THE ASSURED. If a fallback numeric cell was read, discard it.
+  let rawRelationship = cleanText(csvRow.row[columns.relationship]);
+  if (!rawRelationship || /^\d+$/.test(rawRelationship)) {
+    const candidate13 = cleanText(csvRow.row[13]);
+    const candidate14 = cleanText(csvRow.row[14]);
+    if (candidate13 && !/^\d+$/.test(candidate13)) rawRelationship = candidate13;
+    else if (candidate14 && !/^\d+$/.test(candidate14)) rawRelationship = candidate14;
+    else if (/^\d+$/.test(rawRelationship)) rawRelationship = "";
+  }
   const rawStatus = cleanText(csvRow.row[columns.returnStatus]);
   const returnStatus = normalizeReturnStatus(rawStatus);
   const rawEducation = cleanText(csvRow.row[columns.educationLevel]);
@@ -469,6 +480,10 @@ function createPayload(csvRow, context) {
     warnings.push("GSIS Beneficiary is blank; existing designated values stay unchanged.");
     skippedFields.push("designated");
   }
+  if (!rawRelationship) {
+    warnings.push("Relationship is blank; existing relationship values stay unchanged.");
+    skippedFields.push("relationship");
+  }
   if (!returnStatus) {
     warnings.push(`Status "${rawStatus || "(blank)"}" was not imported; existing data is preserved and new records use the database default.`);
     skippedFields.push("return_status");
@@ -495,6 +510,7 @@ function createPayload(csvRow, context) {
       month_period: period?.month ?? null,
       year_period: period?.year ?? null,
       designated: rawDesignated || null,
+      relationship: rawRelationship.toUpperCase() || null,
       birthday,
       age: Number.isInteger(age) ? age : null,
       educ_id: education.educ_id ?? null,
@@ -502,7 +518,6 @@ function createPayload(csvRow, context) {
       batch_id: Number(context.batchId),
       staff_id: Number(context.staffId),
       return_status: returnStatus,
-      relationship: null,
     },
   };
 }
@@ -711,7 +726,7 @@ export function buildImportPlan(csvText, context, selection) {
       };
     }
 
-    const desiredPayload = { ...prepared.payload, relationship: identity.match.relationship ?? null };
+    const desiredPayload = { ...prepared.payload };
     prepared.skippedFields.forEach(field => {
       const categoryChanges = field === "education_level_id" &&
         prepared.payload.educ_id != null &&
