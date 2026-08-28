@@ -738,7 +738,7 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
 }
 // --- END: DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
 
-// --- START: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, INPUT, AND RIGHT-LAST ---
+// --- START: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, 2, INPUT, AND RIGHT-LAST ---
 function updateStaffPageIndicators(totalCount) {
   const indicatorsEl = document.getElementById("page-indicators-container");
   if (!indicatorsEl) return;
@@ -746,8 +746,14 @@ function updateStaffPageIndicators(totalCount) {
   currentPage = Math.min(totalPages, Math.max(1, currentPage));
   preferenceStorage.savePaginationPage(paginationStorageKey, currentPage);
 
+  // Update disabled state of Previous and Next buttons
+  const prevBtn = document.getElementById("prev-page");
+  const nextBtn = document.getElementById("next-page");
+  if (prevBtn) prevBtn.toggleAttribute("disabled", currentPage <= 1 || totalPages <= 1);
+  if (nextBtn) nextBtn.toggleAttribute("disabled", currentPage >= totalPages || totalPages <= 1);
+
   let html = "";
-  if (totalPages <= 3) {
+  if (totalPages <= 4) {
     for (let p = 1; p <= totalPages; p++) {
       const active = p === currentPage
         ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
@@ -761,12 +767,22 @@ function updateStaffPageIndicators(totalCount) {
       : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
     html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p1Active}" data-page="1" aria-label="Go to page 1">1</button></li>`;
 
+    // Page 2
+    const p2Active = currentPage === 2
+      ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+      : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+    html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p2Active}" data-page="2" aria-label="Go to page 2">2</button></li>`;
+
     // Middle: Jump Input Field
-    const isMidActive = currentPage > 1 && currentPage < totalPages;
-    html += `<li class="flex items-center border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary">
+    const isMidActive = currentPage > 2 && currentPage < totalPages;
+    const midActiveClass = isMidActive
+      ? "border-spes-blue ring-2 ring-spes-blue/50 dark:border-spes-yellow dark:ring-spes-yellow/50 bg-spes-blue/5 dark:bg-spes-yellow/5"
+      : "border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary";
+
+    html += `<li class="flex items-center border ${midActiveClass} transition-all">
       <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..." aria-label="Jump to page"
-        class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        style="-moz-appearance: textfield" title="Type page number and press Enter" />
+        class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-black text-spes-blue outline-none dark:text-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        style="-moz-appearance: textfield" title="Type page number (1-${totalPages}) and press Enter" />
     </li>`;
 
     // Right: Last Page (totalPages)
@@ -804,7 +820,7 @@ function updateStaffPageIndicators(totalCount) {
     }
   });
 }
-// --- END: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, INPUT, AND RIGHT-LAST ---
+// --- END: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, 2, INPUT, AND RIGHT-LAST ---
 
 function syncStaffActionDropdown() {
   const actionButton = document.getElementById("staff-action-dropdown-btn");
@@ -942,9 +958,12 @@ function addDragScroll(el) {
     el.scrollLeft = scrollLeft - walk;
   });
   el.addEventListener("wheel", (e) => {
-    if (e.deltaY === 0) return;
-    el.scrollLeft += e.deltaY;
-  }, { passive: true });
+    if (!e.shiftKey) return;
+    if (e.deltaY !== 0 || e.deltaX !== 0) {
+      e.preventDefault();
+      el.scrollLeft += (e.deltaY || e.deltaX);
+    }
+  }, { passive: false });
 }
 // --- END: DRAG SCROLL HELPER FOR DASHBOARD / IMPLEMENTORS / ROLES ---
 

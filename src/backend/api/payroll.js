@@ -170,7 +170,7 @@ export function computePayrollExecutiveSummary(beneficiariesList = [], customGen
  * @param {number} chunkSize - Maximum records per payroll sheet (default 50)
  * @returns {Array} List of structured payroll batch chunk cards
  */
-export function groupOfficeBeneficiariesIntoChunks(officeBeneficiaries = [], chunkSize = BATCH_CHUNK_SIZE) {
+export function groupOfficeBeneficiariesIntoChunks(officeBeneficiaries = [], chunkSize = BATCH_CHUNK_SIZE, sortMode = "default", customOrderIdsMap = {}) {
   if (!Array.isArray(officeBeneficiaries) || officeBeneficiaries.length === 0) {
     return [];
   }
@@ -209,15 +209,29 @@ export function groupOfficeBeneficiariesIntoChunks(officeBeneficiaries = [], chu
     return String(a.batchName).localeCompare(String(b.batchName), undefined, { numeric: true, sensitivity: "base" });
   });
 
-  // 3. For each DB Batch, sort beneficiaries A-Z by full_name and chunk into 50-item sheets
+  // 3. For each DB Batch, sort or arrange beneficiaries and chunk into 50-item sheets
   const resultBatches = [];
   let globalSequentialIndex = 1;
 
   sortedBatchGroups.forEach((group) => {
-    // Sort beneficiaries in this batch A to Z
-    const sortedBene = [...group.beneficiaries].sort((a, b) =>
-      String(a.full_name || "").localeCompare(String(b.full_name || ""))
-    );
+    const groupKey = group.batchId !== null && group.batchId !== undefined ? String(group.batchId) : "unassigned";
+    let sortedBene = [...group.beneficiaries];
+
+    if (sortMode === "name_asc") {
+      sortedBene.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
+    } else if (sortMode === "name_desc") {
+      sortedBene.sort((a, b) => String(b.full_name || "").localeCompare(String(a.full_name || "")));
+    } else if (sortMode === "default" && customOrderIdsMap && Array.isArray(customOrderIdsMap[groupKey])) {
+      const orderIds = customOrderIdsMap[groupKey].map(String);
+      sortedBene.sort((a, b) => {
+        const idxA = orderIds.indexOf(String(a.id));
+        const idxB = orderIds.indexOf(String(b.id));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return 0;
+      });
+    }
 
     const totalInBatch = sortedBene.length;
     if (totalInBatch === 0) return;

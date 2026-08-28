@@ -489,9 +489,12 @@ function addDragScroll(el) {
     el.scrollLeft = scrollLeft - walk;
   });
   el.addEventListener("wheel", (e) => {
-    if (e.deltaY === 0) return;
-    el.scrollLeft += e.deltaY;
-  }, { passive: true });
+    if (!e.shiftKey) return;
+    if (e.deltaY !== 0 || e.deltaX !== 0) {
+      e.preventDefault();
+      el.scrollLeft += (e.deltaY || e.deltaX);
+    }
+  }, { passive: false });
 }
 
 // ── Office Sort Panel ─────────────────────────────────────────
@@ -2524,7 +2527,7 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
 }
 // --- END: BENEFICIARIES DYNAMIC PAGE SIZE FORMULA ---
 
-  // ── Pagination Indicators (Left: 1, Middle: Input, Right: Last Page) ───
+  // ── Pagination Indicators (Left: 1 & 2, Middle: Input, Right: Last Page) ───
   function updatePageIndicators(totalCount) {
     const indicatorsEl = document.getElementById("page-indicators-container");
     if (!indicatorsEl) return;
@@ -2532,8 +2535,14 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
     currentPage = Math.min(totalPages, Math.max(1, currentPage));
     preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
 
+    // Update disabled state of Previous and Next buttons
+    const prevBtn = document.getElementById("prev-page");
+    const nextBtn = document.getElementById("next-page");
+    if (prevBtn) prevBtn.toggleAttribute("disabled", currentPage <= 1 || totalPages <= 1);
+    if (nextBtn) nextBtn.toggleAttribute("disabled", currentPage >= totalPages || totalPages <= 1);
+
     let html = "";
-    if (totalPages <= 3) {
+    if (totalPages <= 4) {
       for (let p = 1; p <= totalPages; p++) {
         const active = p === currentPage
           ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
@@ -2547,12 +2556,22 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
         : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
       html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p1Active}" data-page="1">1</button></li>`;
 
+      // Page 2
+      const p2Active = currentPage === 2
+        ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+        : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+      html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p2Active}" data-page="2">2</button></li>`;
+
       // Middle: Input
-      const isMidActive = currentPage > 1 && currentPage < totalPages;
-      html += `<li class="flex items-center border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary">
+      const isMidActive = currentPage > 2 && currentPage < totalPages;
+      const midActiveClass = isMidActive
+        ? "border-spes-blue ring-2 ring-spes-blue/50 dark:border-spes-yellow dark:ring-spes-yellow/50 bg-spes-blue/5 dark:bg-spes-yellow/5"
+        : "border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary";
+
+      html += `<li class="flex items-center border ${midActiveClass} transition-all">
         <input type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..."
-               class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-               style="-moz-appearance: textfield;" title="Type page and press Enter" />
+               class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-black text-spes-blue outline-none dark:text-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+               style="-moz-appearance: textfield;" title="Type page number (1-${totalPages}) and press Enter" />
       </li>`;
 
       // Right: Last Page (totalPages)
@@ -2598,21 +2617,18 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
 
   // ── Pagination controls ──────────────────────────────────────
   document.getElementById("prev-page")?.addEventListener("click", () => {
-    if (currentPage > 1) { currentPage--; renderPaginatedTable(); }
+    if (currentPage > 1) {
+      currentPage--;
+      renderPaginatedTable();
+    }
   });
   document.getElementById("next-page")?.addEventListener("click", () => {
-    let listLength = 0;
-    if (viewMode === "implementors") {
-      listLength = activeImplementors.length;
-    } else if (selectedBatchId === "unassigned") {
-      listLength = activeBeneficiaries.filter(b => b.batch_id === null || b.batch?.id === null).length;
-    } else if (selectedBatchId !== null) {
-      listLength = activeBeneficiaries.filter(b => String(b.batch_id ?? b.batch?.id) === String(selectedBatchId)).length;
-    } else {
-      listLength = activeBeneficiaries.length;
+    const listLength = viewMode === "implementors" ? activeImplementors.length : getVisibleBeneficiaries().length;
+    const total = Math.max(1, Math.ceil(listLength / rowsPerPage));
+    if (currentPage < total) {
+      currentPage++;
+      renderPaginatedTable();
     }
-    const total = Math.ceil(listLength / rowsPerPage);
-    if (currentPage < total) { currentPage++; renderPaginatedTable(); }
   });
 
   // ── Select all ───────────────────────────────────────────────

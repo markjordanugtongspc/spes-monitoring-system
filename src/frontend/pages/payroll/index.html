@@ -118,7 +118,7 @@
             <!-- Normal Counter Display -->
             <div id="stat-total-budget-display-container">
               <h3 id="stat-total-budget" data-counter="currency" data-value="0"
-                class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+                class="font-mono text-xl sm:text-2xl lg:text-3xl font-black text-white mt-1 tabular-nums transition-all break-words">₱0.00</h3>
             </div>
             <!-- Inline Edit Input Container -->
             <div id="stat-total-budget-edit-container" class="hidden mt-1.5">
@@ -177,7 +177,7 @@
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-teal-100 dark:text-teal-200/90">Total Paid (Disbursed)</p>
             <h3 id="stat-total-paid" data-counter="currency" data-value="0"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+              class="font-mono text-xl sm:text-2xl lg:text-3xl font-black text-white mt-1 tabular-nums transition-all break-words">₱0.00</h3>
             <div class="flex items-center justify-between mt-2 text-xs">
               <span class="font-bold text-emerald-200 dark:text-emerald-300 tabular-nums" id="stat-paid-count" data-counter="number" data-value="0">0 Paid Accounts</span>
               <span class="inline-flex items-center gap-1 font-semibold text-teal-100/90 dark:text-teal-200 text-[11px]">
@@ -211,7 +211,7 @@
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-amber-100 dark:text-amber-200/90">Total Pending</p>
             <h3 id="stat-total-pending" data-counter="currency" data-value="0"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+              class="font-mono text-xl sm:text-2xl lg:text-3xl font-black text-white mt-1 tabular-nums transition-all break-words">₱0.00</h3>
             <div class="flex items-center justify-between mt-2 text-xs">
               <span class="font-bold text-amber-200 dark:text-amber-300 tabular-nums" id="stat-pending-count" data-counter="number" data-value="0">0 In Processing</span>
               <span class="inline-flex items-center gap-1 font-semibold text-amber-100/90 dark:text-amber-200 text-[11px]">
@@ -246,7 +246,7 @@
           <div class="relative z-10 mt-4">
             <p class="text-xs font-black uppercase tracking-widest text-rose-100 dark:text-rose-200/90">Remaining Balance</p>
             <h3 id="stat-remaining-balance" data-counter="currency" data-value="0"
-              class="font-mono text-2xl sm:text-3xl font-black text-white mt-1 tabular-nums transition-all">₱0.00</h3>
+              class="font-mono text-xl sm:text-2xl lg:text-3xl font-black text-white mt-1 tabular-nums transition-all break-words">₱0.00</h3>
             <div class="flex items-center justify-between mt-2 text-xs">
               <span class="font-bold text-rose-200 dark:text-rose-300 tabular-nums" id="stat-disbursement-rate" data-counter="percent" data-value="0">0% Disbursed</span>
               <span class="inline-flex items-center gap-1 font-semibold text-rose-100/90 dark:text-rose-200 text-[11px]">
@@ -381,7 +381,10 @@
                     <!-- Main 2: BULK UN-PAID -->
                     <li>
                       <button type="button" id="btn-action-bulk-mark-unpaid"
-                        class="cursor-pointer flex w-full items-center rounded-none px-3 py-2.5 font-black text-rose-100 hover:bg-rose-600/30 hover:text-white dark:text-rose-200 transition-colors">
+                        class="cursor-pointer flex w-full items-center gap-2 rounded-none px-3 py-2.5 font-black text-rose-100 hover:bg-rose-600/30 hover:text-white dark:text-rose-200 transition-colors">
+                        <svg class="h-4 w-4 text-rose-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Bulk Mark Unpaid
                       </button>
                     </li>
@@ -412,16 +415,63 @@
                   <div class="tooltip-arrow" data-popper-arrow></div>
                 </div>
 
-                <!-- Status Dropdown Menu with Sharp Edges (rounded-none) & Text Colors -->
+                <!-- Status & Sort Dropdown Menu with Sharp Edges (rounded-none) & Text Colors -->
                 <div id="dropdown-payroll-status-filter"
-                  class="z-50 hidden my-2 w-48 list-none divide-y divide-blue-400/20 rounded-none bg-[#1d4ed8] p-1.5 shadow-2xl shadow-blue-950/40 border border-blue-300/30 dark:bg-[#16336e] dark:divide-blue-300/15 dark:border-blue-400/30">
-                  <div class="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-blue-100 dark:text-blue-200">
-                    Filter by Status
+                  class="z-50 hidden my-2 w-56 list-none divide-y divide-blue-400/20 rounded-none bg-[#1d4ed8] p-1.5 shadow-2xl shadow-blue-950/40 border border-blue-300/30 dark:bg-[#16336e] dark:divide-blue-300/15 dark:border-blue-400/30">
+                  <!-- Sort Arrangement Section -->
+                  <div class="px-3 py-1.5 text-[11px] font-black uppercase tracking-wider text-blue-100 dark:text-blue-200">
+                    Sort Arrangement
+                  </div>
+                  <ul class="py-1 text-xs sm:text-sm space-y-0.5" aria-label="Sort Arrangement">
+                    <li>
+                      <button type="button" data-sort-val="default"
+                        class="sort-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-white bg-white/20 transition-colors">
+                        <span>Default (DB / Custom)</span>
+                        <svg class="sort-check-icon h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" data-sort-val="name_asc"
+                        class="sort-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-blue-200 hover:bg-blue-500/30 transition-colors">
+                        <span>Name: A → Z</span>
+                        <svg class="sort-check-icon hidden h-4 w-4 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" data-sort-val="name_desc"
+                        class="sort-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-blue-200 hover:bg-blue-500/30 transition-colors">
+                        <span>Name: Z → A</span>
+                        <svg class="sort-check-icon hidden h-4 w-4 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" id="btn-reset-custom-order" data-sort-val="reset_order"
+                        class="cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-500/20 transition-colors"
+                        title="Reset custom drag-and-drop order for this batch to natural database order">
+                        <span class="inline-flex items-center gap-1">
+                          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Reset Arrangement
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+
+                  <!-- Payment Status Section -->
+                  <div class="px-3 pt-2.5 pb-1 text-[11px] font-black uppercase tracking-wider text-blue-100 dark:text-blue-200">
+                    Payment Status
                   </div>
                   <ul class="py-1 text-xs sm:text-sm space-y-0.5" aria-labelledby="btn-payroll-status-filter">
                     <li>
                       <button type="button" data-status-val="all"
-                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-white bg-white/20 transition-colors">
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-white bg-white/20 transition-colors">
                         <span>All Statuses</span>
                         <svg class="status-check-icon h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -430,7 +480,7 @@
                     </li>
                     <li>
                       <button type="button" data-status-val="PAID"
-                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-blue-200 hover:bg-blue-500/30 transition-colors">
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-blue-200 hover:bg-blue-500/30 transition-colors">
                         <span>Paid</span>
                         <svg class="status-check-icon hidden h-4 w-4 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -439,7 +489,7 @@
                     </li>
                     <li>
                       <button type="button" data-status-val="PENDING"
-                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-yellow-300 hover:bg-yellow-500/20 transition-colors">
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-yellow-300 hover:bg-yellow-500/20 transition-colors">
                         <span>Pending</span>
                         <svg class="status-check-icon hidden h-4 w-4 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -448,7 +498,7 @@
                     </li>
                     <li>
                       <button type="button" data-status-val="UNPAID"
-                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-rose-300 hover:bg-rose-500/25 transition-colors">
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-1.5 font-black text-rose-300 hover:bg-rose-500/25 transition-colors">
                         <span>Unpaid</span>
                         <svg class="status-check-icon hidden h-4 w-4 text-rose-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
@@ -556,8 +606,8 @@
         </div>
 
         <!-- ── VIEW 2: 50-RECORD CHUNKED BATCHES ET.AL CARDS ── -->
-        <div id="payroll-batches-view" class="hidden p-6 sm:p-8">
-          <div id="payroll-batches-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <div id="payroll-batches-view" class="hidden p-4 sm:p-6 lg:p-8">
+          <div id="payroll-batches-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6 items-start">
             <!-- Dynamic 50-Item Chunked Batches rendered via payroll.js -->
           </div>
         </div>

@@ -34,9 +34,40 @@ import {
 } from "../../../../backend/api/payroll.js";
 import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices } from "../../../../backend/api/staff.js";
+import { fetchBatches } from "../../../../backend/api/beneficiary.js";
 import { initPayrollExportModal, openPayrollExportModal, updatePayrollExportData } from "./payroll-export.js";
 
 let rowsPerPage = 10;
+let payrollSortMode = "default"; // "default" | "name_asc" | "name_desc"
+
+// --- START: PAYROLL BATCH ORDER LOCAL STORAGE HELPERS ---
+function getPayrollBatchOrderStorageKey(officeId, batchKey) {
+  const o = String(officeId ?? "all").toLowerCase();
+  const b = String(batchKey ?? "default").toLowerCase().replace(/\s+/g, "_");
+  return `spes_payroll_order_${o}_${b}`;
+}
+
+function getPayrollCustomOrder(officeId, batchKey) {
+  try {
+    const raw = localStorage.getItem(getPayrollBatchOrderStorageKey(officeId, batchKey));
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function savePayrollCustomOrder(officeId, batchKey, orderIds) {
+  try {
+    localStorage.setItem(getPayrollBatchOrderStorageKey(officeId, batchKey), JSON.stringify(orderIds));
+  } catch (e) {}
+}
+
+function clearPayrollCustomOrder(officeId, batchKey) {
+  try {
+    localStorage.removeItem(getPayrollBatchOrderStorageKey(officeId, batchKey));
+  } catch (e) {}
+}
+// --- END: PAYROLL BATCH ORDER LOCAL STORAGE HELPERS ---
 
 // --- START: PURGE LEGACY PAYROLL MOCK STORAGE ---
 function _purgeLegacyPayrollStorage() {
@@ -108,6 +139,7 @@ let allBeneficiaries = [];
 let filteredBeneficiaries = [];
 let allImplementors = [];
 let allOffices = [];
+let allBatches = [];
 let customGeneralBudget = null;
 let customOfficeBudgets = {};
 
@@ -529,45 +561,46 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
         
         <div>
           <!-- Card Header & Badge -->
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="flex items-center flex-wrap gap-1.5">
-                <!-- Compact Badge (e.g. B1 - P1) with Interactive Hover Tooltip (BATCH 1 - PAYROLL 1) -->
-                <div class="group/batchtip relative inline-flex z-20 hover:z-50">
-                  <span class="cursor-pointer inline-flex items-center gap-1.5 rounded-none bg-spes-blue/10 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/30 hover:bg-spes-blue/20 dark:hover:bg-spes-yellow/25 transition-colors">
-                    ${escHtml(batch.shortCode || batch.batchName)} (Max ${BATCH_CHUNK_SIZE})
-                  </span>
-                  <div role="tooltip"
-                    class="pointer-events-none absolute bottom-full left-0 mb-2.5 z-50 invisible opacity-0 group-hover/batchtip:visible group-hover/batchtip:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-black text-white shadow-2xl dark:bg-slate-800 border border-spes-blue/40 dark:border-spes-yellow/40 flex items-center gap-2 drop-shadow-2xl">
-                    <span class="inline-block h-2 w-2 rounded-full bg-spes-blue dark:bg-spes-yellow shrink-0"></span>
-                    <span class="tracking-wide">${escHtml(batch.batchName)} — Max ${BATCH_CHUNK_SIZE}</span>
-                    <div class="absolute -bottom-1 left-4 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
-                  </div>
+          <div class="flex items-start justify-between gap-2 flex-wrap sm:flex-nowrap">
+            <div class="flex items-center flex-wrap gap-1.5 min-w-0">
+              <!-- Compact Badge (e.g. B1 - P1) with Interactive Hover Tooltip (BATCH 1 - PAYROLL 1) -->
+              <div class="group/batchtip relative inline-flex z-20 hover:z-50 shrink-0">
+                <span class="cursor-pointer inline-flex items-center gap-1 rounded-none bg-spes-blue/10 px-2 sm:px-2.5 py-1 text-xs font-black uppercase tracking-wider text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow border border-spes-blue/20 dark:border-spes-yellow/30 hover:bg-spes-blue/20 dark:hover:bg-spes-yellow/25 transition-colors">
+                  ${escHtml(batch.shortCode || batch.batchName)} (Max ${BATCH_CHUNK_SIZE})
+                </span>
+                <div role="tooltip"
+                  class="pointer-events-none absolute bottom-full left-0 mb-2.5 z-50 invisible opacity-0 group-hover/batchtip:visible group-hover/batchtip:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-black text-white shadow-2xl dark:bg-slate-800 border border-spes-blue/40 dark:border-spes-yellow/40 flex items-center gap-2 drop-shadow-2xl">
+                  <span class="inline-block h-2 w-2 rounded-full bg-spes-blue dark:bg-spes-yellow shrink-0"></span>
+                  <span class="tracking-wide">${escHtml(batch.batchName)} — Max ${BATCH_CHUNK_SIZE}</span>
+                  <div class="absolute -bottom-1 left-4 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
                 </div>
-                ${matchBadge}
               </div>
-              <!-- ET. AL Main Principal Header (e.g. ABA-A, CARLIA ANN P. ET. AL.) -->
-              <h4 class="mt-2.5 font-montserrat text-lg font-black uppercase text-spes-black dark:text-white leading-snug group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-colors">
-                ${highlightMatchText(batch.etAlName, searchQ)}
-              </h4>
-              <p class="text-xs sm:text-sm font-bold text-spes-black/60 dark:text-white/60 mt-1">
-                Contract Period: <span class="text-spes-blue dark:text-spes-yellow font-black uppercase">${escHtml(batch.contractPeriod)}</span>
-              </p>
+              ${matchBadge}
             </div>
             
-            <div class="text-right shrink-0">
-              <span class="block text-xs font-extrabold uppercase tracking-widest text-spes-black/50 dark:text-white/50">Batch Principal</span>
-              <span class="batch-principal-val font-mono text-xl sm:text-2xl font-black text-spes-blue dark:text-spes-yellow tabular-nums" data-target="${batch.totalPrincipal}">
+            <div class="text-right min-w-0 max-w-full text-wrap whitespace-normal self-start">
+              <span class="block text-[10px] sm:text-xs font-extrabold uppercase tracking-widest text-spes-black/50 dark:text-white/50 text-wrap whitespace-normal">Batch Principal</span>
+              <span class="batch-principal-val font-mono text-base sm:text-lg md:text-xl font-black text-spes-blue dark:text-spes-yellow tabular-nums text-wrap whitespace-normal break-words inline-block" data-target="${batch.totalPrincipal}">
                 ₱0.00
               </span>
             </div>
           </div>
 
+          <!-- ET. AL Main Principal Header & Contract Period -->
+          <div class="mt-3">
+            <h4 class="font-montserrat text-base sm:text-lg font-black uppercase text-spes-black dark:text-white leading-snug group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-colors break-words">
+              ${highlightMatchText(batch.etAlName, searchQ)}
+            </h4>
+            <p class="text-xs sm:text-sm font-bold text-spes-black/60 dark:text-white/60 mt-1">
+              Contract Period: <span class="text-spes-blue dark:text-spes-yellow font-black uppercase">${escHtml(batch.contractPeriod)}</span>
+            </p>
+          </div>
+
           <!-- Progress Bar -->
           <div class="mt-5 space-y-2">
             <div class="flex justify-between text-xs font-black uppercase text-spes-black/60 dark:text-white/60">
-              <span>Disbursed: <span class="batch-paid-val font-mono tabular-nums font-bold text-spes-black dark:text-white" data-target="${batch.totalPaid}">₱0.00</span></span>
-              <span class="batch-progress-val text-emerald-600 dark:text-emerald-400 font-mono font-bold" data-target="${progress}">0%</span>
+              <span class="truncate">Disbursed: <span class="batch-paid-val font-mono tabular-nums font-bold text-spes-black dark:text-white" data-target="${batch.totalPaid}">₱0.00</span></span>
+              <span class="batch-progress-val text-emerald-600 dark:text-emerald-400 font-mono font-bold shrink-0 ml-2" data-target="${progress}">0%</span>
             </div>
             <div class="h-2.5 w-full overflow-hidden bg-gray-200 dark:bg-black/40">
               <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${progress}%"></div>
@@ -575,18 +608,18 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
           </div>
 
           <!-- Stats Mini Grid with Neutral Fills & Literal Number Fonts -->
-          <div class="mt-4 grid grid-cols-3 gap-2.5 text-center">
-            <div class="rounded-none bg-slate-100 dark:bg-[#141D26] p-3 border border-slate-300 dark:border-white/10">
-              <span class="block text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70">TOTAL</span>
-              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-spes-black dark:text-white tabular-nums" data-target="${totalCount}">0</span>
+          <div class="mt-4 grid grid-cols-3 gap-1.5 sm:gap-2.5 text-center">
+            <div class="rounded-none bg-slate-100 dark:bg-[#141D26] p-2 sm:p-3 border border-slate-300 dark:border-white/10 min-w-0">
+              <span class="block text-[10px] sm:text-xs font-black uppercase tracking-wider text-spes-black/70 dark:text-white/70 truncate">TOTAL</span>
+              <span class="batch-stat-count font-mono font-black text-base sm:text-lg md:text-xl text-spes-black dark:text-white tabular-nums" data-target="${totalCount}">0</span>
             </div>
-            <div class="rounded-none bg-emerald-50 dark:bg-emerald-950/40 p-3 border border-emerald-300 dark:border-emerald-500/40">
-              <span class="block text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">PAID</span>
-              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-emerald-700 dark:text-emerald-300 tabular-nums" data-target="${paidCount}">0</span>
+            <div class="rounded-none bg-emerald-50 dark:bg-emerald-950/40 p-2 sm:p-3 border border-emerald-300 dark:border-emerald-500/40 min-w-0">
+              <span class="block text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 truncate">PAID</span>
+              <span class="batch-stat-count font-mono font-black text-base sm:text-lg md:text-xl text-emerald-700 dark:text-emerald-300 tabular-nums" data-target="${paidCount}">0</span>
             </div>
-            <div class="rounded-none bg-amber-50 dark:bg-amber-950/40 p-3 border border-amber-300 dark:border-amber-500/40">
-              <span class="block text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">PENDING</span>
-              <span class="batch-stat-count font-mono font-black text-lg sm:text-xl text-amber-700 dark:text-amber-300 tabular-nums" data-target="${pendingCount}">0</span>
+            <div class="rounded-none bg-amber-50 dark:bg-amber-950/40 p-2 sm:p-3 border border-amber-300 dark:border-amber-500/40 min-w-0">
+              <span class="block text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 truncate">PENDING</span>
+              <span class="batch-stat-count font-mono font-black text-base sm:text-lg md:text-xl text-amber-700 dark:text-amber-300 tabular-nums" data-target="${pendingCount}">0</span>
             </div>
           </div>
         </div>
@@ -681,7 +714,27 @@ function applyBeneficiaryFiltersAndRender() {
     b.batchId === selectedBatchIndex ||
     String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
   );
-  let list = targetBatch ? targetBatch.beneficiaries : [];
+  let list = targetBatch ? [...targetBatch.beneficiaries] : [];
+
+  // Apply sorting mode or custom saved order per batch
+  const batchKey = targetBatch?.batchId || targetBatch?.shortCode || selectedBatchTitle || "default";
+  const customOrder = getPayrollCustomOrder(selectedOfficeId, batchKey);
+
+  if (payrollSortMode === "name_asc") {
+    list.sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || "")));
+  } else if (payrollSortMode === "name_desc") {
+    list.sort((a, b) => String(b.full_name || "").localeCompare(String(a.full_name || "")));
+  } else if (payrollSortMode === "default" && Array.isArray(customOrder)) {
+    const orderIds = customOrder.map(String);
+    list.sort((a, b) => {
+      const idxA = orderIds.indexOf(String(a.id));
+      const idxB = orderIds.indexOf(String(b.id));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
+    });
+  }
 
   if (statusFilter !== "all") {
     list = list.filter(b => (b.payroll?.payment_status || "PENDING") === statusFilter);
@@ -726,7 +779,7 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       </tr>
     `;
   } else {
-    tbody.innerHTML = pageItems.map((b) => {
+    tbody.innerHTML = pageItems.map((b, idx) => {
       const p = b.payroll || {};
       const isSelected = selectedBeneficiaryIds.has(String(b.id));
       const isPaid = p.payment_status === "PAID";
@@ -772,10 +825,18 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
 
       return `
         <tr class="beneficiary-row cursor-pointer border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-300 text-sm sm:text-base ${highlightMatchedRow}"
-            data-bene-id="${b.id}">
+            data-bene-id="${b.id}"
+            draggable="true">
           <td class="p-5 text-center" onclick="event.stopPropagation()">
-            <input type="checkbox" data-checkbox-bene-id="${b.id}" ${isSelected ? "checked" : ""}
-              class="payroll-row-checkbox h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow" />
+            <div class="flex items-center justify-center gap-2">
+              <button type="button" class="cursor-grab active:cursor-grabbing text-spes-black/30 hover:text-spes-blue dark:text-white/30 dark:hover:text-spes-yellow transition-colors drag-handle p-1" title="Hold & Drag to reorder row in this batch">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
+                </svg>
+              </button>
+              <input type="checkbox" data-checkbox-bene-id="${b.id}" ${isSelected ? "checked" : ""}
+                class="payroll-row-checkbox h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow" />
+            </div>
           </td>
           <td class="px-6 py-5 font-black text-base text-spes-black dark:text-white uppercase whitespace-nowrap">
             <span class="hover:underline hover:text-spes-blue dark:hover:text-spes-yellow">${highlightMatchText(b.full_name || "—", searchQ)}</span>
@@ -851,8 +912,115 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
   updatePaginationIndicators(total);
   updateBulkDisburseButtonState();
   wireTableActions();
+  initPayrollRowDragAndDrop();
 }
 // --- END: RENDER VIEW 3 (INDIVIDUAL BENEFICIARY PAYROLL TABLE WITH LARGER FONTS) ---
+
+// --- START: BENEFICIARY ROW DRAG-AND-DROP REORDERING ---
+function initPayrollRowDragAndDrop() {
+  const tbody = document.getElementById("payroll-beneficiaries-tbody");
+  if (!tbody || tbody.dataset.dragBound === "true") return;
+  tbody.dataset.dragBound = "true";
+
+  let draggedRow = null;
+  let draggedBeneId = null;
+
+  tbody.addEventListener("dragstart", (e) => {
+    const row = e.target.closest("tr.beneficiary-row");
+    if (!row) return;
+
+    draggedRow = row;
+    draggedBeneId = row.dataset.beneId;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", draggedBeneId);
+
+    setTimeout(() => {
+      row.classList.add("opacity-40", "bg-blue-500/10", "border-2", "border-dashed", "border-spes-blue");
+    }, 0);
+  });
+
+  tbody.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    const targetRow = e.target.closest("tr.beneficiary-row");
+    if (!targetRow || targetRow === draggedRow) return;
+
+    const rect = targetRow.getBoundingClientRect();
+    const isAfter = (e.clientY - rect.top) > (rect.height / 2);
+
+    tbody.querySelectorAll("tr.beneficiary-row").forEach(r => {
+      r.classList.remove("border-t-4", "border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+    });
+
+    if (isAfter) {
+      targetRow.classList.add("border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+    } else {
+      targetRow.classList.add("border-t-4", "border-spes-blue", "dark:border-spes-yellow");
+    }
+  });
+
+  tbody.addEventListener("dragleave", (e) => {
+    const targetRow = e.target.closest("tr.beneficiary-row");
+    if (targetRow) {
+      targetRow.classList.remove("border-t-4", "border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+    }
+  });
+
+  tbody.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const targetRow = e.target.closest("tr.beneficiary-row");
+    if (!targetRow || !draggedRow || targetRow === draggedRow) {
+      tbody.querySelectorAll("tr.beneficiary-row").forEach(r => {
+        r.classList.remove("border-t-4", "border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+      });
+      return;
+    }
+
+    const sourceId = String(draggedBeneId);
+    const targetId = String(targetRow.dataset.beneId);
+
+    const targetBatch = currentOfficeBatches.find(b => 
+      b.batchIndex === selectedBatchIndex ||
+      b.batchId === selectedBatchIndex ||
+      String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
+    );
+
+    if (targetBatch && Array.isArray(targetBatch.beneficiaries)) {
+      const srcIdx = targetBatch.beneficiaries.findIndex(b => String(b.id) === sourceId);
+      const tgtIdx = targetBatch.beneficiaries.findIndex(b => String(b.id) === targetId);
+
+      if (srcIdx !== -1 && tgtIdx !== -1) {
+        const [movedItem] = targetBatch.beneficiaries.splice(srcIdx, 1);
+        targetBatch.beneficiaries.splice(tgtIdx, 0, movedItem);
+
+        const newOrderIds = targetBatch.beneficiaries.map(b => b.id);
+        const batchKey = targetBatch.batchId || targetBatch.shortCode || selectedBatchTitle || "default";
+        savePayrollCustomOrder(selectedOfficeId, batchKey, newOrderIds);
+
+        payrollSortMode = "default";
+        updateSortDropdownIcons();
+        applyBeneficiaryFiltersAndRender();
+      }
+    }
+
+    tbody.querySelectorAll("tr.beneficiary-row").forEach(r => {
+      r.classList.remove("border-t-4", "border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+    });
+  });
+
+  tbody.addEventListener("dragend", () => {
+    if (draggedRow) {
+      draggedRow.classList.remove("opacity-40", "bg-blue-500/10", "border-2", "border-dashed", "border-spes-blue");
+      draggedRow = null;
+      draggedBeneId = null;
+    }
+    tbody.querySelectorAll("tr.beneficiary-row").forEach(r => {
+      r.classList.remove("border-t-4", "border-b-4", "border-spes-blue", "dark:border-spes-yellow");
+    });
+  });
+}
+// --- END: BENEFICIARY ROW DRAG-AND-DROP REORDERING ---
 
 // --- START: WIRE TABLE ACTIONS (ROW CLICK = VIEW, EDIT ICON = EDIT) ---
 function wireTableActions() {
@@ -1221,7 +1389,7 @@ function renderPayrollPageSizeSelector(totalCount, onChangeCallback) {
 }
 // --- END: PAYROLL DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
 
-// --- START: PAGINATION CONTROLS & INDICATORS (LEFT-1, INPUT, RIGHT-LAST) ---
+// --- START: PAGINATION CONTROLS & INDICATORS (LEFT-1, 2, INPUT, RIGHT-LAST) ---
 function updatePaginationIndicators(totalCount) {
   const indicatorsEl = document.getElementById("payroll-page-indicators");
   if (!indicatorsEl) return;
@@ -1229,8 +1397,14 @@ function updatePaginationIndicators(totalCount) {
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
   currentPage = Math.min(totalPages, Math.max(1, currentPage));
 
+  // Update disabled state of Previous and Next buttons
+  const prevBtn = document.getElementById("payroll-prev-page");
+  const nextBtn = document.getElementById("payroll-next-page");
+  if (prevBtn) prevBtn.toggleAttribute("disabled", currentPage <= 1 || totalPages <= 1);
+  if (nextBtn) nextBtn.toggleAttribute("disabled", currentPage >= totalPages || totalPages <= 1);
+
   let html = "";
-  if (totalPages <= 3) {
+  if (totalPages <= 4) {
     for (let p = 1; p <= totalPages; p++) {
       const isActive = p === currentPage;
       const activeClass = isActive
@@ -1257,13 +1431,29 @@ function updatePaginationIndicators(totalCount) {
       </li>
     `;
 
-    // Middle: Jump input
-    const isMidActive = currentPage > 1 && currentPage < totalPages;
+    // Page 2
+    const p2Active = currentPage === 2
+      ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+      : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-primary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
     html += `
-      <li class="flex items-center h-9 rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-primary">
+      <li>
+        <button type="button" class="cursor-pointer page-indicator-btn h-9 min-w-9 rounded-xl px-2.5 text-xs sm:text-sm transition-colors ${p2Active}" data-page="2">
+          2
+        </button>
+      </li>
+    `;
+
+    // Middle: Jump input
+    const isMidActive = currentPage > 2 && currentPage < totalPages;
+    const midActiveClass = isMidActive
+      ? "border-spes-blue ring-2 ring-spes-blue/50 dark:border-spes-yellow dark:ring-spes-yellow/50 bg-spes-blue/5 dark:bg-spes-yellow/5"
+      : "border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-primary";
+
+    html += `
+      <li class="flex items-center h-9 rounded-xl border ${midActiveClass} transition-all">
         <input id="payroll-page-jump" type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..."
-               class="w-14 h-full bg-transparent px-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-               style="-moz-appearance: textfield;" title="Type page and press Enter" />
+               class="w-14 h-full bg-transparent px-1.5 text-center text-xs sm:text-sm font-black text-spes-blue outline-none dark:text-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+               style="-moz-appearance: textfield;" title="Type page number (1-${totalPages}) and press Enter" />
       </li>
     `;
 
@@ -1313,7 +1503,7 @@ function updatePaginationIndicators(totalCount) {
     });
   }
 }
-// --- END: PAGINATION CONTROLS & INDICATORS (LEFT-1, INPUT, RIGHT-LAST) ---
+// --- END: PAGINATION CONTROLS & INDICATORS (LEFT-1, 2, INPUT, RIGHT-LAST) ---
 
 // --- START: EXPORT PAYROLL REPORT SUMMARY ---
 function exportPayrollReport(e) {
@@ -1476,20 +1666,81 @@ function updateBulkDisburseButtonState() {
 }
 // --- END: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
 
-// --- START: SETUP PAYROLL STATUS FILTER DROPDOWN ---
+// --- START: SETUP PAYROLL STATUS & SORT FILTER DROPDOWN ---
+function updateSortDropdownIcons() {
+  const sortItems = document.querySelectorAll(".sort-filter-item");
+  sortItems.forEach(otherItem => {
+    const isCurrent = (otherItem.dataset.sortVal || "default") === payrollSortMode;
+    const checkIcon = otherItem.querySelector(".sort-check-icon");
+    if (checkIcon) {
+      checkIcon.classList.toggle("hidden", !isCurrent);
+    }
+    if (isCurrent) {
+      otherItem.classList.add("bg-white/20");
+    } else {
+      otherItem.classList.remove("bg-white/20");
+    }
+  });
+}
+
 function setupPayrollStatusFilterDropdown() {
   const filterBtn = document.getElementById("btn-payroll-status-filter");
   const filterInput = document.getElementById("payroll-status-filter");
   const tooltipLabel = document.getElementById("tooltip-current-status-label");
-  const items = document.querySelectorAll(".status-filter-item");
+  const statusItems = document.querySelectorAll(".status-filter-item");
+  const sortItems = document.querySelectorAll(".sort-filter-item");
+  const resetOrderBtn = document.getElementById("btn-reset-custom-order");
 
-  items.forEach(item => {
+  // Wire Sort items
+  sortItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const sortVal = item.dataset.sortVal || "default";
+      payrollSortMode = sortVal;
+      updateSortDropdownIcons();
+
+      if (currentView === "beneficiaries") {
+        currentPage = 1;
+        applyBeneficiaryFiltersAndRender();
+      } else if (currentView === "batches") {
+        render50ItemChunkedBatchCards();
+      }
+    });
+  });
+
+  // Wire Reset Custom Order Button
+  resetOrderBtn?.addEventListener("click", () => {
+    const targetBatch = currentOfficeBatches.find(b => 
+      b.batchIndex === selectedBatchIndex ||
+      b.batchId === selectedBatchIndex ||
+      String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
+    );
+    const batchKey = targetBatch?.batchId || targetBatch?.shortCode || selectedBatchTitle || "default";
+    clearPayrollCustomOrder(selectedOfficeId, batchKey);
+    payrollSortMode = "default";
+    updateSortDropdownIcons();
+
+    // Re-group office batches cleanly
+    const officeBeneficiaries = selectedOfficeId === "ALL"
+      ? allBeneficiaries
+      : allBeneficiaries.filter(b => String(b.staffs?.office_id) === String(selectedOfficeId));
+    currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE, "default");
+
+    if (currentView === "beneficiaries") {
+      currentPage = 1;
+      applyBeneficiaryFiltersAndRender();
+    } else if (currentView === "batches") {
+      render50ItemChunkedBatchCards();
+    }
+  });
+
+  // Wire Status items
+  statusItems.forEach(item => {
     item.addEventListener("click", () => {
       const statusVal = item.dataset.statusVal || "all";
       if (filterInput) filterInput.value = statusVal;
 
       // Update active highlight and check icons on items
-      items.forEach(otherItem => {
+      statusItems.forEach(otherItem => {
         const isCurrent = (otherItem.dataset.statusVal || "all") === statusVal;
         const checkIcon = otherItem.querySelector(".status-check-icon");
         if (checkIcon) {
@@ -1509,7 +1760,7 @@ function setupPayrollStatusFilterDropdown() {
 
       // Update active state on button to show filled icon when active
       if (filterBtn) {
-        if (statusVal !== "all") {
+        if (statusVal !== "all" || payrollSortMode !== "default") {
           filterBtn.classList.add("active", "text-spes-yellow");
           filterBtn.classList.remove("text-white/80");
         } else {
@@ -1525,15 +1776,15 @@ function setupPayrollStatusFilterDropdown() {
     });
   });
 }
-// --- END: SETUP PAYROLL STATUS FILTER DROPDOWN ---
+// --- END: SETUP PAYROLL STATUS & SORT FILTER DROPDOWN ---
 
 // --- START: ADJUST RESPONSIVE DROPDOWN PLACEMENT ---
 function adjustResponsiveDropdownPlacement() {
   const subToggle = document.getElementById("btn-bulk-edit-submenu-toggle");
   if (!subToggle) return;
-  // If mobile or small viewport, drop below (bottom-start); otherwise drop to right
+  // If mobile or small viewport, drop below (bottom-start); on desktop, show on left side (left-start)
   const isSmallScreen = window.innerWidth < 640;
-  subToggle.setAttribute("data-dropdown-placement", isSmallScreen ? "bottom-start" : "right-start");
+  subToggle.setAttribute("data-dropdown-placement", isSmallScreen ? "bottom-start" : "left-start");
 }
 // --- END: ADJUST RESPONSIVE DROPDOWN PLACEMENT ---
 
@@ -1925,11 +2176,12 @@ function restoreViewFromUrl(isFirstVisit = false) {
  */
 async function refreshPayrollData({ silent = true } = {}) {
   try {
-    const [beneRes, officeRes, implRes, budgetRes] = await Promise.all([
+    const [beneRes, officeRes, implRes, budgetRes, batchRes] = await Promise.all([
       fetchBeneficiaryPayrollRoster({ forceRefresh: true }),
       fetchOffices({ forceRefresh: true }),
       fetchImplementorList({ forceRefresh: true }),
       fetchDbPayrollBudgets({ forceRefresh: true }),
+      fetchBatches({ forceRefresh: true }),
     ]);
 
     if (!beneRes.error && Array.isArray(beneRes.data)) {
@@ -1940,6 +2192,9 @@ async function refreshPayrollData({ silent = true } = {}) {
     }
     if (implRes && Array.isArray(implRes)) {
       allImplementors = implRes;
+    }
+    if (batchRes && Array.isArray(batchRes.data)) {
+      allBatches = batchRes.data;
     }
 
     if (budgetRes) {
@@ -1968,7 +2223,7 @@ async function refreshPayrollData({ silent = true } = {}) {
       const officeBeneficiaries = selectedOfficeId === "ALL"
         ? allBeneficiaries
         : allBeneficiaries.filter(b => String(b.staffs?.office_id) === String(selectedOfficeId));
-      currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE);
+      currentOfficeBatches = groupOfficeBeneficiariesIntoChunks(officeBeneficiaries, BATCH_CHUNK_SIZE, payrollSortMode);
       applyBeneficiaryFiltersAndRender();
     }
 
@@ -2012,16 +2267,18 @@ export async function initPayroll() {
   }
 
   try {
-    const [beneRes, officeRes, implRes, budgetRes] = await Promise.all([
+    const [beneRes, officeRes, implRes, budgetRes, batchRes] = await Promise.all([
       fetchBeneficiaryPayrollRoster({ forceRefresh: false }),
       fetchOffices({ forceRefresh: false }),
       fetchImplementorList({ forceRefresh: false }),
       fetchDbPayrollBudgets({ forceRefresh: false }),
+      fetchBatches({ forceRefresh: false }),
     ]);
 
     allBeneficiaries = beneRes.data || [];
     allOffices = officeRes.data || [];
     allImplementors = implRes || [];
+    allBatches = batchRes?.data || [];
 
     if (budgetRes) {
       if (budgetRes.generalBudget !== undefined && budgetRes.generalBudget !== null) {
@@ -2435,6 +2692,14 @@ export function initPayrollTableDragScroll() {
       const walk = (x - startX) * 1.5;
       container.scrollLeft = scrollLeft - walk;
     });
+
+    container.addEventListener("wheel", (e) => {
+      if (!e.shiftKey) return;
+      if (e.deltaY !== 0 || e.deltaX !== 0) {
+        e.preventDefault();
+        container.scrollLeft += (e.deltaY || e.deltaX);
+      }
+    }, { passive: false });
   });
 }
 // --- END: PAYROLL TABLE DRAG TO SCROLL (GRAB TO SCROLL) ---
