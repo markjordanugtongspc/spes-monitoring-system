@@ -271,7 +271,7 @@
           <div class="flex items-center gap-3 min-w-0 flex-1">
             <!-- Back button: STRICTLY hidden on root view -->
             <button id="btn-back-to-payroll-implementors"
-              class="cursor-pointer hidden items-center justify-center rounded-xl border border-white/30 bg-white/15 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-white/25 active:scale-95 transition-all shrink-0"
+              class="cursor-pointer hidden items-center justify-center rounded-md border border-rose-600 bg-rose-600 px-3.5 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-all hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-400/80 active:scale-95 dark:border-rose-500 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-500/20 dark:hover:text-rose-300 dark:hover:border-rose-400/60 shrink-0"
               title="Back to Overview">
               <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
@@ -463,18 +463,18 @@
         </div>
 
         <!-- ── VIEW 1: IMPLEMENTORS PAYROLL OVERVIEW TABLE ── -->
-        <div id="payroll-implementors-view" class="overflow-x-auto">
-          <table class="w-full text-left text-sm sm:text-base">
+        <div id="payroll-implementors-view" class="overflow-x-auto select-none sm:select-auto transition-all">
+          <table class="w-full min-w-[950px] lg:min-w-full text-left text-sm sm:text-base">
             <thead
               class="bg-gray-100/80 text-xs font-black uppercase tracking-wider text-spes-black/75 border-b border-gray-200 dark:bg-white/5 dark:text-white/70 dark:border-white/10">
               <tr>
-                <th scope="col" class="px-6 py-4">Implementor / Office</th>
-                <th scope="col" class="px-6 py-4">Assigned Officer</th>
-                <th scope="col" class="px-6 py-4 text-center">Beneficiaries</th>
-                <th scope="col" class="px-6 py-4 text-right">Total Budget</th>
-                <th scope="col" class="px-6 py-4 text-right">Total Disbursed</th>
-                <th scope="col" class="px-6 py-4 text-right">Pending Amount</th>
-                <th scope="col" class="px-6 py-4 text-right">Remaining Balance</th>
+                <th scope="col" class="px-6 py-4 whitespace-nowrap">Implementor / Office</th>
+                <th scope="col" class="px-6 py-4 whitespace-nowrap">Assigned Officer</th>
+                <th scope="col" class="px-6 py-4 text-center whitespace-nowrap">Beneficiaries</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Total Budget</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Total Disbursed</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Pending Amount</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Remaining Balance</th>
               </tr>
             </thead>
             <tbody id="payroll-implementors-tbody" class="divide-y divide-gray-100 dark:divide-white/5">
@@ -563,8 +563,8 @@
         </div>
 
         <!-- ── VIEW 3: INDIVIDUAL BENEFICIARY PAYROLL ROSTER TABLE ── -->
-        <div id="payroll-beneficiaries-view" class="hidden overflow-x-auto">
-          <table class="w-full text-left text-sm sm:text-base">
+        <div id="payroll-beneficiaries-view" class="hidden overflow-x-auto select-none sm:select-auto transition-all">
+          <table class="w-full min-w-[1050px] lg:min-w-full text-left text-sm sm:text-base">
             <thead
               class="bg-gray-100/80 text-xs font-black uppercase tracking-wider text-spes-black/75 border-b border-gray-200 dark:bg-white/5 dark:text-white/70 dark:border-white/10">
               <tr>
@@ -572,12 +572,12 @@
                   <input id="payroll-checkbox-all" type="checkbox"
                     class="h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow" />
                 </th>
-                <th scope="col" class="px-6 py-4">Name of Assured / Beneficiary</th>
-                <th scope="col" class="px-6 py-4 text-center">Contract Period</th>
-                <th scope="col" class="px-6 py-4 text-right">Days Worked</th>
-                <th scope="col" class="px-6 py-4 text-right">Stipend Amount</th>
-                <th scope="col" class="px-6 py-4 text-center">Payment Status</th>
-                <th scope="col" class="px-6 py-4 text-center">Actions</th>
+                <th scope="col" class="px-6 py-4 whitespace-nowrap">Name of Assured / Beneficiary</th>
+                <th scope="col" class="px-6 py-4 text-center whitespace-nowrap">Contract Period</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Days Worked</th>
+                <th scope="col" class="px-6 py-4 text-right whitespace-nowrap">Stipend Amount</th>
+                <th scope="col" class="px-6 py-4 text-center whitespace-nowrap">Payment Status</th>
+                <th scope="col" class="px-6 py-4 text-center whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody id="payroll-beneficiaries-tbody" class="divide-y divide-gray-100 dark:divide-white/5">
@@ -590,10 +590,19 @@
         <nav id="payroll-pagination"
           class="flex flex-col sm:flex-row items-center justify-between p-5 border-t border-gray-100 dark:border-white/10 gap-3"
           aria-label="Payroll Table Navigation">
-          <span class="text-sm font-semibold text-spes-black/60 dark:text-white/60">
-            Showing <span id="payroll-pagination-range" class="font-black text-spes-black dark:text-white">0</span> of
-            <span id="payroll-pagination-total" class="font-black text-spes-black dark:text-white">0</span> entries
-          </span>
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-sm font-semibold text-spes-black/60 dark:text-white/60">
+              Showing <span id="payroll-pagination-range" class="font-black text-spes-black dark:text-white">0</span> of
+              <span id="payroll-pagination-total" class="font-black text-spes-black dark:text-white">0</span> entries
+            </span>
+            <!-- Dynamic Page Size Selector (Show 5, 10, 25, 50, All) -->
+            <div id="payroll-page-size-container" class="flex items-center gap-1.5 text-xs text-spes-black/60 dark:text-white/60">
+              <label for="payroll-page-size-select" class="font-medium whitespace-nowrap">Show:</label>
+              <select id="payroll-page-size-select"
+                class="cursor-pointer rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-spes-black shadow-sm focus:border-spes-blue focus:outline-none dark:border-white/10 dark:bg-spes-dark-secondary dark:text-white dark:focus:border-spes-yellow transition-all">
+              </select>
+            </div>
+          </div>
           <div class="inline-flex items-center gap-1.5">
             <button id="payroll-prev-page"
               class="cursor-pointer px-4 py-2 text-xs sm:text-sm font-bold rounded-xl border border-gray-300 dark:border-white/10 hover:bg-spes-blue/10 dark:hover:bg-white/10 transition-colors">Previous</button>

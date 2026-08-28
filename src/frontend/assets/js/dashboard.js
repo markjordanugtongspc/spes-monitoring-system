@@ -503,7 +503,7 @@ const paginationStorageKey = window.location.pathname.includes("/roles/")
   ? "roles"
   : "implementors";
 let currentPage = preferenceStorage.getPaginationPage(paginationStorageKey) || 1;
-const rowsPerPage = (window.location.pathname.includes("/implementors/") || window.location.pathname.includes("/roles/")) ? 5 : 3;
+let rowsPerPage = 10;
 
 async function loadImplementorTable(userRole) {
   const isRolesPage = window.location.pathname.includes("/roles/");
@@ -671,45 +671,140 @@ function _loadTimelineMetrics(beneficiaries = []) {
   }
 }
 
+// --- START: DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
+function calculatePageSizeOptions(totalCount) {
+  const count = Math.max(0, Number(totalCount) || 0);
+  const tiers = [5, 10, 25, 50, 100];
+  
+  let validTiers = tiers.filter(t => t < count);
+  if (count > 0 && !validTiers.includes(10) && count >= 10) validTiers.push(10);
+  if (count > 5 && count <= 15 && !validTiers.includes(5)) validTiers.push(5);
+  
+  if (count > 0 && !validTiers.includes(count)) {
+    validTiers.push(count);
+  }
+  
+  validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx && val > 0).sort((a, b) => a - b);
+  
+  if (validTiers.length === 0) {
+    return [10];
+  }
+  if (validTiers.length === 1 && count > 0) {
+    validTiers.unshift(Math.min(5, count));
+    validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx);
+  }
+  
+  return validTiers;
+}
+
+function renderPageSizeSelector(totalCount, onChangeCallback) {
+  const container = document.getElementById("page-size-selector-container");
+  const select = document.getElementById("page-size-select");
+  if (!container || !select) return;
+
+  const count = Math.max(0, Number(totalCount) || 0);
+  if (count === 0) {
+    container.classList.add("hidden");
+    container.classList.remove("flex");
+    return;
+  }
+
+  container.classList.remove("hidden");
+  container.classList.add("flex");
+
+  const options = calculatePageSizeOptions(count);
+
+  if (!options.includes(rowsPerPage) && rowsPerPage !== count) {
+    rowsPerPage = options.includes(10) ? 10 : (options[0] || 10);
+  }
+
+  select.innerHTML = options
+    .map(opt => {
+      const isSelected = opt === rowsPerPage || (rowsPerPage >= count && opt === count);
+      const label = opt === count ? `All (${opt})` : opt;
+      return `<option value="${opt}" ${isSelected ? "selected" : ""}>${label}</option>`;
+    })
+    .join("");
+
+  if (select.dataset.listenerBound !== "true") {
+    select.dataset.listenerBound = "true";
+    select.addEventListener("change", (e) => {
+      const val = Number(e.target.value);
+      rowsPerPage = val > 0 ? val : (count || 10);
+      currentPage = 1;
+      if (typeof onChangeCallback === "function") onChangeCallback();
+    });
+  }
+}
+// --- END: DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
+
+// --- START: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, INPUT, AND RIGHT-LAST ---
 function updateStaffPageIndicators(totalCount) {
   const indicatorsEl = document.getElementById("page-indicators-container");
   if (!indicatorsEl) return;
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
   currentPage = Math.min(totalPages, Math.max(1, currentPage));
   preferenceStorage.savePaginationPage(paginationStorageKey, currentPage);
-  const pages = totalPages <= 3
-    ? Array.from({ length: totalPages }, (_, index) => index + 1)
-    : [1, 2, "input", totalPages];
+
   let html = "";
-  pages.forEach((page, index) => {
-    if (index === 2 && page === "input") {
-      html += `<li class="flex items-center border border-spes-blue/15 bg-spes-white dark:border-white/10 dark:bg-spes-dark-primary">
-        <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="${currentPage > 2 && currentPage < totalPages ? currentPage : ""}" placeholder="..." aria-label="Jump to page"
-          class="w-16 bg-transparent px-2 py-2 text-center text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          style="-moz-appearance: textfield" title="Type a page number and press Enter">
-      </li>`;
-    } else {
-    const active = page === currentPage
-      ? "bg-spes-blue/10 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-black"
-      : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-white/8 dark:hover:text-spes-yellow";
-    html += `<li><button type="button" class="page-btn cursor-pointer border border-spes-blue/15 px-3 py-2 text-sm font-medium transition-colors ${active}" data-page="${page}" aria-label="Go to page ${page}">${page}</button></li>`;
+  if (totalPages <= 3) {
+    for (let p = 1; p <= totalPages; p++) {
+      const active = p === currentPage
+        ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+        : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+      html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${active}" data-page="${p}" aria-label="Go to page ${p}">${p}</button></li>`;
     }
-  });
+  } else {
+    // Left: Page 1
+    const p1Active = currentPage === 1
+      ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+      : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+    html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p1Active}" data-page="1" aria-label="Go to page 1">1</button></li>`;
+
+    // Middle: Jump Input Field
+    const isMidActive = currentPage > 1 && currentPage < totalPages;
+    html += `<li class="flex items-center border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary">
+      <input id="staff-page-jump" type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..." aria-label="Jump to page"
+        class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        style="-moz-appearance: textfield" title="Type page number and press Enter" />
+    </li>`;
+
+    // Right: Last Page (totalPages)
+    const pLastActive = currentPage === totalPages
+      ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+      : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+    html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${pLastActive}" data-page="${totalPages}" aria-label="Go to page ${totalPages}">${totalPages}</button></li>`;
+  }
+
   indicatorsEl.innerHTML = html;
+
   indicatorsEl.querySelectorAll(".page-btn").forEach((button) => button.addEventListener("click", () => {
     currentPage = Number(button.dataset.page) || 1;
     renderPaginatedTable(window._spesDashboardRole || "officer");
   }));
+
   const jumpInput = document.getElementById("staff-page-jump");
   const jump = () => {
-    const requested = Number.parseInt(jumpInput?.value, 10);
+    const rawVal = jumpInput?.value?.trim();
+    if (!rawVal) return;
+    const requested = Number.parseInt(rawVal, 10);
     if (!Number.isFinite(requested)) return;
     currentPage = Math.min(totalPages, Math.max(1, requested));
     renderPaginatedTable(window._spesDashboardRole || "officer");
   };
-  jumpInput?.addEventListener("change", jump);
-  jumpInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") jump(); });
+  jumpInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      jump();
+    }
+  });
+  jumpInput?.addEventListener("blur", () => {
+    if (jumpInput.value && jumpInput.value !== String(currentPage)) {
+      jump();
+    }
+  });
 }
+// --- END: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, INPUT, AND RIGHT-LAST ---
 
 function syncStaffActionDropdown() {
   const actionButton = document.getElementById("staff-action-dropdown-btn");
@@ -772,8 +867,13 @@ function positionStaffActionMenu(menu, trigger) {
     bottom: "auto",
     transform: "none",
   });
-}function renderPaginatedTable(userRole) {
+}
+
+// --- START: RENDER PAGINATED TABLE WITH DYNAMIC PAGE SIZE ---
+function renderPaginatedTable(userRole) {
   const total = allImplementors.length;
+  renderPageSizeSelector(total, () => renderPaginatedTable(userRole));
+
   const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
   currentPage = Math.min(totalPages, Math.max(1, currentPage));
   const start = total === 0 ? 0 : (currentPage - 1) * rowsPerPage;
@@ -797,6 +897,56 @@ function positionStaffActionMenu(menu, trigger) {
   renderTableRows(paged, userRole);
   updateStaffPageIndicators(total);
 }
+// --- END: RENDER PAGINATED TABLE WITH DYNAMIC PAGE SIZE ---
+
+// --- START: DRAG SCROLL HELPER FOR DASHBOARD / IMPLEMENTORS / ROLES ---
+function addDragScroll(el) {
+  if (!el || el.dataset.dragScrollBound === "true") return;
+  el.dataset.dragScrollBound = "true";
+  let isDown = false, startX = 0, scrollLeft = 0;
+
+  const checkOverflow = () => {
+    if (el.scrollWidth > el.clientWidth) {
+      el.classList.add("cursor-grab");
+    } else {
+      el.classList.remove("cursor-grab", "cursor-grabbing");
+    }
+  };
+
+  window.addEventListener("resize", checkOverflow);
+  setTimeout(checkOverflow, 400);
+
+  el.addEventListener("mousedown", (e) => {
+    if (e.target.closest("button, input, select, a, svg")) return;
+    isDown = true;
+    el.classList.add("cursor-grabbing");
+    el.classList.remove("cursor-grab");
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener("mouseleave", () => {
+    isDown = false;
+    el.classList.remove("cursor-grabbing");
+    checkOverflow();
+  });
+  el.addEventListener("mouseup", () => {
+    isDown = false;
+    el.classList.remove("cursor-grabbing");
+    checkOverflow();
+  });
+  el.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    el.scrollLeft = scrollLeft - walk;
+  });
+  el.addEventListener("wheel", (e) => {
+    if (e.deltaY === 0) return;
+    el.scrollLeft += e.deltaY;
+  }, { passive: true });
+}
+// --- END: DRAG SCROLL HELPER FOR DASHBOARD / IMPLEMENTORS / ROLES ---
 
 function initPaginationEvents(userRole) {
   const previousButton = document.getElementById("prev-page");
@@ -813,6 +963,9 @@ function initPaginationEvents(userRole) {
       if (currentPage < Math.ceil(allImplementors.length / rowsPerPage)) { currentPage++; renderPaginatedTable(userRole); }
     });
   }
+
+  const tableWrapper = document.getElementById("staff-table-wrapper") || document.getElementById("roles-table-wrapper") || document.querySelector(".overflow-x-auto");
+  if (tableWrapper) addDragScroll(tableWrapper);
 }
 
 function renderTableRows(implementors, userRole) {

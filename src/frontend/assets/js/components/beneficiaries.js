@@ -73,7 +73,7 @@ const OFFICE_BADGE_PALETTES = [
 ];
 
 // ── Constants ─────────────────────────────────────────────────
-const ROWS_PER_PAGE = 10;
+let rowsPerPage = 10;
 
 // ── URL state helpers ─────────────────────────────────────────
 function _getUrlParam(key) {
@@ -448,13 +448,50 @@ function initAnimatedBadgePanel(config) {
 
 // ── Drag + wheel-to-scroll helper ────────────────────────────
 function addDragScroll(el) {
-  if (!el) return;
+  if (!el || el.dataset.dragScrollBound === "true") return;
+  el.dataset.dragScrollBound = "true";
   let isDown = false, startX = 0, scrollLeft = 0;
-  el.addEventListener("mousedown",  (e) => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; });
-  el.addEventListener("mouseleave", ()  => { isDown = false; });
-  el.addEventListener("mouseup",    ()  => { isDown = false; });
-  el.addEventListener("mousemove",  (e) => { if (!isDown) return; e.preventDefault(); const x = e.pageX - el.offsetLeft; el.scrollLeft = scrollLeft - (x - startX); });
-  el.addEventListener("wheel",      (e) => { if (e.deltaY === 0) return; e.preventDefault(); el.scrollLeft += e.deltaY; }, { passive: false });
+
+  const checkOverflow = () => {
+    if (el.scrollWidth > el.clientWidth) {
+      el.classList.add("cursor-grab");
+    } else {
+      el.classList.remove("cursor-grab", "cursor-grabbing");
+    }
+  };
+
+  window.addEventListener("resize", checkOverflow);
+  setTimeout(checkOverflow, 400);
+
+  el.addEventListener("mousedown", (e) => {
+    if (e.target.closest("button, input, select, a, svg")) return;
+    isDown = true;
+    el.classList.add("cursor-grabbing");
+    el.classList.remove("cursor-grab");
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener("mouseleave", () => {
+    isDown = false;
+    el.classList.remove("cursor-grabbing");
+    checkOverflow();
+  });
+  el.addEventListener("mouseup", () => {
+    isDown = false;
+    el.classList.remove("cursor-grabbing");
+    checkOverflow();
+  });
+  el.addEventListener("mousemove", (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    el.scrollLeft = scrollLeft - walk;
+  });
+  el.addEventListener("wheel", (e) => {
+    if (e.deltaY === 0) return;
+    el.scrollLeft += e.deltaY;
+  }, { passive: true });
 }
 
 // ── Office Sort Panel ─────────────────────────────────────────
@@ -533,6 +570,8 @@ export function initBeneficiaries() {
   if (!tbody) return;
   if (tbody.dataset.beneficiariesInitialized === "true") return;
   tbody.dataset.beneficiariesInitialized = "true";
+
+  addDragScroll(document.getElementById("implementors-table-wrapper"));
 
   const session = getSession();
   const access = getOfficeAccessScope(session);
@@ -1562,7 +1601,7 @@ export function initBeneficiaries() {
     if (targetB) {
       const idx = filteredData.findIndex(item => String(item.id) === String(targetB));
       if (idx !== -1) {
-        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+        currentPage = Math.floor(idx / rowsPerPage) + 1;
       }
     }
 
@@ -1780,7 +1819,7 @@ export function initBeneficiaries() {
     if (targetId) {
       const idx = activeStaffs.findIndex(item => String(item.id) === String(targetId));
       if (idx !== -1) {
-        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+        currentPage = Math.floor(idx / rowsPerPage) + 1;
       }
     }
     setupSortFilter(activeStaffs);
@@ -1970,11 +2009,13 @@ export function initBeneficiaries() {
   // ── Table rendering ─────────────────────────────────────────
   function renderPaginatedTable() {
     const visibleRows = viewMode === "implementors" ? activeImplementors : getVisibleBeneficiaries();
-    const totalPages = Math.max(1, Math.ceil(visibleRows.length / ROWS_PER_PAGE));
+    renderPageSizeSelector(visibleRows.length, () => renderPaginatedTable());
+
+    const totalPages = Math.max(1, Math.ceil(visibleRows.length / rowsPerPage));
     currentPage = Math.min(totalPages, Math.max(1, currentPage));
     preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
-    const start = (currentPage - 1) * ROWS_PER_PAGE;
-    const end = start + ROWS_PER_PAGE;
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
 
     // Update headers and controls visibility first
     const headerRow = document.getElementById("table-header-row");
@@ -2416,59 +2457,142 @@ export function initBeneficiaries() {
 
   }
 
-  // ── Pagination Indicators ───────────────────────────────────────────────
+  // --- START: BENEFICIARIES DYNAMIC PAGE SIZE FORMULA ---
+function calculatePageSizeOptions(totalCount) {
+  const count = Math.max(0, Number(totalCount) || 0);
+  const tiers = [5, 10, 25, 50, 100];
+  
+  let validTiers = tiers.filter(t => t < count);
+  if (count > 0 && !validTiers.includes(10) && count >= 10) validTiers.push(10);
+  if (count > 5 && count <= 15 && !validTiers.includes(5)) validTiers.push(5);
+  
+  if (count > 0 && !validTiers.includes(count)) {
+    validTiers.push(count);
+  }
+  
+  validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx && val > 0).sort((a, b) => a - b);
+  
+  if (validTiers.length === 0) {
+    return [10];
+  }
+  if (validTiers.length === 1 && count > 0) {
+    validTiers.unshift(Math.min(5, count));
+    validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx);
+  }
+  
+  return validTiers;
+}
+
+function renderPageSizeSelector(totalCount, onChangeCallback) {
+  const container = document.getElementById("page-size-selector-container");
+  const select = document.getElementById("page-size-select");
+  if (!container || !select) return;
+
+  const count = Math.max(0, Number(totalCount) || 0);
+  if (count === 0) {
+    container.classList.add("hidden");
+    container.classList.remove("flex");
+    return;
+  }
+
+  container.classList.remove("hidden");
+  container.classList.add("flex");
+
+  const options = calculatePageSizeOptions(count);
+
+  if (!options.includes(rowsPerPage) && rowsPerPage !== count) {
+    rowsPerPage = options.includes(10) ? 10 : (options[0] || 10);
+  }
+
+  select.innerHTML = options
+    .map(opt => {
+      const isSelected = opt === rowsPerPage || (rowsPerPage >= count && opt === count);
+      const label = opt === count ? `All (${opt})` : opt;
+      return `<option value="${opt}" ${isSelected ? "selected" : ""}>${label}</option>`;
+    })
+    .join("");
+
+  if (select.dataset.listenerBound !== "true") {
+    select.dataset.listenerBound = "true";
+    select.addEventListener("change", (e) => {
+      const val = Number(e.target.value);
+      rowsPerPage = val > 0 ? val : (count || 10);
+      currentPage = 1;
+      if (typeof onChangeCallback === "function") onChangeCallback();
+    });
+  }
+}
+// --- END: BENEFICIARIES DYNAMIC PAGE SIZE FORMULA ---
+
+  // ── Pagination Indicators (Left: 1, Middle: Input, Right: Last Page) ───
   function updatePageIndicators(totalCount) {
     const indicatorsEl = document.getElementById("page-indicators-container");
-    if (indicatorsEl) {
-      const totalPages = Math.max(1, Math.ceil(totalCount / ROWS_PER_PAGE));
+    if (!indicatorsEl) return;
+    const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+    currentPage = Math.min(totalPages, Math.max(1, currentPage));
+    preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
 
-      const pages = totalPages <= 3
-        ? Array.from({ length: totalPages }, (_, index) => index + 1)
-        : [1, 2, 'input', totalPages];
+    let html = "";
+    if (totalPages <= 3) {
+      for (let p = 1; p <= totalPages; p++) {
+        const active = p === currentPage
+          ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+          : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+        html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${active}" data-page="${p}">${p}</button></li>`;
+      }
+    } else {
+      // Left: Page 1
+      const p1Active = currentPage === 1
+        ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+        : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+      html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${p1Active}" data-page="1">1</button></li>`;
 
-      let html = "";
-      pages.forEach(p => {
-        if (p === 'input') {
-          const showValue = currentPage > 2 && currentPage < totalPages ? currentPage : "";
-          const activeClass = showValue !== '' ? 'bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold' : 'text-spes-black/60 dark:text-spes-white/60';
+      // Middle: Input
+      const isMidActive = currentPage > 1 && currentPage < totalPages;
+      html += `<li class="flex items-center border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-secondary">
+        <input type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..."
+               class="w-14 bg-transparent px-1.5 py-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+               style="-moz-appearance: textfield;" title="Type page and press Enter" />
+      </li>`;
 
-          html += `
-            <li class="flex items-center border border-spes-blue/15 dark:border-white/10 bg-spes-white dark:bg-spes-dark-primary">
-              <input type="number" min="1" max="${totalPages}" value="${showValue}" placeholder="..." 
-                     class="w-12 py-2 text-center text-sm bg-transparent focus:outline-none focus:ring-1 focus:ring-spes-blue dark:focus:ring-spes-yellow transition-colors [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${activeClass}" 
-                     style="-moz-appearance: textfield;" title="Type page and press Enter" />
-            </li>
-          `;
-        } else {
-          const active = p === currentPage
-            ? "bg-spes-blue/8 text-spes-blue dark:bg-white/10 dark:text-spes-yellow font-bold border-spes-blue/15"
-            : "bg-spes-white text-spes-black/60 hover:bg-spes-blue/8 hover:text-spes-blue dark:bg-spes-dark-primary dark:text-spes-white/60 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow border-spes-blue/15 dark:border-white/10";
-          html += `<li><button class="page-btn cursor-pointer border px-3 py-2 text-sm font-medium ${active} transition-colors" data-page="${p}">${p}</button></li>`;
+      // Right: Last Page (totalPages)
+      const pLastActive = currentPage === totalPages
+        ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+        : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-secondary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+      html += `<li><button type="button" class="page-btn cursor-pointer border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-medium transition-colors ${pLastActive}" data-page="${totalPages}">${totalPages}</button></li>`;
+    }
+
+    indicatorsEl.innerHTML = html;
+    indicatorsEl.querySelectorAll(".page-btn").forEach(btn => {
+      btn.addEventListener("click", e => {
+        currentPage = parseInt(e.currentTarget.getAttribute("data-page"), 10);
+        renderPaginatedTable();
+      });
+    });
+
+    const input = indicatorsEl.querySelector("input");
+    if (input) {
+      const jump = () => {
+        const rawVal = input.value.trim();
+        if (!rawVal) return;
+        let val = parseInt(rawVal, 10);
+        if (isNaN(val) || val < 1) val = 1;
+        if (val > totalPages) val = totalPages;
+        currentPage = val;
+        preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
+        renderPaginatedTable();
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          jump();
         }
       });
-      indicatorsEl.innerHTML = html;
-      indicatorsEl.querySelectorAll(".page-btn").forEach(btn => {
-        btn.addEventListener("click", e => {
-          currentPage = parseInt(e.currentTarget.getAttribute("data-page"), 10);
-          renderPaginatedTable();
-        });
+      input.addEventListener("blur", () => {
+        if (input.value && input.value !== String(currentPage)) {
+          jump();
+        }
       });
-
-      const input = indicatorsEl.querySelector("input");
-      if (input) {
-        input.addEventListener("change", (e) => {
-          let val = parseInt(e.target.value, 10);
-          if (isNaN(val) || val < 1) val = 1;
-          if (val > totalPages) val = totalPages;
-          currentPage = val;
-          preferenceStorage.savePaginationPage(getPaginationStorageKey(), currentPage);
-          renderPaginatedTable();
-        });
-        input.addEventListener("keyup", (e) => {
-          if (e.key === "Enter") input.blur();
-        });
-      }
-      // End page-jump listeners.
     }
   }
 
@@ -2487,7 +2611,7 @@ export function initBeneficiaries() {
     } else {
       listLength = activeBeneficiaries.length;
     }
-    const total = Math.ceil(listLength / ROWS_PER_PAGE);
+    const total = Math.ceil(listLength / rowsPerPage);
     if (currentPage < total) { currentPage++; renderPaginatedTable(); }
   });
 
@@ -3292,7 +3416,7 @@ export function initBeneficiaries() {
       const idx = visibleBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
       if (idx !== -1) {
         // Go to the correct page
-        currentPage = Math.floor(idx / ROWS_PER_PAGE) + 1;
+        currentPage = Math.floor(idx / rowsPerPage) + 1;
 
         // renderPaginatedTable might not be in scope here if it's defined inside another block,
         // but wait, it is hoisted or accessible? We should check if we can call it.

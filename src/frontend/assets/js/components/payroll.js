@@ -36,7 +36,7 @@ import { fetchImplementorList } from "../../../../backend/api/auth.js";
 import { fetchOffices } from "../../../../backend/api/staff.js";
 import { initPayrollExportModal, openPayrollExportModal, updatePayrollExportData } from "./payroll-export.js";
 
-const ROWS_PER_PAGE = 10;
+let rowsPerPage = 10;
 
 // --- START: PURGE LEGACY PAYROLL MOCK STORAGE ---
 function _purgeLegacyPayrollStorage() {
@@ -708,11 +708,13 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
   const searchQ = (document.getElementById("payroll-search-input")?.value || "").trim().toLowerCase();
 
   const total = filteredBeneficiaries.length;
-  const totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+  renderPayrollPageSizeSelector(total, () => renderBeneficiariesPaginatedTable());
+
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
   currentPage = Math.min(totalPages, Math.max(1, currentPage));
 
-  const start = (currentPage - 1) * ROWS_PER_PAGE;
-  const end = start + ROWS_PER_PAGE;
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
   const pageItems = filteredBeneficiaries.slice(start, end);
 
   if (pageItems.length === 0) {
@@ -1152,28 +1154,127 @@ function setPayrollDrawerStatus(status = "PENDING") {
 // --- END: SET PAYROLL DRAWER PAYMENT STATUS BUTTON STATE ---
 // --- END: OFFCANVAS DRAWER VIEW / EDIT LOGIC ---
 
-// --- START: PAGINATION CONTROLS & INDICATORS ---
+// --- START: PAYROLL DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
+function calculatePayrollPageSizeOptions(totalCount) {
+  const count = Math.max(0, Number(totalCount) || 0);
+  const tiers = [5, 10, 25, 50, 100];
+  
+  let validTiers = tiers.filter(t => t < count);
+  if (count > 0 && !validTiers.includes(10) && count >= 10) validTiers.push(10);
+  if (count > 5 && count <= 15 && !validTiers.includes(5)) validTiers.push(5);
+  
+  if (count > 0 && !validTiers.includes(count)) {
+    validTiers.push(count);
+  }
+  
+  validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx && val > 0).sort((a, b) => a - b);
+  
+  if (validTiers.length === 0) {
+    return [10];
+  }
+  if (validTiers.length === 1 && count > 0) {
+    validTiers.unshift(Math.min(5, count));
+    validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx);
+  }
+  
+  return validTiers;
+}
+
+function renderPayrollPageSizeSelector(totalCount, onChangeCallback) {
+  const container = document.getElementById("payroll-page-size-container");
+  const select = document.getElementById("payroll-page-size-select");
+  if (!container || !select) return;
+
+  const count = Math.max(0, Number(totalCount) || 0);
+  if (count === 0) {
+    container.classList.add("hidden");
+    container.classList.remove("flex");
+    return;
+  }
+
+  container.classList.remove("hidden");
+  container.classList.add("flex");
+
+  const options = calculatePayrollPageSizeOptions(count);
+
+  if (!options.includes(rowsPerPage) && rowsPerPage !== count) {
+    rowsPerPage = options.includes(10) ? 10 : (options[0] || 10);
+  }
+
+  select.innerHTML = options
+    .map(opt => {
+      const isSelected = opt === rowsPerPage || (rowsPerPage >= count && opt === count);
+      const label = opt === count ? `All (${opt})` : opt;
+      return `<option value="${opt}" ${isSelected ? "selected" : ""}>${label}</option>`;
+    })
+    .join("");
+
+  if (select.dataset.listenerBound !== "true") {
+    select.dataset.listenerBound = "true";
+    select.addEventListener("change", (e) => {
+      const val = Number(e.target.value);
+      rowsPerPage = val > 0 ? val : (count || 10);
+      currentPage = 1;
+      if (typeof onChangeCallback === "function") onChangeCallback();
+    });
+  }
+}
+// --- END: PAYROLL DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
+
+// --- START: PAGINATION CONTROLS & INDICATORS (LEFT-1, INPUT, RIGHT-LAST) ---
 function updatePaginationIndicators(totalCount) {
   const indicatorsEl = document.getElementById("payroll-page-indicators");
   if (!indicatorsEl) return;
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / ROWS_PER_PAGE));
-  let html = "";
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+  currentPage = Math.min(totalPages, Math.max(1, currentPage));
 
-  for (let p = 1; p <= totalPages; p++) {
-    if (totalPages > 6 && p > 3 && p < totalPages - 1) {
-      if (p === 4) html += `<li class="px-2 text-xs font-bold text-spes-black/40 dark:text-white/40">...</li>`;
-      continue;
+  let html = "";
+  if (totalPages <= 3) {
+    for (let p = 1; p <= totalPages; p++) {
+      const isActive = p === currentPage;
+      const activeClass = isActive
+        ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+        : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-primary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+      html += `
+        <li>
+          <button type="button" class="cursor-pointer page-indicator-btn h-9 min-w-9 rounded-xl px-2.5 text-xs sm:text-sm transition-colors ${activeClass}" data-page="${p}">
+            ${p}
+          </button>
+        </li>
+      `;
     }
-    const isActive = p === currentPage;
-    const activeClass = isActive
+  } else {
+    // Left: Page 1
+    const p1Active = currentPage === 1
       ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
       : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-primary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
-
     html += `
       <li>
-        <button type="button" class="cursor-pointer page-indicator-btn h-9 min-w-9 rounded-xl px-2.5 text-xs sm:text-sm transition-colors ${activeClass}" data-page="${p}">
-          ${p}
+        <button type="button" class="cursor-pointer page-indicator-btn h-9 min-w-9 rounded-xl px-2.5 text-xs sm:text-sm transition-colors ${p1Active}" data-page="1">
+          1
+        </button>
+      </li>
+    `;
+
+    // Middle: Jump input
+    const isMidActive = currentPage > 1 && currentPage < totalPages;
+    html += `
+      <li class="flex items-center h-9 rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-spes-dark-primary">
+        <input id="payroll-page-jump" type="number" min="1" max="${totalPages}" value="${isMidActive ? currentPage : ""}" placeholder="..."
+               class="w-14 h-full bg-transparent px-1.5 text-center text-xs sm:text-sm font-bold text-spes-blue outline-none focus:ring-2 focus:ring-spes-blue dark:text-spes-yellow dark:focus:ring-spes-yellow [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+               style="-moz-appearance: textfield;" title="Type page and press Enter" />
+      </li>
+    `;
+
+    // Right: Last Page (totalPages)
+    const pLastActive = currentPage === totalPages
+      ? "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue font-black"
+      : "bg-white text-spes-black hover:bg-spes-blue/10 dark:bg-spes-dark-primary dark:text-white dark:hover:bg-white/10 font-bold border border-gray-200 dark:border-white/10";
+    html += `
+      <li>
+        <button type="button" class="cursor-pointer page-indicator-btn h-9 min-w-9 rounded-xl px-2.5 text-xs sm:text-sm transition-colors ${pLastActive}" data-page="${totalPages}">
+          ${totalPages}
         </button>
       </li>
     `;
@@ -1187,8 +1288,32 @@ function updatePaginationIndicators(totalCount) {
       renderBeneficiariesPaginatedTable();
     });
   });
+
+  const jumpInput = document.getElementById("payroll-page-jump");
+  if (jumpInput) {
+    const jump = () => {
+      const rawVal = jumpInput.value.trim();
+      if (!rawVal) return;
+      let requested = Number.parseInt(rawVal, 10);
+      if (isNaN(requested) || requested < 1) requested = 1;
+      if (requested > totalPages) requested = totalPages;
+      currentPage = requested;
+      renderBeneficiariesPaginatedTable();
+    };
+    jumpInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        jump();
+      }
+    });
+    jumpInput.addEventListener("blur", () => {
+      if (jumpInput.value && jumpInput.value !== String(currentPage)) {
+        jump();
+      }
+    });
+  }
 }
-// --- END: PAGINATION CONTROLS & INDICATORS ---
+// --- END: PAGINATION CONTROLS & INDICATORS (LEFT-1, INPUT, RIGHT-LAST) ---
 
 // --- START: EXPORT PAYROLL REPORT SUMMARY ---
 function exportPayrollReport(e) {
@@ -2033,7 +2158,7 @@ export async function initPayroll() {
   });
 
   document.getElementById("payroll-next-page")?.addEventListener("click", () => {
-    const totalPages = Math.ceil(filteredBeneficiaries.length / ROWS_PER_PAGE);
+    const totalPages = Math.ceil(filteredBeneficiaries.length / rowsPerPage);
     if (currentPage < totalPages) {
       currentPage++;
       renderBeneficiariesPaginatedTable();
@@ -2251,5 +2376,65 @@ export async function initPayroll() {
     const loggedTs = paymentStatus === "PAID" && targetDatePaid ? ` (Logged: ${formatPhilippineTimestamp(targetDatePaid)})` : "";
     modals.flowbiteToast("Record Saved", `Disbursement details updated successfully in database.${loggedTs}`, "success");
   });
+
+  initPayrollTableDragScroll();
 }
 // --- END: MAIN PAYROLL INITIALIZATION ---
+
+// --- START: PAYROLL TABLE DRAG TO SCROLL (GRAB TO SCROLL) ---
+export function initPayrollTableDragScroll() {
+  const tableContainers = [
+    document.getElementById("payroll-implementors-view"),
+    document.getElementById("payroll-beneficiaries-view")
+  ];
+
+  tableContainers.forEach(container => {
+    if (!container || container.dataset.dragScrollBound === "true") return;
+    container.dataset.dragScrollBound = "true";
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    const checkOverflow = () => {
+      if (container.scrollWidth > container.clientWidth) {
+        container.classList.add("cursor-grab");
+      } else {
+        container.classList.remove("cursor-grab", "cursor-grabbing");
+      }
+    };
+
+    window.addEventListener("resize", checkOverflow);
+    setTimeout(checkOverflow, 400);
+
+    container.addEventListener("mousedown", (e) => {
+      if (e.target.closest("button, input, select, a, svg")) return;
+      isDown = true;
+      container.classList.add("cursor-grabbing");
+      container.classList.remove("cursor-grab");
+      startX = e.pageX - container.offsetLeft;
+      scrollLeft = container.scrollLeft;
+    });
+
+    container.addEventListener("mouseleave", () => {
+      isDown = false;
+      container.classList.remove("cursor-grabbing");
+      checkOverflow();
+    });
+
+    container.addEventListener("mouseup", () => {
+      isDown = false;
+      container.classList.remove("cursor-grabbing");
+      checkOverflow();
+    });
+
+    container.addEventListener("mousemove", (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      container.scrollLeft = scrollLeft - walk;
+    });
+  });
+}
+// --- END: PAYROLL TABLE DRAG TO SCROLL (GRAB TO SCROLL) ---

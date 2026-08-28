@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -181,9 +181,9 @@
             </div>
 
             <!-- Scrollable Table Wrapper -->
-            <div class="overflow-x-auto w-full">
+            <div id="staff-table-wrapper" class="overflow-x-auto w-full select-none sm:select-auto transition-all">
               <!-- Table -->
-              <table class="w-full text-sm text-spes-black/70 dark:text-spes-white/70">
+              <table class="w-full min-w-[750px] lg:min-w-full text-sm text-spes-black/70 dark:text-spes-white/70">
                 <thead
                   class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
                   <tr>
@@ -334,16 +334,25 @@
 
             <!-- Pagination -->
             <nav class="flex flex-col items-center justify-between gap-3 p-4 sm:flex-row" aria-label="Table navigation">
-              <span class="text-sm text-spes-black/60 dark:text-spes-white/60">
-                Showing <span id="pagination-range"
-                  class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
-                  class="font-semibold text-spes-black dark:text-spes-white">0</span>
-              </span>
-              <ul id="pagination-controls" class="grid w-full grid-cols-2 items-start justify-center gap-2 text-sm sm:flex sm:w-auto sm:-space-x-px sm:gap-0">
+              <div class="flex flex-wrap items-center gap-3">
+                <span class="text-sm text-spes-black/60 dark:text-spes-white/60">
+                  Showing <span id="pagination-range"
+                    class="font-semibold text-spes-black dark:text-spes-white">1-10</span> of <span id="pagination-total"
+                    class="font-semibold text-spes-black dark:text-spes-white">0</span>
+                </span>
+                <!-- Dynamic Page Size Selector (Show 5, 10, 25, 50, All) -->
+                <div id="page-size-selector-container" class="flex items-center gap-1.5 text-xs text-spes-black/60 dark:text-spes-white/60">
+                  <label for="page-size-select" class="font-medium whitespace-nowrap">Show:</label>
+                  <select id="page-size-select"
+                    class="cursor-pointer rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-bold text-spes-black shadow-sm focus:border-spes-blue focus:outline-none dark:border-white/10 dark:bg-spes-dark-secondary dark:text-white dark:focus:border-spes-yellow transition-all">
+                  </select>
+                </div>
+              </div>
+              <ul id="pagination-controls" class="grid w-full grid-cols-2 items-center justify-center gap-2 text-sm sm:flex sm:w-auto sm:-space-x-px sm:gap-0">
                 <li class="w-full sm:w-auto"><button id="prev-page"
                     class="cursor-pointer w-full whitespace-nowrap rounded-lg border sm:rounded-s-lg border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 shadow-sm transition-colors hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-40 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200">Previous</button>
                 </li>
-                <li id="page-indicators-container" class="order-3 col-span-2 flex w-full flex-wrap justify-center -space-x-px sm:order-none sm:col-span-1 sm:w-auto"></li>
+                <li id="page-indicators-container" class="order-3 col-span-2 flex w-full flex-wrap items-center justify-center -space-x-px sm:order-none sm:col-span-1 sm:w-auto"></li>
                 <li class="w-full sm:w-auto"><button id="next-page"
                     class="cursor-pointer w-full whitespace-nowrap rounded-lg border sm:rounded-e-lg border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 disabled:pointer-events-none disabled:opacity-40 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200">Next</button>
                 </li>
