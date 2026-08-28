@@ -10,6 +10,7 @@ import {
   fetchDbPayrollRecords,
   upsertDbPayrollRecord,
   bulkUpsertDbPayrollStatus,
+  bulkUpsertDbPayrollRecords,
   fetchDbPayrollBudgets,
   upsertDbPayrollBudget,
   invalidatePayrollCache,
@@ -320,3 +321,17 @@ export async function bulkUpdatePayrollStatus(beneficiaryItems = [], newStatus =
   return await bulkUpsertDbPayrollStatus(beneficiaryItems, newStatus, staffId);
 }
 // --- END: BULK UPDATE BENEFICIARY PAYROLL STATUS IN DATABASE ---
+
+// --- START: BULK UPDATE BENEFICIARY PAYROLL RECORDS IN DATABASE ---
+/**
+ * Batch updates arbitrary payroll fields (stipend, work days, notes, payment status) in Supabase for selected beneficiaries.
+ *
+ * @param {Array<{ beneficiaryId: string|number, officeId?: string|number|null }|string|number>} beneficiaryItems
+ * @param {object} commonUpdates
+ * @param {string|number|null} staffId
+ * @returns {Promise<{ success: boolean, updatedCount?: number, error?: string }>}
+ */
+export async function bulkUpdatePayrollRecords(beneficiaryItems = [], commonUpdates = {}, staffId = null) {
+  return await bulkUpsertDbPayrollRecords(beneficiaryItems, commonUpdates, staffId);
+}
+// --- END: BULK UPDATE BENEFICIARY PAYROLL RECORDS IN DATABASE ---

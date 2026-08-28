@@ -27,6 +27,7 @@ import {
   groupOfficeBeneficiariesIntoChunks,
   updateBeneficiaryPayrollRecord,
   bulkUpdatePayrollStatus,
+  bulkUpdatePayrollRecords,
   fetchDbPayrollBudgets,
   upsertDbPayrollBudget,
   subscribeToPayrollRealtime,
@@ -1239,12 +1240,34 @@ function renderImplementorsSkeleton() {
 }
 // --- END: SKELETON LOADERS ---
 
+// --- START: HIDE FLOWBITE MODAL HELPER ---
+function hideFlowbiteModalById(modalId) {
+  const modalEl = document.getElementById(modalId);
+  if (!modalEl) return;
+  const closeBtn = modalEl.querySelector("[data-modal-hide]");
+  if (closeBtn) {
+    closeBtn.click();
+  } else {
+    modalEl.classList.add("hidden");
+    modalEl.setAttribute("aria-hidden", "true");
+  }
+}
+// --- END: HIDE FLOWBITE MODAL HELPER ---
+
 // --- START: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
 function updateBulkDisburseButtonState() {
   const btn = document.getElementById("btn-bulk-disburse");
   const labelEl = document.getElementById("btn-bulk-disburse-label");
   const iconEl = document.getElementById("btn-bulk-disburse-icon");
   const editDataBtn = document.getElementById("btn-toggle-inline-edit");
+
+  // Update Left-Side Checkbox + Chevron Bulk Actions Button
+  const bulkActionsBtn = document.getElementById("btn-payroll-bulk-actions");
+  const countBadge = document.getElementById("bulk-selected-count-badge");
+  const countDropdown = document.getElementById("bulk-selected-dropdown-count");
+  const countStipend = document.getElementById("bulk-stipend-count-label");
+  const countDays = document.getElementById("bulk-days-count-label");
+  const countNotes = document.getElementById("bulk-notes-count-label");
 
   // Edit Data button: STRICTLY visible only in View 1 (Implementors Root View)
   if (editDataBtn) {
@@ -1255,6 +1278,25 @@ function updateBulkDisburseButtonState() {
       editDataBtn.classList.add("hidden");
       editDataBtn.classList.remove("inline-flex");
       if (isInlineEditMode) toggleInlineEditMode(false);
+    }
+  }
+
+  const selectedItems = allBeneficiaries.filter(b => selectedBeneficiaryIds.has(String(b.id)));
+  const count = selectedItems.length;
+
+  if (countBadge) countBadge.textContent = count;
+  if (countDropdown) countDropdown.textContent = count;
+  if (countStipend) countStipend.textContent = count;
+  if (countDays) countDays.textContent = count;
+  if (countNotes) countNotes.textContent = count;
+
+  if (bulkActionsBtn) {
+    if (currentView === "beneficiaries" && count > 0) {
+      bulkActionsBtn.classList.remove("hidden");
+      bulkActionsBtn.classList.add("inline-flex");
+    } else {
+      bulkActionsBtn.classList.add("hidden");
+      bulkActionsBtn.classList.remove("inline-flex");
     }
   }
 
@@ -1269,9 +1311,6 @@ function updateBulkDisburseButtonState() {
 
   btn.classList.remove("hidden");
   btn.classList.add("inline-flex");
-
-  const selectedItems = allBeneficiaries.filter(b => selectedBeneficiaryIds.has(String(b.id)));
-  const count = selectedItems.length;
 
   if (count > 0) {
     btn.disabled = false;
@@ -1311,6 +1350,264 @@ function updateBulkDisburseButtonState() {
   }
 }
 // --- END: UPDATE BULK DISBURSE ACTION BUTTON STATE ---
+
+// --- START: SETUP PAYROLL STATUS FILTER DROPDOWN ---
+function setupPayrollStatusFilterDropdown() {
+  const filterBtn = document.getElementById("btn-payroll-status-filter");
+  const filterInput = document.getElementById("payroll-status-filter");
+  const tooltipLabel = document.getElementById("tooltip-current-status-label");
+  const items = document.querySelectorAll(".status-filter-item");
+
+  items.forEach(item => {
+    item.addEventListener("click", () => {
+      const statusVal = item.dataset.statusVal || "all";
+      if (filterInput) filterInput.value = statusVal;
+
+      // Update active highlight and check icons on items
+      items.forEach(otherItem => {
+        const isCurrent = (otherItem.dataset.statusVal || "all") === statusVal;
+        const checkIcon = otherItem.querySelector(".status-check-icon");
+        if (checkIcon) {
+          checkIcon.classList.toggle("hidden", !isCurrent);
+        }
+        if (isCurrent) {
+          otherItem.classList.add("bg-white/20");
+        } else {
+          otherItem.classList.remove("bg-white/20");
+        }
+      });
+
+      // Update tooltip label
+      if (tooltipLabel) {
+        tooltipLabel.textContent = statusVal === "all" ? "All" : statusVal;
+      }
+
+      // Update active state on button to show filled icon when active
+      if (filterBtn) {
+        if (statusVal !== "all") {
+          filterBtn.classList.add("active", "text-spes-yellow");
+          filterBtn.classList.remove("text-white/80");
+        } else {
+          filterBtn.classList.remove("active", "text-spes-yellow");
+          filterBtn.classList.add("text-white/80");
+        }
+      }
+
+      if (currentView === "beneficiaries") {
+        currentPage = 1;
+        applyBeneficiaryFiltersAndRender();
+      }
+    });
+  });
+}
+// --- END: SETUP PAYROLL STATUS FILTER DROPDOWN ---
+
+// --- START: ADJUST RESPONSIVE DROPDOWN PLACEMENT ---
+function adjustResponsiveDropdownPlacement() {
+  const subToggle = document.getElementById("btn-bulk-edit-submenu-toggle");
+  if (!subToggle) return;
+  // If mobile or small viewport, drop below (bottom-start); otherwise drop to right
+  const isSmallScreen = window.innerWidth < 640;
+  subToggle.setAttribute("data-dropdown-placement", isSmallScreen ? "bottom-start" : "right-start");
+}
+// --- END: ADJUST RESPONSIVE DROPDOWN PLACEMENT ---
+
+// --- START: SETUP BULK ACTIONS AND MODALS ---
+function setupPayrollBulkActions() {
+  // Adjust responsive placement on setup and viewport resize
+  adjustResponsiveDropdownPlacement();
+  window.addEventListener("resize", adjustResponsiveDropdownPlacement);
+
+  // 1. Live comma formatting for bulk stipend input
+  const inputBulkStipend = document.getElementById("input-bulk-stipend");
+  if (inputBulkStipend) {
+    attachNumberCommaFormatter(inputBulkStipend, { allowDecimals: true });
+  }
+
+  // 2. Confirm Bulk Edit Stipend Amount
+  document.getElementById("btn-confirm-bulk-stipend")?.addEventListener("click", async () => {
+    const ids = [...selectedBeneficiaryIds];
+    if (ids.length === 0) {
+      modals.warning("No Selection", "Please select at least one beneficiary.");
+      return;
+    }
+
+    const inputVal = document.getElementById("input-bulk-stipend")?.value;
+    const amount = parseNumberFromCommas(inputVal);
+
+    if (isNaN(amount) || amount <= 0) {
+      modals.warning("Invalid Amount", "Please enter a valid stipend amount.");
+      return;
+    }
+
+    const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
+    const session = getSession();
+
+    modals.loading("Updating Stipend", `Applying ${formatCurrency(amount)} to ${ids.length} beneficiaries...`);
+
+    const payloadItems = selectedItems.map(b => ({
+      beneficiaryId: b.id,
+      officeId: b.staffs?.office_id || null,
+      stipend_amount: amount,
+      days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
+      payment_status: b.payroll?.payment_status || "PENDING",
+      notes: b.payroll?.notes || "",
+    }));
+
+    await bulkUpdatePayrollRecords(payloadItems, { stipend_amount: amount }, session?.id);
+    modals.close();
+
+    // Update memory
+    allBeneficiaries.forEach(b => {
+      if (ids.includes(String(b.id))) {
+        b.payroll.stipend_amount = amount;
+        b.payroll.rate_per_day = b.payroll.days_worked > 0 ? (amount / b.payroll.days_worked) : (amount / DEFAULT_WORK_DAYS);
+      }
+    });
+
+    hideFlowbiteModalById("modal-bulk-edit-stipend");
+    updateExecutiveSummaryCards(allBeneficiaries);
+    applyBeneficiaryFiltersAndRender();
+    modals.flowbiteToast("Stipend Updated", `Stipend amount updated to ${formatCurrency(amount)} for ${ids.length} beneficiaries.`, "success");
+  });
+
+  // 3. Confirm Bulk Edit Work Days
+  document.getElementById("btn-confirm-bulk-days")?.addEventListener("click", async () => {
+    const ids = [...selectedBeneficiaryIds];
+    if (ids.length === 0) {
+      modals.warning("No Selection", "Please select at least one beneficiary.");
+      return;
+    }
+
+    const inputVal = document.getElementById("input-bulk-days")?.value;
+    const days = parseInt(inputVal, 10);
+
+    if (isNaN(days) || days <= 0 || days > 60) {
+      modals.warning("Invalid Days", "Please enter a valid number of work days (1–60).");
+      return;
+    }
+
+    const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
+    const session = getSession();
+
+    modals.loading("Updating Work Days", `Applying ${days} days to ${ids.length} beneficiaries...`);
+
+    const payloadItems = selectedItems.map(b => ({
+      beneficiaryId: b.id,
+      officeId: b.staffs?.office_id || null,
+      stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
+      days_worked: days,
+      payment_status: b.payroll?.payment_status || "PENDING",
+      notes: b.payroll?.notes || "",
+    }));
+
+    await bulkUpdatePayrollRecords(payloadItems, { days_worked: days }, session?.id);
+    modals.close();
+
+    // Update memory
+    allBeneficiaries.forEach(b => {
+      if (ids.includes(String(b.id))) {
+        b.payroll.days_worked = days;
+        b.payroll.rate_per_day = days > 0 ? (b.payroll.stipend_amount / days) : (DEFAULT_STIPEND_RATE / DEFAULT_WORK_DAYS);
+      }
+    });
+
+    hideFlowbiteModalById("modal-bulk-edit-days");
+    updateExecutiveSummaryCards(allBeneficiaries);
+    applyBeneficiaryFiltersAndRender();
+    modals.flowbiteToast("Work Days Updated", `Work days updated to ${days} days for ${ids.length} beneficiaries.`, "success");
+  });
+
+  // 4. Confirm Bulk Edit Notes
+  document.getElementById("btn-confirm-bulk-notes")?.addEventListener("click", async () => {
+    const ids = [...selectedBeneficiaryIds];
+    if (ids.length === 0) {
+      modals.warning("No Selection", "Please select at least one beneficiary.");
+      return;
+    }
+
+    const notesVal = document.getElementById("textarea-bulk-notes")?.value || "";
+    const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
+    const session = getSession();
+
+    modals.loading("Updating Notes", `Updating remarks for ${ids.length} beneficiaries...`);
+
+    const payloadItems = selectedItems.map(b => ({
+      beneficiaryId: b.id,
+      officeId: b.staffs?.office_id || null,
+      stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
+      days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
+      payment_status: b.payroll?.payment_status || "PENDING",
+      notes: notesVal,
+    }));
+
+    await bulkUpdatePayrollRecords(payloadItems, { notes: notesVal }, session?.id);
+    modals.close();
+
+    // Update memory
+    allBeneficiaries.forEach(b => {
+      if (ids.includes(String(b.id))) {
+        b.payroll.notes = notesVal;
+      }
+    });
+
+    hideFlowbiteModalById("modal-bulk-edit-notes");
+    applyBeneficiaryFiltersAndRender();
+    modals.flowbiteToast("Notes Updated", `Payroll remarks updated for ${ids.length} beneficiaries.`, "success");
+  });
+
+  // 5. Bulk Mark Unpaid
+  document.getElementById("btn-action-bulk-mark-unpaid")?.addEventListener("click", async () => {
+    const ids = [...selectedBeneficiaryIds];
+    if (ids.length === 0) {
+      modals.warning("No Selection", "Please select at least one beneficiary.");
+      return;
+    }
+
+    const confirm = await modals.confirm(
+      "Mark Selected as Unpaid",
+      `Set payment status of ${ids.length} selected beneficiar${ids.length === 1 ? "y" : "ies"} to UNPAID?`,
+      "Confirm Unpaid",
+      "Cancel"
+    );
+
+    if (!confirm.isConfirmed) return;
+
+    const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
+    const session = getSession();
+
+    modals.loading("Updating Status", `Marking ${ids.length} records as UNPAID in database...`);
+
+    const payloadItems = selectedItems.map(b => ({
+      beneficiaryId: b.id,
+      officeId: b.staffs?.office_id || null,
+      stipend_amount: b.payroll?.stipend_amount || DEFAULT_STIPEND_RATE,
+      days_worked: b.payroll?.days_worked || DEFAULT_WORK_DAYS,
+    }));
+
+    await bulkUpdatePayrollStatus(payloadItems, "UNPAID", session?.id);
+    modals.close();
+
+    // Update memory
+    allBeneficiaries.forEach(b => {
+      if (ids.includes(String(b.id))) {
+        b.payroll.payment_status = "UNPAID";
+        b.payroll.date_paid = null;
+      }
+    });
+
+    selectedBeneficiaryIds.clear();
+    updateExecutiveSummaryCards(allBeneficiaries);
+    applyBeneficiaryFiltersAndRender();
+
+    modals.flowbiteToast(
+      "Status Set to Unpaid",
+      `${ids.length} beneficiaries marked as UNPAID. You can revert anytime using Mark Paid/Pending.`,
+      "warning"
+    );
+  });
+}
+// --- END: SETUP BULK ACTIONS AND MODALS ---
 
 // --- START: TOGGLE INLINE EDIT MODE FOR PAYROLL DIRECTORY & BUDGET ---
 function toggleInlineEditMode(forceActive = null) {
@@ -1714,6 +2011,10 @@ export async function initPayroll() {
   if (inputStipendEl) {
     attachNumberCommaFormatter(inputStipendEl, { allowDecimals: true });
   }
+
+  // Attach Status Filter & Bulk Action Handlers
+  setupPayrollStatusFilterDropdown();
+  setupPayrollBulkActions();
 
   // Status dropdown filter
   document.getElementById("payroll-status-filter")?.addEventListener("change", () => {

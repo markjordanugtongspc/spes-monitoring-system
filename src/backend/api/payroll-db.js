@@ -232,7 +232,94 @@ export async function bulkUpsertDbPayrollStatus(items = [], newStatus = "PAID", 
     return { success: false, error: "Failed to batch update payroll records in database." };
   }
 }
-// --- END: BULK UPSERT BENEFICIARY PAYROLL STATUS ---
+// --- START: BULK UPSERT BENEFICIARY PAYROLL RECORDS ---
+/**
+ * Batch updates or inserts arbitrary payroll fields (stipend_amount, days_worked, notes, payment_status) in Supabase.
+ *
+ * @param {Array<{ beneficiaryId: string|number, officeId?: string|number|null, stipend_amount?: number, days_worked?: number, payment_status?: string, notes?: string }>} items
+ * @param {object} commonUpdates
+ * @param {string|number|null} staffId
+ * @returns {Promise<{ success: boolean, updatedCount?: number, error?: string }>}
+ */
+export async function bulkUpsertDbPayrollRecords(items = [], commonUpdates = {}, staffId = null) {
+  if (!items || items.length === 0) {
+    return { success: false, error: "No beneficiaries selected." };
+  }
+
+  const now = new Date().toISOString();
+  const cleanStaffId = staffId ? Number(staffId) : null;
+
+  const recordsToUpsert = items.map(item => {
+    const bId = typeof item === "object" ? Number(item.beneficiaryId || item.id) : Number(item);
+    const offId = typeof item === "object" ? (item.officeId ? Number(item.officeId) : null) : null;
+
+    const stipend = commonUpdates.stipend_amount !== undefined
+      ? Number(commonUpdates.stipend_amount)
+      : (typeof item === "object" && item.stipend_amount !== undefined ? Number(item.stipend_amount) : 5133.00);
+
+    const days = commonUpdates.days_worked !== undefined
+      ? Number(commonUpdates.days_worked)
+      : (typeof item === "object" && item.days_worked !== undefined ? Number(item.days_worked) : 20);
+
+    const status = commonUpdates.payment_status !== undefined
+      ? commonUpdates.payment_status
+      : (typeof item === "object" && item.payment_status ? item.payment_status : "PENDING");
+
+    const notes = commonUpdates.notes !== undefined
+      ? String(commonUpdates.notes).trim()
+      : (typeof item === "object" && item.notes !== undefined ? String(item.notes).trim() : null);
+
+    const datePaid = status === "PAID"
+      ? (typeof item === "object" && item.date_paid ? item.date_paid : now)
+      : null;
+
+    const row = {
+      beneficiary_id: bId,
+      office_id: offId,
+      stipend_amount: stipend,
+      days_worked: days,
+      payment_status: status,
+      date_paid: datePaid,
+      notes: notes,
+      updated_at: now,
+    };
+
+    if (cleanStaffId) {
+      row.updated_by = cleanStaffId;
+    }
+    return row;
+  }).filter(r => Boolean(r.beneficiary_id));
+
+  if (recordsToUpsert.length === 0) {
+    return { success: false, error: "No valid beneficiary records to update." };
+  }
+
+  try {
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < recordsToUpsert.length; i += CHUNK_SIZE) {
+      const chunk = recordsToUpsert.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase
+        .from("payroll_records")
+        .upsert(chunk, { onConflict: "beneficiary_id" });
+
+      if (error) {
+        if (import.meta.env.DEV) {
+          console.error("[SPES Payroll DB] bulkUpsertDbPayrollRecords error:", error.code, error.message);
+        }
+        return { success: false, error: error.message };
+      }
+    }
+
+    invalidatePayrollCache();
+    return { success: true, updatedCount: recordsToUpsert.length };
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.error("[SPES Payroll DB] bulkUpsertDbPayrollRecords catch:", err?.message);
+    }
+    return { success: false, error: "Failed to batch update payroll records in database." };
+  }
+}
+// --- END: BULK UPSERT BENEFICIARY PAYROLL RECORDS ---
 
 // --- START: FETCH PAYROLL BUDGETS (GENERAL & PER-OFFICE) ---
 /**

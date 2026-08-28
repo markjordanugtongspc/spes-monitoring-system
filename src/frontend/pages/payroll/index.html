@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -266,8 +266,9 @@
 
         <!-- Header Bar with Gradient -->
         <div
-          class="flex flex-col gap-4 bg-gradient-to-r from-spes-blue via-spes-blue to-[#002878] p-5 border-b border-white/10 rounded-t-2xl sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-3 min-w-0">
+          class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-spes-blue via-spes-blue to-[#002878] p-5 border-b border-white/10 rounded-t-2xl">
+          <!-- Left: Back Button & Title -->
+          <div class="flex items-center gap-3 min-w-0 flex-1">
             <!-- Back button: STRICTLY hidden on root view -->
             <button id="btn-back-to-payroll-implementors"
               class="cursor-pointer hidden items-center justify-center rounded-xl border border-white/30 bg-white/15 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-white hover:bg-white/25 active:scale-95 transition-all shrink-0"
@@ -284,10 +285,10 @@
             </h3>
           </div>
 
-          <!-- Search & Filter Controls (EXPANDED SPACIOUS WIDTH) -->
-          <div class="flex flex-wrap items-center gap-3 ml-auto w-full sm:w-auto">
+          <!-- Right: Search & Filter Controls -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             <!-- Spacious Search input with Clear (X) UX & Tooltip -->
-            <div class="relative w-full sm:w-80 md:w-96 flex-1 sm:flex-initial">
+            <div class="relative w-full sm:w-72 md:w-80 lg:w-96">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                 <svg class="h-4 w-4 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-width="2.5"
@@ -314,14 +315,150 @@
               </div>
             </div>
 
-            <!-- Payment Status Filter -->
-            <select id="payroll-status-filter"
-              class="cursor-pointer h-10 rounded-xl border border-white/30 bg-white/15 px-3.5 text-xs sm:text-sm font-bold text-white focus:border-spes-yellow focus:bg-spes-blue focus:outline-none transition-all">
-              <option value="all" class="text-spes-black bg-white">All Statuses</option>
-              <option value="PAID" class="text-emerald-700 bg-white font-bold">Paid</option>
-              <option value="PENDING" class="text-amber-700 bg-white font-bold">Pending</option>
-              <option value="UNPAID" class="text-slate-700 bg-white font-bold">Unpaid</option>
-            </select>
+            <!-- Action Controls Group -->
+            <div class="flex items-center justify-end sm:justify-start gap-2.5 shrink-0">
+              <!-- Checkbox Bulk Actions Dropdown Trigger (Shown ONLY when >= 1 checkbox selected) -->
+              <div class="relative">
+                <button id="btn-payroll-bulk-actions" type="button"
+                  data-dropdown-toggle="dropdown-payroll-bulk-actions" data-dropdown-placement="bottom-end"
+                  class="hidden cursor-pointer h-10 items-center justify-center gap-2 rounded-none border border-emerald-400/80 bg-emerald-600 hover:bg-emerald-500 px-3.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-md shadow-emerald-950/30 transition-all duration-200 active:scale-95">
+                  <!-- Checkbox SVG Icon -->
+                  <svg class="h-4 w-4 text-spes-yellow shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                  </svg>
+                  <span class="whitespace-nowrap">Selected (<span id="bulk-selected-count-badge">0</span>)</span>
+                </button>
+
+                <!-- Flowbite Multi-level Dropdown for Bulk Actions (Filled with Card 01 Deep Blue) -->
+                <div id="dropdown-payroll-bulk-actions"
+                  class="z-50 hidden my-2 w-56 list-none divide-y divide-blue-400/20 rounded-none bg-[#1d4ed8] p-1.5 shadow-2xl shadow-blue-950/40 border border-blue-300/30 dark:bg-[#16336e] dark:divide-blue-300/15 dark:border-blue-400/30">
+                  <div class="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-blue-100 dark:text-blue-200">
+                    Batch Operations (<span id="bulk-selected-dropdown-count">0</span>)
+                  </div>
+                  <ul class="py-1 text-xs sm:text-sm space-y-0.5" aria-labelledby="btn-payroll-bulk-actions">
+                    <!-- Main 1: BULK EDIT with nested submenu -->
+                    <li>
+                      <button id="btn-bulk-edit-submenu-toggle" data-dropdown-toggle="dropdown-bulk-edit-submenu" data-dropdown-placement="bottom-start" type="button"
+                        class="cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2.5 font-black text-white hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
+                        <span class="flex items-center gap-2">
+                          <svg class="h-4 w-4 text-spes-yellow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Bulk Edit
+                        </span>
+                        <svg class="h-3.5 w-3.5 rtl:rotate-180 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m9 5 7 7-7 7" />
+                        </svg>
+                      </button>
+                      <!-- Sub Dropdown (Filled with Darker Tinted Blue) -->
+                      <div id="dropdown-bulk-edit-submenu"
+                        class="z-50 hidden my-2 w-56 list-none rounded-none bg-[#1e40af] p-1.5 shadow-2xl shadow-blue-950/50 border border-blue-300/30 dark:bg-[#122856] dark:border-blue-400/30">
+                        <ul class="space-y-0.5 text-xs sm:text-sm">
+                          <li>
+                            <button type="button" id="btn-action-bulk-edit-stipend"
+                              data-modal-target="modal-bulk-edit-stipend" data-modal-toggle="modal-bulk-edit-stipend"
+                              class="cursor-pointer flex w-full items-center rounded-none px-3 py-2 font-bold text-white hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
+                              Edit Stipend Amount
+                            </button>
+                          </li>
+                          <li>
+                            <button type="button" id="btn-action-bulk-edit-days"
+                              data-modal-target="modal-bulk-edit-days" data-modal-toggle="modal-bulk-edit-days"
+                              class="cursor-pointer flex w-full items-center rounded-none px-3 py-2 font-bold text-white hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
+                              Edit Work Days
+                            </button>
+                          </li>
+                          <li>
+                            <button type="button" id="btn-action-bulk-edit-notes"
+                              data-modal-target="modal-bulk-edit-notes" data-modal-toggle="modal-bulk-edit-notes"
+                              class="cursor-pointer flex w-full items-center rounded-none px-3 py-2 font-bold text-white hover:bg-white/20 dark:hover:bg-white/10 transition-colors">
+                              Edit Remarks / Notes
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    </li>
+                    <!-- Main 2: BULK UN-PAID -->
+                    <li>
+                      <button type="button" id="btn-action-bulk-mark-unpaid"
+                        class="cursor-pointer flex w-full items-center rounded-none px-3 py-2.5 font-black text-rose-100 hover:bg-rose-600/30 hover:text-white dark:text-rose-200 transition-colors">
+                        Bulk Mark Unpaid
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Payment Status Filter Icon Button (Stand-alone SVG without rounded background container) -->
+              <div class="relative">
+                <input type="hidden" id="payroll-status-filter" value="all" />
+                <button id="btn-payroll-status-filter" type="button"
+                  data-dropdown-toggle="dropdown-payroll-status-filter" data-dropdown-placement="bottom-end"
+                  class="group/filter cursor-pointer flex h-10 w-10 items-center justify-center text-white/80 hover:text-white focus:outline-none transition-all active:scale-95"
+                  data-tooltip-target="tooltip-status-filter"
+                  title="Filter by Payment Status"
+                  aria-label="Filter by Payment Status">
+                  <!-- Static Outline SVG (Shown by default) -->
+                  <svg class="h-6 w-6 text-white group-hover/filter:hidden group-[.active]/filter:hidden transition-all duration-200" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g id="Layer_44_outline" data-name="Layer 44"><path d="m10.19 2.5a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73zm0 12.46a4.73 4.73 0 1 1 4.73-4.73 4.73 4.73 0 0 1 -4.73 4.77z"/><path d="m10.19 24.27a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73zm0 12.46a4.73 4.73 0 1 1 4.73-4.73 4.73 4.73 0 0 1 -4.73 4.73z"/><path d="m10.19 46a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73zm0 12.46a4.73 4.73 0 1 1 4.73-4.73 4.73 4.73 0 0 1 -4.73 4.77z"/><path d="m29.92 14.84h27a4.62 4.62 0 1 0 0-9.23h-27a4.62 4.62 0 0 0 0 9.23zm0-6.23h27a1.62 1.62 0 1 1 0 3.23h-27a1.62 1.62 0 0 1 0-3.23z"/><path d="m56.92 27.38h-27a4.62 4.62 0 0 0 0 9.24h27a4.62 4.62 0 0 0 0-9.24zm0 6.24h-27a1.62 1.62 0 0 1 0-3.24h27a1.62 1.62 0 0 1 0 3.24z"/><path d="m56.92 49.15h-27a4.62 4.62 0 0 0 0 9.23h27a4.62 4.62 0 1 0 0-9.23zm0 6.23h-27a1.62 1.62 0 0 1 0-3.23h27a1.62 1.62 0 1 1 0 3.23z"/></g></svg>
+
+                  <!-- Filled Solid SVG (Shown on hover, click, active state, or open dropdown) -->
+                  <svg class="h-6 w-6 text-white hidden group-hover/filter:block group-[.active]/filter:block transition-all duration-200" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g id="Layer_44_solid" data-name="Layer 44"><path d="m10.19 2.5a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73z"/><path d="m10.19 24.27a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73z"/><path d="m10.19 46a7.73 7.73 0 1 0 7.73 7.73 7.74 7.74 0 0 0 -7.73-7.73z"/><path d="m29.92 14.84h27a4.62 4.62 0 1 0 0-9.23h-27a4.62 4.62 0 0 0 0 9.23z"/><path d="m56.92 27.38h-27a4.62 4.62 0 0 0 0 9.24h27a4.62 4.62 0 0 0 0-9.24z"/><path d="m56.92 49.15h-27a4.62 4.62 0 0 0 0 9.23h27a4.62 4.62 0 1 0 0-9.23z"/></g></svg>
+                </button>
+
+                <!-- Tooltip -->
+                <div id="tooltip-status-filter" role="tooltip"
+                  class="absolute z-50 invisible inline-block px-2.5 py-1 text-xs font-semibold text-white bg-slate-900 rounded-none shadow-lg opacity-0 tooltip dark:bg-slate-800 transition-opacity duration-200">
+                  Filter status: <span id="tooltip-current-status-label" class="font-black text-spes-yellow">All</span>
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- Status Dropdown Menu with Sharp Edges (rounded-none) & Text Colors -->
+                <div id="dropdown-payroll-status-filter"
+                  class="z-50 hidden my-2 w-48 list-none divide-y divide-blue-400/20 rounded-none bg-[#1d4ed8] p-1.5 shadow-2xl shadow-blue-950/40 border border-blue-300/30 dark:bg-[#16336e] dark:divide-blue-300/15 dark:border-blue-400/30">
+                  <div class="px-3 py-2 text-[11px] font-black uppercase tracking-wider text-blue-100 dark:text-blue-200">
+                    Filter by Status
+                  </div>
+                  <ul class="py-1 text-xs sm:text-sm space-y-0.5" aria-labelledby="btn-payroll-status-filter">
+                    <li>
+                      <button type="button" data-status-val="all"
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-white bg-white/20 transition-colors">
+                        <span>All Statuses</span>
+                        <svg class="status-check-icon h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" data-status-val="PAID"
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-blue-200 hover:bg-blue-500/30 transition-colors">
+                        <span>Paid</span>
+                        <svg class="status-check-icon hidden h-4 w-4 text-blue-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" data-status-val="PENDING"
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-yellow-300 hover:bg-yellow-500/20 transition-colors">
+                        <span>Pending</span>
+                        <svg class="status-check-icon hidden h-4 w-4 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                    <li>
+                      <button type="button" data-status-val="UNPAID"
+                        class="status-filter-item cursor-pointer flex w-full items-center justify-between rounded-none px-3 py-2 font-black text-rose-300 hover:bg-rose-500/25 transition-colors">
+                        <span>Unpaid</span>
+                        <svg class="status-check-icon hidden h-4 w-4 text-rose-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                        </svg>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -951,6 +1088,201 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- BULK EDIT: STIPEND AMOUNT FLOWBITE MODAL             -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="modal-bulk-edit-stipend" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 right-0 left-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto md:inset-0 bg-spes-black/60 backdrop-blur-xs">
+    <div class="relative max-h-full w-full max-w-md mx-auto my-auto p-4">
+      <div class="relative bg-white rounded-2xl shadow-2xl dark:bg-spes-dark-primary border border-spes-blue/15 dark:border-white/10 overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-spes-blue/10 bg-gradient-to-r from-spes-blue to-[#002878] p-5 text-white">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 font-mono text-base font-black text-white shadow-inner">
+              ₱
+            </div>
+            <div>
+              <h3 class="font-montserrat text-base font-black uppercase tracking-wider text-white">
+                Bulk Edit Stipend
+              </h3>
+              <p class="text-xs text-white/80">
+                Updating <span id="bulk-stipend-count-label" class="font-bold text-spes-yellow">0</span> selected beneficiaries
+              </p>
+            </div>
+          </div>
+          <button type="button" data-modal-hide="modal-bulk-edit-stipend"
+            class="cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+            aria-label="Close modal">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="p-6 space-y-4">
+          <div>
+            <label for="input-bulk-stipend" class="block text-xs font-black uppercase tracking-wider text-spes-black dark:text-white mb-2">
+              New Stipend Amount (₱)
+            </label>
+            <div class="relative">
+              <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <span class="font-mono text-sm font-black text-gray-500 dark:text-gray-400">₱</span>
+              </div>
+              <input type="text" id="input-bulk-stipend" inputmode="decimal"
+                class="w-full rounded-xl border border-gray-300 bg-white py-3 pl-8 pr-4 font-mono text-base font-black text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/10 dark:bg-spes-dark-secondary dark:text-white dark:focus:border-spes-yellow transition-all"
+                placeholder="5,133.00" value="5,133.00" />
+            </div>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Standard SPES monthly stipend baseline is ₱5,133.00.
+            </p>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-secondary px-6 py-4">
+          <button type="button" data-modal-hide="modal-bulk-edit-stipend"
+            class="cursor-pointer rounded-xl border border-gray-300 dark:border-white/15 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-spes-black/70 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5 transition-all">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-bulk-stipend"
+            class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl bg-spes-blue px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg hover:bg-spes-blue/90 active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Apply to Selected
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- BULK EDIT: WORK DAYS FLOWBITE MODAL                  -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="modal-bulk-edit-days" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 right-0 left-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto md:inset-0 bg-spes-black/60 backdrop-blur-xs">
+    <div class="relative max-h-full w-full max-w-md mx-auto my-auto p-4">
+      <div class="relative bg-white rounded-2xl shadow-2xl dark:bg-spes-dark-primary border border-spes-blue/15 dark:border-white/10 overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-spes-blue/10 bg-gradient-to-r from-spes-blue to-[#002878] p-5 text-white">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white shadow-inner">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-montserrat text-base font-black uppercase tracking-wider text-white">
+                Bulk Edit Work Days
+              </h3>
+              <p class="text-xs text-white/80">
+                Updating <span id="bulk-days-count-label" class="font-bold text-spes-yellow">0</span> selected beneficiaries
+              </p>
+            </div>
+          </div>
+          <button type="button" data-modal-hide="modal-bulk-edit-days"
+            class="cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+            aria-label="Close modal">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="p-6 space-y-4">
+          <div>
+            <label for="input-bulk-days" class="block text-xs font-black uppercase tracking-wider text-spes-black dark:text-white mb-2">
+              Number of Days Worked
+            </label>
+            <input type="number" id="input-bulk-days" min="1" max="30" step="1"
+              class="w-full rounded-xl border border-gray-300 bg-white py-3 px-4 font-mono text-base font-black text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/10 dark:bg-spes-dark-secondary dark:text-white dark:focus:border-spes-yellow transition-all"
+              placeholder="20" value="20" />
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Standard contract deployment period is 20 days.
+            </p>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-secondary px-6 py-4">
+          <button type="button" data-modal-hide="modal-bulk-edit-days"
+            class="cursor-pointer rounded-xl border border-gray-300 dark:border-white/15 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-spes-black/70 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5 transition-all">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-bulk-days"
+            class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl bg-spes-blue px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg hover:bg-spes-blue/90 active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Apply to Selected
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- BULK EDIT: REMARKS & NOTES FLOWBITE MODAL            -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div id="modal-bulk-edit-notes" tabindex="-1" aria-hidden="true"
+    class="fixed top-0 right-0 left-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto md:inset-0 bg-spes-black/60 backdrop-blur-xs">
+    <div class="relative max-h-full w-full max-w-lg mx-auto my-auto p-4">
+      <div class="relative bg-white rounded-2xl shadow-2xl dark:bg-spes-dark-primary border border-spes-blue/15 dark:border-white/10 overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-spes-blue/10 bg-gradient-to-r from-spes-blue to-[#002878] p-5 text-white">
+          <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white shadow-inner">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-montserrat text-base font-black uppercase tracking-wider text-white">
+                Bulk Edit Notes
+              </h3>
+              <p class="text-xs text-white/80">
+                Updating <span id="bulk-notes-count-label" class="font-bold text-spes-yellow">0</span> selected beneficiaries
+              </p>
+            </div>
+          </div>
+          <button type="button" data-modal-hide="modal-bulk-edit-notes"
+            class="cursor-pointer inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+            aria-label="Close modal">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <!-- Body -->
+        <div class="p-6 space-y-4">
+          <div>
+            <label for="textarea-bulk-notes" class="block text-xs font-black uppercase tracking-wider text-spes-black dark:text-white mb-2">
+              Remarks / Payroll Notes
+            </label>
+            <textarea id="textarea-bulk-notes" rows="4"
+              class="w-full rounded-xl border border-gray-300 bg-white p-3.5 text-xs sm:text-sm font-medium text-spes-black placeholder:text-gray-400 focus:border-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/10 dark:bg-spes-dark-secondary dark:text-white dark:focus:border-spes-yellow transition-all"
+              placeholder="Add batch disbursement note, voucher reference, or remarks..."></textarea>
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              This note will be saved across all selected beneficiary payroll records.
+            </p>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 border-t border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-spes-dark-secondary px-6 py-4">
+          <button type="button" data-modal-hide="modal-bulk-edit-notes"
+            class="cursor-pointer rounded-xl border border-gray-300 dark:border-white/15 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-spes-black/70 hover:bg-gray-100 dark:text-white/70 dark:hover:bg-white/5 transition-all">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-bulk-notes"
+            class="cursor-pointer inline-flex items-center justify-center gap-2 rounded-xl bg-spes-blue px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-lg hover:bg-spes-blue/90 active:scale-95 dark:bg-spes-yellow dark:text-spes-dark-blue dark:hover:bg-yellow-400 transition-all">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            Apply to Selected
+          </button>
+        </div>
       </div>
     </div>
   </div>
