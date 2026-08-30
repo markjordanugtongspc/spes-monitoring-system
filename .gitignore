@@ -31,3 +31,6 @@ src/backend/.env
 
 # /src/frontend/services/
 .vercel
+
+# Supabase
+supabase/

@@ -132,11 +132,12 @@ export function computePayrollExecutiveSummary(beneficiariesList = [], customGen
     const amount = Number(p.stipend_amount) || DEFAULT_STIPEND_RATE;
     calculatedBudget += amount;
 
-    if (p.payment_status === "PAID") {
+    const status = String(p.payment_status || (b.is_paid ? "PAID" : "PENDING")).trim().toUpperCase();
+    if (status === "PAID") {
       totalPaid += amount;
-    } else if (p.payment_status === "PENDING") {
-      totalPending += amount;
     } else {
+      // Any beneficiary not yet paid is pending disbursement
+      totalPending += amount;
       totalUnpaid += amount;
     }
   });

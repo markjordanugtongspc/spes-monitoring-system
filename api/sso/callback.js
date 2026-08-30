@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         id, username, full_name, email, role_id, office_id, approved, archive_at,
         perm_view_users, perm_create_users, perm_edit_users, perm_delete_users,
         perm_export_reports, perm_view_other_offices, perm_view_global_stats,
-        roles(name)
+        perm_view_payroll, roles(name)
       `)
       .eq('id', externalUserId)
       .maybeSingle();
@@ -78,7 +78,8 @@ export default async function handler(req, res) {
         delete_users: Boolean(staff.perm_delete_users),
         export_reports: Boolean(staff.perm_export_reports),
         view_other_offices: Boolean(staff.perm_view_other_offices),
-        view_global_stats: Boolean(staff.perm_view_global_stats)
+        view_global_stats: Boolean(staff.perm_view_global_stats),
+        view_payroll: Boolean(staff.perm_view_payroll),
       }
     };
 

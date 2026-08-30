@@ -1,7 +1,6 @@
 import "../styles/tailwind.css";
 import "./components/flow-debugger.js";
-import "flowbite";
-import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
+import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut } from "./rbac/guard.js";
 import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
@@ -1314,15 +1313,7 @@ function _populateSidebar(user) {
 }
 
 function _setActiveSidebarLink(navId) {
-  document.querySelectorAll(".sidebar-link").forEach(link => {
-    const isMatch = link.getAttribute("data-nav-item") === navId;
-    if (isMatch) {
-      link.classList.add("bg-spes-blue/10", "dark:bg-spes-yellow/15", "text-spes-blue", "dark:text-spes-yellow");
-    } else {
-      link.classList.remove("bg-spes-blue/10", "dark:bg-spes-yellow/15", "text-spes-blue", "dark:text-spes-yellow",
-        "bg-spes-blue/8", "dark:bg-spes-white/8");
-    }
-  });
+  highlightSidebarActiveLink(navId);
   // Keep sidebar dropdown open state
   const beneUl  = document.getElementById("sidebar-dropdown-beneficiaries");
   const beneBtn = document.querySelector('[aria-controls="sidebar-dropdown-beneficiaries"]');

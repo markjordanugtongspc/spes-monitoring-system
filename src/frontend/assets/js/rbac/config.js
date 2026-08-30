@@ -48,6 +48,8 @@ const roles = {
       "reports:export",
       "beneficiaries:edit",
       "beneficiaries:delete",
+      "payroll:view",
+      "payroll:manage",
       "services:manage",
       "services:access",
       "system:*"

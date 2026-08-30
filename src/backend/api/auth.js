@@ -75,6 +75,7 @@ export async function loginImplementor(username, password) {
       export_reports: false,
       view_other_offices: false,
       view_global_stats: false,
+      view_payroll: false,
     };
 
     const session = {
@@ -223,6 +224,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         perm_view_users, perm_create_users, perm_edit_users,
         perm_delete_users, perm_export_reports,
         perm_view_other_offices, perm_view_global_stats,
+        perm_view_payroll,
         roles   ( id, name ),
         offices ( id, name, location ),
         beneficiary!beneficiary_id(full_name, return_status)
@@ -233,7 +235,32 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);
     }
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    if (error && (error.code === "42703" || error.code === "PGRST204" || error.code === "PGRST100" || String(error.message || "").includes("perm_view_payroll"))) {
+      // Fallback query if perm_view_payroll column is not yet migrated in DB
+      let fallbackQuery = supabase
+        .from("staffs")
+        .select(`
+          id, full_name, username, email, address, phone, created_at,
+          religion, language, blood_type, status, approved,
+          archive_at, role_id, office_id, beneficiary_id,
+          perm_view_users, perm_create_users, perm_edit_users,
+          perm_delete_users, perm_export_reports,
+          perm_view_other_offices, perm_view_global_stats,
+          roles   ( id, name ),
+          offices ( id, name, location ),
+          beneficiary!beneficiary_id(full_name, return_status)
+        `)
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: false });
+      if (!access.canViewOtherOffices && officeId) {
+        fallbackQuery = fallbackQuery.eq("office_id", officeId);
+      }
+      const retry = await fallbackQuery;
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code);
@@ -267,6 +294,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         export_reports: Boolean(s.perm_export_reports),
         view_other_offices: Boolean(s.perm_view_other_offices),
         view_global_stats: Boolean(s.perm_view_global_stats),
+        view_payroll: Boolean(s.perm_view_payroll),
       },
     }));
 

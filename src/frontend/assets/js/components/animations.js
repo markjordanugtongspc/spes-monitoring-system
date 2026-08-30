@@ -487,7 +487,7 @@ export function initLoginSignupSlider() {
   const btnShowLogin = document.getElementById('btn-show-login');
   const leftTrack = document.getElementById('left-overlay-track');
   const rightTrack = document.getElementById('right-form-track');
-  
+
   const panelLeft = document.getElementById('panel-left');
   const panelRight = document.getElementById('panel-right');
   const loginContainer = document.getElementById('login-form-container');
@@ -511,14 +511,14 @@ export function initLoginSignupSlider() {
       if (loginContainer && signupContainer) {
         // Pop out login: scale down, fade out
         loginContainer.classList.add('scale-95', 'opacity-0', 'pointer-events-none');
-        
+
         setTimeout(() => {
           loginContainer.classList.add('max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
-          
+
           // Pop up signup in front: prepare initial state, make visible, and scale up
           signupContainer.classList.remove('max-lg:hidden');
           signupContainer.style.zIndex = '30';
-          
+
           // Micro-tick for browser paint animation
           requestAnimationFrame(() => {
             signupContainer.classList.remove('max-lg:opacity-0', 'max-lg:scale-95', 'max-lg:pointer-events-none');
@@ -557,10 +557,10 @@ export function initLoginSignupSlider() {
         // Pop out signup
         signupContainer.classList.remove('scale-100', 'opacity-100', 'pointer-events-auto');
         signupContainer.classList.add('max-lg:opacity-0', 'max-lg:scale-95', 'max-lg:pointer-events-none');
-        
+
         setTimeout(() => {
           signupContainer.classList.add('max-lg:hidden');
-          
+
           // Pop up login
           loginContainer.classList.remove('max-lg:hidden', 'absolute', 'top-2', 'left-0', 'right-0');
           requestAnimationFrame(() => {
@@ -596,9 +596,9 @@ export function initLoginSignupSlider() {
  * On mouseleave: resets to flat.
  */
 export function initExportButtonTilt() {
-  const TILT_STYLE  = "skewX(-6deg) translateY(-2px)";
+  const TILT_STYLE = "skewX(-6deg) translateY(-2px)";
   const RESET_STYLE = "skewX(0deg) translateY(0)";
-  const TRANSITION  = "transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)";
+  const TRANSITION = "transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)";
 
   document.querySelectorAll("[data-tilt-btn]").forEach(btn => {
     btn.style.transition = TRANSITION;
@@ -650,35 +650,93 @@ export function initPasswordConfirmReveal() {
 // SECTION 8 — NUMBER & MONEY COUNTER ANIMATION (TAILWINDCSS TABULAR NUMS)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+export const COUNTER_ANIMATION_STORAGE_PREFIX = "spes_counter_animations_";
+
+function _getUserCounterStorageKey(userId = null) {
+  let id = userId;
+  if (!id) {
+    try {
+      const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
+      if (raw) {
+        const s = JSON.parse(raw);
+        id = s?.id != null ? String(s.id) : (s?.username ? String(s.username) : null);
+      }
+    } catch { }
+  }
+  return id ? `${COUNTER_ANIMATION_STORAGE_PREFIX}${id}` : "spes_counter_animations";
+}
+
+/**
+ * Checks whether counter rolling animations are enabled for the current user.
+ * Default is FALSE to prioritize low-end device battery, CPU, and GPU performance.
+ * @param {string|number} [userId]
+ * @returns {boolean}
+ */
+export function isCounterAnimationEnabled(userId = null) {
+  try {
+    const key = _getUserCounterStorageKey(userId);
+    return localStorage.getItem(key) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sets the counter rolling animation user preference for the current user.
+ * @param {boolean} enabled
+ * @param {string|number} [userId]
+ */
+export function setCounterAnimationEnabled(enabled, userId = null) {
+  try {
+    const key = _getUserCounterStorageKey(userId);
+    localStorage.setItem(key, enabled ? "true" : "false");
+  } catch { }
+}
+
+// Cached formatters to eliminate Garbage Collection lag inside 60/120fps requestAnimationFrame loops
+const cachedCurrencyFormatter = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatterCache = new Map();
+function getCachedNumberFormatter(decimals) {
+  if (!formatterCache.has(decimals)) {
+    formatterCache.set(decimals, new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }));
+  }
+  return formatterCache.get(decimals);
+}
+
 // --- FUNCTION: ANIMATE NUMBER & MONEY COUNTER (START) ---
 /**
  * Smoothly animates numeric and currency values with easing from 0 (or start value) to target.
  * Optimized for executive dashboard stats and cards with TailwindCSS tabular-nums.
+ * Defaults to instant value rendering unless counter animations are explicitly enabled in Settings or forced.
  *
  * @param {HTMLElement} element - Target DOM element containing or receiving the counter
  * @param {number} endVal - The target number to count up to
- * @param {Object} options - Configuration options (duration, delay, isCurrency, prefix, suffix, decimals, forceFromZero)
+ * @param {Object} options - Configuration options (duration, delay, isCurrency, prefix, suffix, decimals, forceFromZero, forceAnimate)
  */
 export function animateCounter(element, endVal, options = {}) {
   if (!element) return;
 
   const {
-    duration = 2000,
+    duration = 750,
     delay = 0,
     isCurrency = false,
     prefix = isCurrency ? "₱" : "",
     suffix = "",
     decimals = isCurrency ? 2 : 0,
     forceFromZero = false,
+    forceAnimate = false,
   } = options;
 
   const target = Number(endVal) || 0;
-  
-  // Read current value from dataset or fallback to 0
-  let start = 0;
-  if (!forceFromZero && element.dataset.currentVal !== undefined) {
-    start = Number(element.dataset.currentVal) || 0;
-  }
 
   // Cancel any running animation or pending delay on this element
   if (element._counterTimeoutId) {
@@ -690,34 +748,50 @@ export function animateCounter(element, endVal, options = {}) {
     element._counterAnimId = null;
   }
 
-  // Formatting helper
+  const numFormatter = getCachedNumberFormatter(decimals);
+
+  // Formatting helper with pre-warmed cached formatters (zero allocation per frame)
   const formatVal = (num) => {
     if (isCurrency) {
-      return new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(num);
+      return cachedCurrencyFormatter.format(num);
     }
-    const formatted = num.toLocaleString("en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
-    return `${prefix}${formatted}${suffix}`;
+    return `${prefix}${numFormatter.format(num)}${suffix}`;
   };
 
-  // Set initial formatted value immediately
-  element.textContent = formatVal(start);
-
-  if (start === target && element.dataset.currentVal !== undefined && !forceFromZero) {
+  // If animations are globally disabled and not forced, render immediately with ZERO CPU/GPU loop overhead
+  const shouldAnimate = forceAnimate || isCounterAnimationEnabled();
+  if (!shouldAnimate) {
     element.textContent = formatVal(target);
+    element.dataset.currentVal = String(target);
+    element._currentAnimValue = target;
+    return;
+  }
+
+  // Read current value from dataset or live animation state or fallback to 0
+  let start = 0;
+  if (!forceFromZero) {
+    if (element._currentAnimValue !== undefined && !isNaN(element._currentAnimValue)) {
+      start = Number(element._currentAnimValue);
+    } else if (element.dataset.currentVal !== undefined) {
+      start = Number(element.dataset.currentVal) || 0;
+    }
+  }
+
+  // Set initial formatted value immediately if starting fresh
+  if (element.dataset.currentVal === undefined || forceFromZero) {
+    element.textContent = formatVal(start);
+  }
+
+  if (Math.abs(target - start) < 0.001 && element.dataset.currentVal !== undefined && !forceFromZero) {
+    element.textContent = formatVal(target);
+    element._currentAnimValue = target;
+    element.dataset.currentVal = String(target);
     return;
   }
 
   const startAnimation = () => {
     let startTime = null;
-    // Ultra-smooth easeOutCubic/Expo hybrid curve for visible rolling count
+    // Ultra-smooth easeOutCubic curve matching Settings preview
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
     function step(timestamp) {
@@ -725,6 +799,7 @@ export function animateCounter(element, endVal, options = {}) {
       const progress = Math.min((timestamp - startTime) / duration, 1);
       const eased = easeOutCubic(progress);
       const current = start + (target - start) * eased;
+      element._currentAnimValue = current;
 
       element.textContent = formatVal(current);
 
@@ -733,6 +808,7 @@ export function animateCounter(element, endVal, options = {}) {
       } else {
         element.textContent = formatVal(target);
         element.dataset.currentVal = String(target);
+        element._currentAnimValue = target;
         element._counterAnimId = null;
       }
     }

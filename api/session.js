@@ -8,6 +8,17 @@ const STAFF_PERMISSION_SELECT = `
   perm_delete_users,
   perm_export_reports,
   perm_view_other_offices,
+  perm_view_global_stats,
+  perm_view_payroll
+`;
+
+const STAFF_PERMISSION_FALLBACK_SELECT = `
+  perm_view_users,
+  perm_create_users,
+  perm_edit_users,
+  perm_delete_users,
+  perm_export_reports,
+  perm_view_other_offices,
   perm_view_global_stats
 `;
 
@@ -20,6 +31,7 @@ function normalizeStaffPermissions(row = {}) {
     export_reports: Boolean(row.perm_export_reports),
     view_other_offices: Boolean(row.perm_view_other_offices),
     view_global_stats: Boolean(row.perm_view_global_stats),
+    view_payroll: Boolean(row.perm_view_payroll),
   };
 }
 
@@ -59,20 +71,24 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data: staffAccess, error: accessError } = await supabase
+    let staffAccess = {};
+    const { data: selectData, error: accessError } = await supabase
       .from("staffs")
       .select(STAFF_PERMISSION_SELECT)
       .eq("id", data.user.id)
-      .single();
+      .maybeSingle();
+
     if (accessError) {
-      console.error("[SPES API] staff permission lookup failed:", accessError.code);
-      return res.status(500).json({
-        success: false,
-        error: accessError.code === "42703"
-          ? "The individual staff permissions migration has not been applied."
-          : "Could not load account permissions.",
-      });
+      const fallback = await supabase
+        .from("staffs")
+        .select(STAFF_PERMISSION_FALLBACK_SELECT)
+        .eq("id", data.user.id)
+        .maybeSingle();
+      staffAccess = fallback.data || {};
+    } else {
+      staffAccess = selectData || {};
     }
+
     data.user.permissions = normalizeStaffPermissions(staffAccess);
 
     res.setHeader("Set-Cookie", createSessionCookie(data.user));

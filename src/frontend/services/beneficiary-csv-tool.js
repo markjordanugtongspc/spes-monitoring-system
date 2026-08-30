@@ -1,6 +1,9 @@
 // --- START: BENEFICIARY CSV TOOL IMPORTS ---
 import "../assets/styles/tailwind.css";
-import { requireAdmin } from "../assets/js/rbac/guard.js";
+import "flowbite";
+import { initFlowbite } from "flowbite";
+import { requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";
+import { initThemeToggle } from "../assets/js/components/theme-toggle.js";
 import { buildImportPlan, executeImportPlan, loadConverterContext } from "./beneficiary-csv-converter.js";
 import { bulkDeleteBeneficiaries, fetchBeneficiaryDuplicateGroups } from "../../backend/api/beneficiary.js";
 // --- END: BENEFICIARY CSV TOOL IMPORTS ---
@@ -1091,6 +1094,44 @@ updateScrollTopControl();
 // --- START: PAGE INITIALIZATION ---
 async function initialize() {
   if (!session) return;
+
+  initThemeToggle();
+  initFlowbite();
+
+  // Populate sidebar user details
+  const user = getSession() || session;
+  if (user) {
+    const nameEl    = document.getElementById("sidebar-user-name");
+    const emailEl   = document.getElementById("sidebar-user-email");
+    const roleBadge = document.getElementById("sidebar-role-badge");
+    const avatarEl  = document.getElementById("sidebar-user-avatar");
+
+    if (nameEl)    nameEl.textContent  = user.full_name || "Administrator";
+    if (emailEl)   emailEl.textContent = user.email || "";
+    if (roleBadge) roleBadge.textContent = user.role_label || user.role || "Administrator";
+    if (avatarEl) {
+      if (user.avatar_url) {
+        avatarEl.innerHTML = `<img src="${user.avatar_url}" class="h-full w-full rounded-full object-cover" alt="User avatar" />`;
+      } else {
+        avatarEl.textContent = (user.full_name || user.email || "AD")
+          .split(" ")
+          .filter(Boolean)
+          .map((n) => n[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || "AD";
+      }
+    }
+  }
+
+  // Highlight active sidebar navigation item
+  highlightSidebarActiveLink("auto-import");
+
+  const signoutBtn = document.getElementById("sign-out-btn");
+  if (signoutBtn) signoutBtn.addEventListener("click", signOut);
+
+  await applyPermissions(user?.role);
+
   elements.session.textContent = `${session.full_name || session.username} (${session.role})`;
   setBusy(true);
   try {

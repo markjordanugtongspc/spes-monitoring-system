@@ -9,7 +9,7 @@ import "../styles/tailwind.css";
 import "./components/flow-debugger.js";
 import "flowbite";
 import { initFlowbite } from "flowbite";
-import { applyPermissions, requireAuth, signOut, getSession } from "./rbac/guard.js";
+import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut, getSession } from "./rbac/guard.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initExportButtonTilt } from "./components/animations.js";
@@ -83,11 +83,7 @@ function _populateSidebar(user) {
 }
 
 function _setActiveSidebarLink(navId) {
-  document.querySelectorAll(".sidebar-link").forEach(link => {
-    if (link.getAttribute("data-nav-item") === navId) {
-      link.classList.add("bg-spes-blue/10", "dark:bg-spes-yellow/15", "text-spes-blue", "dark:text-spes-yellow");
-    }
-  });
+  highlightSidebarActiveLink(navId);
 }
 
 // --- START: SIDEBAR DROPDOWN INITIALIZER ---

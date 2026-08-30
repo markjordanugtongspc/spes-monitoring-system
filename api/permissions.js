@@ -9,6 +9,7 @@ const ALLOWED_FIELDS = [
   "export_reports",
   "view_other_offices",
   "view_global_stats",
+  "view_payroll",
 ];
 
 const STAFF_PERMISSION_COLUMNS = Object.fromEntries(
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("staffs")
       .update(payload)
       .in("id", staffIds)
@@ -84,12 +85,33 @@ export default async function handler(req, res) {
         perm_delete_users,
         perm_export_reports,
         perm_view_other_offices,
-        perm_view_global_stats
+        perm_view_global_stats,
+        perm_view_payroll
       `);
+
+    if (error && (error.code === "42703" || error.code === "PGRST204" || error.code === "PGRST100" || String(error.message || "").includes("perm_view_payroll"))) {
+      delete payload.perm_view_payroll;
+      const retry = await supabase
+        .from("staffs")
+        .update(payload)
+        .in("id", staffIds)
+        .select(`
+          id,
+          perm_view_users,
+          perm_create_users,
+          perm_edit_users,
+          perm_delete_users,
+          perm_export_reports,
+          perm_view_other_offices,
+          perm_view_global_stats
+        `);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error("[SPES API] staff permissions update failed:", error.code, error.message);
-      if (error.code === "42703") {
+      if (error.code === "42703" || error.code === "PGRST204") {
         return res.status(409).json({
           error: "The individual staff permissions migration has not been applied.",
         });

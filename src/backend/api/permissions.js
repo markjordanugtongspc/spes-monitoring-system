@@ -4,7 +4,7 @@
  */
 import { supabase } from "./supabase.js";
 
-const CACHE_KEY = "spes_staff_permissions_v2";
+const CACHE_KEY = "spes_staff_permissions_v3";
 const CACHE_TTL = 10 * 60 * 1000;
 const PERMISSION_FIELDS = [
   "view_users",
@@ -14,6 +14,7 @@ const PERMISSION_FIELDS = [
   "export_reports",
   "view_other_offices",
   "view_global_stats",
+  "view_payroll",
 ];
 
 function normalizeStaffPermissions(row = {}) {
@@ -56,7 +57,8 @@ export async function fetchAllStaffPermissions({ forceRefresh = false } = {}) {
     if (cached) return { data: cached };
   }
 
-  const result = await supabase
+  // Try fetching with perm_view_payroll, fallback if column does not exist yet
+  let result = await supabase
     .from("staffs")
     .select(`
       id,
@@ -66,9 +68,27 @@ export async function fetchAllStaffPermissions({ forceRefresh = false } = {}) {
       perm_delete_users,
       perm_export_reports,
       perm_view_other_offices,
-      perm_view_global_stats
+      perm_view_global_stats,
+      perm_view_payroll
     `)
     .is("archive_at", null);
+
+  if (result.error && (result.error.code === "42703" || result.error.code === "PGRST204" || result.error.code === "PGRST100" || String(result.error.message || "").includes("perm_view_payroll"))) {
+    // Column perm_view_payroll not yet in DB, fallback query
+    result = await supabase
+      .from("staffs")
+      .select(`
+        id,
+        perm_view_users,
+        perm_create_users,
+        perm_edit_users,
+        perm_delete_users,
+        perm_export_reports,
+        perm_view_other_offices,
+        perm_view_global_stats
+      `)
+      .is("archive_at", null);
+  }
 
   if (result.error) {
     if (import.meta.env.DEV) {
@@ -97,7 +117,7 @@ export async function fetchStaffPermissions(staffId, options = {}) {
     if (cached?.[numericId]) return { data: cached[numericId] };
   }
 
-  const result = await supabase
+  let result = await supabase
     .from("staffs")
     .select(`
       id,
@@ -107,10 +127,28 @@ export async function fetchStaffPermissions(staffId, options = {}) {
       perm_delete_users,
       perm_export_reports,
       perm_view_other_offices,
-      perm_view_global_stats
+      perm_view_global_stats,
+      perm_view_payroll
     `)
     .eq("id", numericId)
     .maybeSingle();
+
+  if (result.error && (result.error.code === "42703" || result.error.code === "PGRST204" || result.error.code === "PGRST100" || String(result.error.message || "").includes("perm_view_payroll"))) {
+    result = await supabase
+      .from("staffs")
+      .select(`
+        id,
+        perm_view_users,
+        perm_create_users,
+        perm_edit_users,
+        perm_delete_users,
+        perm_export_reports,
+        perm_view_other_offices,
+        perm_view_global_stats
+      `)
+      .eq("id", numericId)
+      .maybeSingle();
+  }
 
   if (result.error) {
     if (import.meta.env.DEV) {

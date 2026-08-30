@@ -12,6 +12,7 @@
 import { fetchOwnProfile, updateOwnProfile } from "../../../../backend/api/settings.js";
 import { getSession } from "../rbac/guard.js";
 import { modals } from "./modals.js";
+import { animateCounter, isCounterAnimationEnabled, setCounterAnimationEnabled } from "./animations.js";
 
 const _g = (id) => document.getElementById(id);
 
@@ -119,6 +120,107 @@ export function initAppearancePrefs() {
   };
   setThemeLabel();
   window.addEventListener("theme-changed", setThemeLabel);
+
+  // ── Counter animations preference & interactive hover preview ──
+  const toggleCounter = _g("toggle-counter-animations");
+  const badgeCounter = _g("counter-anim-badge");
+  const cardCounter = _g("counter-anim-setting-card");
+  const previewCurrency = _g("counter-preview-currency");
+  const previewPercent = _g("counter-preview-percent");
+  const previewPulse = _g("counter-preview-pulse");
+  const previewBox = _g("counter-anim-preview-box");
+
+  const syncCounterUI = (enabled) => {
+    if (toggleCounter) toggleCounter.checked = enabled;
+    if (badgeCounter) {
+      if (enabled) {
+        badgeCounter.textContent = "Enabled (Smooth)";
+        badgeCounter.className = "inline-flex shrink-0 bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded transition-colors";
+      } else {
+        badgeCounter.textContent = "Disabled (Fast)";
+        badgeCounter.className = "inline-flex shrink-0 bg-gray-200 text-spes-black/60 dark:bg-white/10 dark:text-white/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded transition-colors";
+      }
+    }
+  };
+
+  syncCounterUI(isCounterAnimationEnabled());
+
+  // Curated preview data cycles showing realistic SPES metrics
+  const PREVIEW_CYCLES = [
+    { currency: 5133.00, percent: 100, pulseColor: "bg-emerald-500" },
+    { currency: 184788.00, percent: 94.2, pulseColor: "bg-spes-blue" },
+    { currency: 1250000.00, percent: 98.5, pulseColor: "bg-spes-yellow" },
+    { currency: 5133.00, percent: 100, pulseColor: "bg-emerald-500" }
+  ];
+
+  let hoverLoopCount = 0;
+  let hoverTimer = null;
+  let isHovering = false;
+
+  const runPreviewAnimationCycle = (singleCycle = false) => {
+    const cycleData = PREVIEW_CYCLES[hoverLoopCount % PREVIEW_CYCLES.length];
+    hoverLoopCount++;
+
+    if (previewPulse) {
+      previewPulse.className = `flex h-2 w-2 rounded-full transition-all duration-300 ${cycleData.pulseColor} shadow-xs scale-110`;
+      setTimeout(() => {
+        if (previewPulse) previewPulse.classList.remove("scale-110");
+      }, 350);
+    }
+
+    if (previewCurrency) {
+      animateCounter(previewCurrency, cycleData.currency, {
+        isCurrency: true,
+        duration: 750,
+        forceFromZero: true,
+        forceAnimate: true,
+      });
+    }
+
+    if (previewPercent) {
+      animateCounter(previewPercent, cycleData.percent, {
+        suffix: "%",
+        decimals: cycleData.percent % 1 !== 0 ? 1 : 0,
+        duration: 750,
+        forceFromZero: true,
+        forceAnimate: true,
+      });
+    }
+
+    if (!singleCycle && isHovering && hoverLoopCount < 4) {
+      hoverTimer = setTimeout(() => {
+        if (isHovering) runPreviewAnimationCycle();
+      }, 1250);
+    }
+  };
+
+  toggleCounter?.addEventListener("change", (e) => {
+    const enabled = e.target.checked;
+    setCounterAnimationEnabled(enabled);
+    syncCounterUI(enabled);
+
+    // Instant micro-animation feedback when clicking the switch
+    if (previewBox) {
+      previewBox.classList.add("ring-2", "ring-spes-blue/30", "dark:ring-spes-yellow/30");
+      setTimeout(() => previewBox.classList.remove("ring-2", "ring-spes-blue/30", "dark:ring-spes-yellow/30"), 600);
+    }
+    hoverLoopCount = 0;
+    runPreviewAnimationCycle(true);
+  });
+
+  if (cardCounter) {
+    cardCounter.addEventListener("mouseenter", () => {
+      isHovering = true;
+      hoverLoopCount = 0;
+      if (hoverTimer) clearTimeout(hoverTimer);
+      runPreviewAnimationCycle();
+    });
+
+    cardCounter.addEventListener("mouseleave", () => {
+      isHovering = false;
+      if (hoverTimer) clearTimeout(hoverTimer);
+    });
+  }
 }
 
 // ── Main export ───────────────────────────────────────────────
@@ -175,7 +277,7 @@ export async function initSettings() {
   const showErr = (msg) => { if (errBox) { errBox.textContent = msg; errBox.classList.remove("hidden"); } };
   const hideErr = () => { if (errBox) { errBox.textContent = ""; errBox.classList.add("hidden"); } };
 
-  // ── Reset button — restore from last-loaded profile ─────────
+  // ── Reset button — restore from last-loaded profile & defaults ──
   _g("btn-settings-reset")?.addEventListener("click", () => {
     hideErr();
     _setVal("set-full-name", profile.full_name);
@@ -186,6 +288,23 @@ export async function initSettings() {
     _setVal("set-password", "");
     _setVal("set-password-confirm", "");
     _renderStrength("");
+
+    // Reset local appearance preferences
+    localStorage.removeItem(TEXT_SIZE_KEY);
+    applyTextSize(0);
+    const slider = _g("text-size-slider");
+    const sizeLabel = _g("text-size-label");
+    if (slider) slider.value = "0";
+    if (sizeLabel) sizeLabel.textContent = "Normal";
+
+    setCounterAnimationEnabled(false);
+    const toggleCounter = _g("toggle-counter-animations");
+    const badgeCounter = _g("counter-anim-badge");
+    if (toggleCounter) toggleCounter.checked = false;
+    if (badgeCounter) {
+      badgeCounter.textContent = "Disabled (Fast)";
+      badgeCounter.className = "inline-flex shrink-0 bg-gray-200 text-spes-black/60 dark:bg-white/10 dark:text-white/60 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded";
+    }
   });
 
   // ── Submit ──────────────────────────────────────────────────

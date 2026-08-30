@@ -59,13 +59,13 @@ function getPayrollCustomOrder(officeId, batchKey) {
 function savePayrollCustomOrder(officeId, batchKey, orderIds) {
   try {
     localStorage.setItem(getPayrollBatchOrderStorageKey(officeId, batchKey), JSON.stringify(orderIds));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function clearPayrollCustomOrder(officeId, batchKey) {
   try {
     localStorage.removeItem(getPayrollBatchOrderStorageKey(officeId, batchKey));
-  } catch (e) {}
+  } catch (e) { }
 }
 // --- END: PAYROLL BATCH ORDER LOCAL STORAGE HELPERS ---
 
@@ -73,7 +73,7 @@ function clearPayrollCustomOrder(officeId, batchKey) {
 function _purgeLegacyPayrollStorage() {
   try {
     localStorage.removeItem("spes_beneficiary_payroll_v3");
-  } catch {}
+  } catch { }
 }
 // --- END: PURGE LEGACY PAYROLL MOCK STORAGE ---
 
@@ -157,9 +157,28 @@ const editingOfficeIds = new Set();
 let currentPage = 1;
 const selectedBeneficiaryIds = new Set();
 
+// --- START: HR / ADMIN PERMISSION HELPER ---
+function isHrOrAdmin(session) {
+  if (!session) return false;
+  const role = String(session.role || "").trim().toLowerCase();
+  const roleId = Number(session.role_id);
+  const u = String(session.username || "").trim().toLowerCase();
+  const email = String(session.email || "").trim().toLowerCase();
+  const isAdm = role === "admin" || roleId === 1 || role.includes("super");
+  const isHr = u === "lace_arrellano" || u.includes("lace") || email.includes("lace") || role === "hr" || role.includes("human resource");
+  return isAdm || isHr;
+}
+// --- END: HR / ADMIN PERMISSION HELPER ---
+
+let _lastExecutiveStatsKey = null;
+
 // --- START: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
 function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFirstVisit = false) {
-  const stats = computePayrollExecutiveSummary(beneficiaries, customGeneralBudget);
+  const session = getSession();
+  const isExecutive = isHrOrAdmin(session);
+
+  // Global totals for budget, beneficiaries, pending, balance, and disburse rate
+  const globalStats = computePayrollExecutiveSummary(beneficiaries, customGeneralBudget);
 
   const budgetEl = document.getElementById("stat-total-budget");
   const paidEl = document.getElementById("stat-total-paid");
@@ -173,31 +192,56 @@ function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFir
   const inputBudget = document.getElementById("input-edit-total-budget");
 
   if (inputBudget && !isInlineEditMode) {
-    inputBudget.value = formatNumberWithCommas(stats.totalBudget, true);
+    inputBudget.value = formatNumberWithCommas(globalStats.totalBudget, true);
   }
 
-  const paidCount = beneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
-  const pendingCount = beneficiaries.filter(b => b.payroll?.payment_status === "PENDING").length;
+  // Calculate Total Paid & Paid Count:
+  // For HR / Admin (Lace / Admin) -> OVERALL TOTAL of all paid across all offices
+  // For Normal Staff -> ONLY how much was paid in their specific assigned office
+  let displayPaidAmount = 0;
+  let displayPaidCount = 0;
+
+  if (isExecutive) {
+    displayPaidAmount = globalStats.totalPaid;
+    displayPaidCount = beneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
+  } else {
+    const myOfficeBeneficiaries = session?.office_id
+      ? beneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id))
+      : [];
+    displayPaidAmount = myOfficeBeneficiaries
+      .filter(b => b.payroll?.payment_status === "PAID")
+      .reduce((sum, b) => sum + (Number(b.payroll?.stipend_amount) || DEFAULT_STIPEND_RATE), 0);
+    displayPaidCount = myOfficeBeneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
+  }
+
+  const globalPendingCount = beneficiaries.filter(b => b.payroll?.payment_status === "PENDING").length;
+
+  // Check if data has actually changed before triggering animation to prevent idle/re-render jumping
+  const statsKey = `${globalStats.totalBudget}_${displayPaidAmount}_${globalStats.totalPending}_${globalStats.remainingBalance}_${globalStats.totalBeneficiaries}_${displayPaidCount}_${globalPendingCount}_${globalStats.disbursementRate}`;
+  if (_lastExecutiveStatsKey === statsKey && !forceFromZero) {
+    return;
+  }
+  _lastExecutiveStatsKey = statsKey;
 
   // First visit has grand cinematic duration and sequential delay; returning visits have fast snappy rolls
-  const cardDuration = isFirstVisit ? 2000 : 750;
-  const subDuration = isFirstVisit ? 1600 : 600;
+  const cardDuration = isFirstVisit ? 1400 : 750;
+  const subDuration = isFirstVisit ? 1000 : 600;
 
   const budgetDelay = isFirstVisit ? 100 : 0;
   const paidDelay = isFirstVisit ? 220 : 0;
   const pendingDelay = isFirstVisit ? 340 : 0;
   const remainingDelay = isFirstVisit ? 460 : 0;
 
-  if (budgetEl) animateCounter(budgetEl, stats.totalBudget, { isCurrency: true, duration: cardDuration, delay: budgetDelay, forceFromZero });
-  if (paidEl) animateCounter(paidEl, stats.totalPaid, { isCurrency: true, duration: cardDuration, delay: paidDelay, forceFromZero });
-  if (pendingEl) animateCounter(pendingEl, stats.totalPending, { isCurrency: true, duration: cardDuration, delay: pendingDelay, forceFromZero });
-  if (remainingEl) animateCounter(remainingEl, stats.remainingBalance, { isCurrency: true, duration: cardDuration, delay: remainingDelay, forceFromZero });
+  if (budgetEl) animateCounter(budgetEl, globalStats.totalBudget, { isCurrency: true, duration: cardDuration, delay: budgetDelay, forceFromZero });
+  if (paidEl) animateCounter(paidEl, displayPaidAmount, { isCurrency: true, duration: cardDuration, delay: paidDelay, forceFromZero });
+  if (pendingEl) animateCounter(pendingEl, globalStats.totalPending, { isCurrency: true, duration: cardDuration, delay: pendingDelay, forceFromZero });
+  if (remainingEl) animateCounter(remainingEl, globalStats.remainingBalance, { isCurrency: true, duration: cardDuration, delay: remainingDelay, forceFromZero });
 
   // Animate subtitle counts and percentages
-  if (beneCountEl) animateCounter(beneCountEl, stats.totalBeneficiaries, { suffix: " Beneficiaries", duration: subDuration, delay: isFirstVisit ? 150 : 0, forceFromZero });
-  if (paidCountEl) animateCounter(paidCountEl, paidCount, { suffix: " Paid Accounts", duration: subDuration, delay: isFirstVisit ? 270 : 0, forceFromZero });
-  if (pendingCountEl) animateCounter(pendingCountEl, pendingCount, { suffix: " In Processing", duration: subDuration, delay: isFirstVisit ? 390 : 0, forceFromZero });
-  if (disburseRateEl) animateCounter(disburseRateEl, stats.disbursementRate, { suffix: "% Disbursed", decimals: 0, duration: subDuration, delay: isFirstVisit ? 510 : 0, forceFromZero });
+  if (beneCountEl) animateCounter(beneCountEl, globalStats.totalBeneficiaries, { suffix: " Beneficiaries", duration: subDuration, delay: isFirstVisit ? 150 : 0, forceFromZero });
+  if (paidCountEl) animateCounter(paidCountEl, displayPaidCount, { suffix: isExecutive ? " Paid Accounts" : " Paid (My Office)", duration: subDuration, delay: isFirstVisit ? 270 : 0, forceFromZero });
+  if (pendingCountEl) animateCounter(pendingCountEl, globalPendingCount, { suffix: " In Processing", duration: subDuration, delay: isFirstVisit ? 390 : 0, forceFromZero });
+  if (disburseRateEl) animateCounter(disburseRateEl, globalStats.disbursementRate, { suffix: "% Disbursed", decimals: 0, duration: subDuration, delay: isFirstVisit ? 510 : 0, forceFromZero });
 }
 // --- END: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
 
@@ -237,9 +281,15 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
   const searchQ = (document.getElementById("payroll-search-input")?.value || "").trim().toLowerCase();
 
   // Group beneficiaries by office
+  const session = getSession();
+  const access = getOfficeAccessScope(session);
   const officeMap = new Map();
 
-  allOffices.forEach(o => {
+  const scopedOffices = (!access.canViewOtherOffices && session?.office_id)
+    ? allOffices.filter(o => String(o.id) === String(session.office_id))
+    : allOffices;
+
+  scopedOffices.forEach(o => {
     // Find assigned implementors
     const assignedStaff = allImplementors.filter(
       s => String(s.office_id) === String(o.id) || String(s.office || "").toLowerCase() === String(o.name || "").toLowerCase()
@@ -258,7 +308,7 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
     const offId = String(b.staffs?.office_id || "");
     if (officeMap.has(offId)) {
       officeMap.get(offId).beneficiaries.push(b);
-    } else {
+    } else if (access.canViewOtherOffices) {
       if (!officeMap.has("other")) {
         officeMap.set("other", {
           officeId: "other",
@@ -278,11 +328,11 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
     if (item.beneficiaries.length === 0 && item.officeId === "other") return;
     const customOfficeBudget = officeOverrides[String(item.officeId)] || null;
     const stats = computePayrollExecutiveSummary(item.beneficiaries, customOfficeBudget);
-    
+
     // Check search matches
     const nameMatch = item.officeName.toLowerCase().includes(searchQ);
     const officerMatch = item.assignedStaffNames.some(s => s.toLowerCase().includes(searchQ));
-    const matchedBeneficiaries = item.beneficiaries.filter(b => 
+    const matchedBeneficiaries = item.beneficiaries.filter(b =>
       String(b.full_name || "").toLowerCase().includes(searchQ) ||
       String(b.id || "").includes(searchQ) ||
       String(b.payroll?.contract_period || "").toLowerCase().includes(searchQ)
@@ -338,7 +388,8 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
 
     const highlightRowClass = searchQ ? "ring-2 ring-spes-blue/40 dark:ring-spes-yellow/40 bg-spes-blue/[0.02] dark:bg-spes-yellow/[0.02]" : "";
 
-    const isRowEditing = isInlineEditMode && editingOfficeIds.has(String(r.officeId));
+    const canEditBudgets = isHrOrAdmin(session);
+    const isRowEditing = canEditBudgets && isInlineEditMode && editingOfficeIds.has(String(r.officeId));
 
     const budgetCellContent = isRowEditing
       ? `<div class="flex items-center justify-end gap-1.5" onclick="event.stopPropagation()">
@@ -517,7 +568,7 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
       const payrollLabelMatch = String(b.payrollLabel || "").toLowerCase().includes(searchQ);
       const etAlMatch = String(b.etAlName || "").toLowerCase().includes(searchQ);
       const periodMatch = String(b.contractPeriod || "").toLowerCase().includes(searchQ);
-      const beneMatch = b.beneficiaries.some(bene => 
+      const beneMatch = b.beneficiaries.some(bene =>
         String(bene.full_name || "").toLowerCase().includes(searchQ) ||
         String(bene.id || "").includes(searchQ)
       );
@@ -539,7 +590,7 @@ function render50ItemChunkedBatchCards(isFirstVisit = false) {
     const pendingCount = batch.beneficiaries.filter(b => b.payroll?.payment_status === "PENDING").length;
     const progress = totalCount > 0 ? Math.round((batch.totalPaid / batch.totalPrincipal) * 100) : 0;
 
-    const matchedInBatch = searchQ ? batch.beneficiaries.filter(bene => 
+    const matchedInBatch = searchQ ? batch.beneficiaries.filter(bene =>
       String(bene.full_name || "").toLowerCase().includes(searchQ) ||
       String(bene.id || "").includes(searchQ)
     ).length : 0;
@@ -709,7 +760,7 @@ function applyBeneficiaryFiltersAndRender() {
   const searchQ = (document.getElementById("payroll-search-input")?.value || "").trim().toLowerCase();
   const statusFilter = document.getElementById("payroll-status-filter")?.value || "all";
 
-  const targetBatch = currentOfficeBatches.find(b => 
+  const targetBatch = currentOfficeBatches.find(b =>
     b.batchIndex === selectedBatchIndex ||
     b.batchId === selectedBatchIndex ||
     String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
@@ -808,11 +859,11 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
              </div>` : ''}
            </span>`
         : isPending
-        ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400 transition-all duration-200">
+          ? `<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-600 dark:text-amber-400 transition-all duration-200">
              <span class="h-2 w-2 rounded-full bg-amber-500"></span>
              PENDING
            </span>`
-        : `<span class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400 transition-all duration-200">
+          : `<span class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/15 px-3 py-1 text-xs font-black text-gray-600 dark:text-gray-400 transition-all duration-200">
              <span class="h-2 w-2 rounded-full bg-gray-400"></span>
              UNPAID
            </span>`;
@@ -980,7 +1031,7 @@ function initPayrollRowDragAndDrop() {
     const sourceId = String(draggedBeneId);
     const targetId = String(targetRow.dataset.beneId);
 
-    const targetBatch = currentOfficeBatches.find(b => 
+    const targetBatch = currentOfficeBatches.find(b =>
       b.batchIndex === selectedBatchIndex ||
       b.batchId === selectedBatchIndex ||
       String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
@@ -1119,7 +1170,7 @@ function openPayrollDrawer(beneficiary, mode = "view") {
     // Populate View fields
     titleEl.textContent = "Payroll Disbursement Details";
     subtitleEl.textContent = "Review individual beneficiary stipend and payment record.";
-    
+
     document.getElementById("pd-view-student-name").textContent = beneficiary.full_name || "—";
     document.getElementById("pd-view-contract-period").textContent = p.contract_period || "JULY 2026";
     document.getElementById("pd-view-return-status").textContent = beneficiary.return_status || "NEW";
@@ -1144,10 +1195,10 @@ function openPayrollDrawer(beneficiary, mode = "view") {
            </p>` : ''}
          </div>`
       : pStatus === "PENDING"
-      ? `<span class="inline-flex items-center gap-1.5 rounded-none bg-amber-500/15 px-3.5 py-1 text-xs font-black text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        ? `<span class="inline-flex items-center gap-1.5 rounded-none bg-amber-500/15 px-3.5 py-1 text-xs font-black text-amber-600 dark:text-amber-400 border border-amber-500/20">
            <span class="h-2 w-2 rounded-full bg-amber-500"></span> PENDING (In Processing)
          </span>`
-      : `<span class="inline-flex items-center gap-1.5 rounded-none bg-gray-500/15 px-3.5 py-1 text-xs font-black text-gray-600 dark:text-gray-400 border border-gray-500/20">
+        : `<span class="inline-flex items-center gap-1.5 rounded-none bg-gray-500/15 px-3.5 py-1 text-xs font-black text-gray-600 dark:text-gray-400 border border-gray-500/20">
            <span class="h-2 w-2 rounded-full bg-gray-400"></span> UNPAID
          </span>`;
     document.getElementById("pd-view-payment-status").innerHTML = statusBadgeHtml;
@@ -1171,7 +1222,7 @@ function openPayrollDrawer(beneficiary, mode = "view") {
     document.getElementById("pd-stipend-amount").value = formatNumberWithCommas(rawStipend, true);
     document.getElementById("pd-days-worked").value = p.days_worked || DEFAULT_WORK_DAYS;
     document.getElementById("pd-notes").value = p.notes || "";
-    
+
     // Set 3-Grid Payment Status Buttons State
     setPayrollDrawerStatus(p.payment_status || "PENDING");
 
@@ -1326,17 +1377,17 @@ function setPayrollDrawerStatus(status = "PENDING") {
 function calculatePayrollPageSizeOptions(totalCount) {
   const count = Math.max(0, Number(totalCount) || 0);
   const tiers = [5, 10, 25, 50, 100];
-  
+
   let validTiers = tiers.filter(t => t < count);
   if (count > 0 && !validTiers.includes(10) && count >= 10) validTiers.push(10);
   if (count > 5 && count <= 15 && !validTiers.includes(5)) validTiers.push(5);
-  
+
   if (count > 0 && !validTiers.includes(count)) {
     validTiers.push(count);
   }
-  
+
   validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx && val > 0).sort((a, b) => a - b);
-  
+
   if (validTiers.length === 0) {
     return [10];
   }
@@ -1344,7 +1395,7 @@ function calculatePayrollPageSizeOptions(totalCount) {
     validTiers.unshift(Math.min(5, count));
     validTiers = validTiers.filter((val, idx, arr) => arr.indexOf(val) === idx);
   }
-  
+
   return validTiers;
 }
 
@@ -1584,9 +1635,11 @@ function updateBulkDisburseButtonState() {
   const countDays = document.getElementById("bulk-days-count-label");
   const countNotes = document.getElementById("bulk-notes-count-label");
 
-  // Edit Data button: STRICTLY visible only in View 1 (Implementors Root View)
+  // Edit Data button: STRICTLY visible only in View 1 (Implementors Root View) AND ONLY FOR ADMIN OR HR (Lace)
+  const session = getSession();
+  const canEditBudgets = isHrOrAdmin(session);
   if (editDataBtn) {
-    if (currentView === "implementors") {
+    if (currentView === "implementors" && canEditBudgets) {
       editDataBtn.classList.remove("hidden");
       editDataBtn.classList.add("inline-flex");
     } else {
@@ -1709,7 +1762,7 @@ function setupPayrollStatusFilterDropdown() {
 
   // Wire Reset Custom Order Button
   resetOrderBtn?.addEventListener("click", () => {
-    const targetBatch = currentOfficeBatches.find(b => 
+    const targetBatch = currentOfficeBatches.find(b =>
       b.batchIndex === selectedBatchIndex ||
       b.batchId === selectedBatchIndex ||
       String(b.batchName).toLowerCase() === String(selectedBatchTitle || "").toLowerCase()
@@ -1987,6 +2040,12 @@ function setupPayrollBulkActions() {
 
 // --- START: TOGGLE INLINE EDIT MODE FOR PAYROLL DIRECTORY & BUDGET ---
 function toggleInlineEditMode(forceActive = null) {
+  const session = getSession();
+  if (!isHrOrAdmin(session)) {
+    isInlineEditMode = false;
+    return;
+  }
+
   isInlineEditMode = forceActive !== null ? forceActive : !isInlineEditMode;
 
   const btnToggle = document.getElementById("btn-toggle-inline-edit");
@@ -2126,9 +2185,17 @@ function syncUrlState(replace = false) {
 
 // --- START: SYNC AND RESTORE VIEW STATE WITH URL QUERY PARAMETERS ---
 function restoreViewFromUrl(isFirstVisit = false) {
+  const session = getSession();
+  const access = getOfficeAccessScope(session);
+
   const params = new URLSearchParams(window.location.search);
-  const officeParam = params.get("office");
+  let officeParam = params.get("office");
   const batchParam = params.get("batch");
+
+  // If user cannot view other offices, force their assigned office
+  if (!access.canViewOtherOffices && session?.office_id) {
+    officeParam = String(session.office_id);
+  }
 
   if (!officeParam) {
     renderImplementorsView(isFirstVisit, false);
@@ -2136,8 +2203,8 @@ function restoreViewFromUrl(isFirstVisit = false) {
   }
 
   // Find office by ID or name
-  const foundOffice = allOffices.find(o => 
-    String(o.id) === String(officeParam) || 
+  const foundOffice = allOffices.find(o =>
+    String(o.id) === String(officeParam) ||
     String(o.name || "").toLowerCase() === String(officeParam).toLowerCase()
   );
   const officeId = foundOffice ? foundOffice.id : officeParam;
@@ -2247,6 +2314,17 @@ export async function initPayroll() {
   initThemeToggle();
 
   _purgeLegacyPayrollStorage();
+
+  const canEditBudgets = isHrOrAdmin(session);
+  const editDataBtn = document.getElementById("btn-toggle-inline-edit");
+  if (editDataBtn && !canEditBudgets) {
+    editDataBtn.classList.add("hidden");
+    editDataBtn.classList.remove("inline-flex");
+  }
+  const editBudgetContainer = document.getElementById("stat-total-budget-edit-container");
+  if (editBudgetContainer && !canEditBudgets) {
+    editBudgetContainer.classList.add("hidden");
+  }
 
   const isFirstVisit = !preferenceStorage.hasSeenPayrollIntro();
   const cachedData = preferenceStorage.getPayrollCache();
@@ -2374,9 +2452,15 @@ export async function initPayroll() {
     }
   };
 
-  searchInput?.addEventListener("input", executeSearch);
+  let searchDebounceTimer = null;
+  searchInput?.addEventListener("input", () => {
+    syncClearSearchVisibility();
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(executeSearch, 180);
+  });
 
   clearSearchBtn?.addEventListener("click", () => {
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
     if (searchInput) {
       searchInput.value = "";
       searchInput.focus();

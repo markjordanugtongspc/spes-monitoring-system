@@ -1,4 +1,4 @@
-﻿import { readFileSync, existsSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, readdirSync, copyFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv } from "vite";
@@ -232,6 +232,7 @@ export default defineConfig(({ mode }) => {
         exports:        resolve(__dirname, "src/frontend/pages/exports/index.html"),
         settings:       resolve(__dirname, "src/frontend/pages/settings/index.html"),
         about:          resolve(__dirname, "src/frontend/pages/about/index.html"),
+        csvImportReview: resolve(__dirname, "src/frontend/services/beneficiary-csv-import-review.html"),
       }
     }
   },

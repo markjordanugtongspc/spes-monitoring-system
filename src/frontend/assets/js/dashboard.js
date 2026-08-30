@@ -5,8 +5,7 @@
  */
 import "../styles/tailwind.css";
 import "flowbite";
-import ApexCharts from "apexcharts";
-import { applyPermissions, requireAuth, signOut } from "./rbac/guard.js";
+import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut } from "./rbac/guard.js";
 import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { fetchImplementorList, invalidateImplementorCache } from "../../../backend/api/auth.js";
@@ -34,6 +33,7 @@ const ROLE_PERMISSION_DESCRIPTIONS = {
   "users:edit": "Edit and approve implementors only within the user’s assigned office.",
   "users:delete": "Archive implementors only within the user’s assigned office.",
   "reports:export": "Include other permitted offices in exports; approved users can always export their own office data.",
+  "payroll:view": "View and access the SPES Payroll system for the user’s assigned office.",
 };
 
 function setDashboardDocumentTitle(user) {
@@ -186,8 +186,19 @@ async function init(user) {
   const isAdmin = user.role === "admin";
 
   // Page-level Authorization Guards
+  const isApproved = isAdmin || user.approved === true;
+
+  if (path.includes("/beneficiaries/")) {
+    if (!isApproved) {
+      modals.error("Access Restricted", "Your account is pending approval. You do not have permission to view the Beneficiary Directory.").then(() => {
+        window.location.href = "/src/frontend/pages/dashboard/";
+      });
+      return;
+    }
+  }
+
   if (path.includes("/implementors/")) {
-    const canViewUsers = isAdmin || (user.permissions && user.permissions.view_users);
+    const canViewUsers = isApproved && (isAdmin || (user.permissions && user.permissions.view_users));
     if (!canViewUsers) {
       modals.error("Access Denied", "You do not have permission to view the Implementor Directory.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
@@ -197,7 +208,7 @@ async function init(user) {
   }
 
   if (path.includes("/roles/")) {
-    const canManageRoles = isAdmin || (user.permissions && (user.permissions.edit_users || user.permissions.view_users || user.permissions.create_users));
+    const canManageRoles = isApproved && (isAdmin || (user.permissions && (user.permissions.edit_users || user.permissions.view_users || user.permissions.create_users)));
     if (!canManageRoles) {
       modals.error("Access Denied", "You do not have permission to view or manage roles and permissions.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
@@ -254,7 +265,11 @@ async function init(user) {
   if (path.includes("/dashboard/")) {
     const viewAllLink = document.getElementById("dashboard-view-all-link");
     if (viewAllLink) {
-      viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
+      if (!isApproved) {
+        viewAllLink.classList.add("hidden");
+      } else {
+        viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
+      }
     }
     try {
       const chartMetrics = await initDashboardCharts();
@@ -370,82 +385,7 @@ function populateSidebar(user) {
 }
 
 function setActiveSidebarLink(navId) {
-  const userManagementTrigger = document.querySelector('[aria-controls="sidebar-dropdown-users"]');
-  userManagementTrigger?.classList.remove(
-    "bg-spes-blue/10",
-    "dark:bg-spes-yellow/15",
-    "text-spes-blue",
-    "dark:text-spes-yellow",
-    "font-bold"
-  );
-
-  document.querySelectorAll("#sidebar-dropdown-users > li").forEach((item) => {
-    item.removeAttribute("data-active");
-    item.classList.remove(
-      "before:border-spes-blue",
-      "before:bg-spes-blue",
-      "dark:before:border-spes-yellow",
-      "dark:before:bg-spes-yellow"
-    );
-  });
-
-  document.querySelectorAll(".sidebar-link").forEach(link => {
-    const isMatch   = link.getAttribute("data-nav-item") === navId;
-    const isSubLink = link.closest("ul[id^='sidebar-dropdown-']");
-    const subItem = link.closest("li");
-
-    if (isMatch) {
-      if (isSubLink) {
-        link.classList.add(
-          "text-spes-blue",
-          "dark:text-spes-yellow",
-          "font-bold"
-        );
-        subItem?.classList.add(
-          "before:border-spes-blue",
-          "before:bg-spes-blue",
-          "dark:before:border-spes-yellow",
-          "dark:before:bg-spes-yellow"
-        );
-        subItem?.setAttribute("data-active", "true");
-      } else {
-        link.classList.add(
-          "bg-spes-blue/10",
-          "dark:bg-spes-yellow/15",
-          "text-spes-blue",
-          "dark:text-spes-yellow"
-        );
-      }
-
-      if (isSubLink) {
-        isSubLink.classList.remove("hidden");
-        const trigger = document.querySelector(`[aria-controls="${isSubLink.id}"]`);
-        if (trigger) {
-          trigger.classList.add(
-            "bg-spes-blue/10",
-            "dark:bg-spes-yellow/15",
-            "text-spes-blue",
-            "dark:text-spes-yellow",
-            "font-bold"
-          );
-          trigger.querySelector("svg:last-child")?.classList.add("rotate-180");
-        }
-      }
-    } else {
-        link.classList.remove(
-          "bg-spes-blue/10",
-          "dark:bg-spes-yellow/15",
-        "text-spes-blue",
-        "dark:text-spes-yellow",
-        "font-bold",
-        "bg-spes-blue/8",
-        "dark:bg-spes-white/8",
-        "border-l-4",
-        "border-spes-blue",
-        "dark:border-spes-yellow"
-      );
-    }
-  });
+  highlightSidebarActiveLink(navId);
 }
 
 function _formatOfficeName(officeText) {
@@ -464,7 +404,7 @@ function _formatOfficeName(officeText) {
 // ── Implementor table ─────────────────────────────────────────
 function isLguIliganOffice(officeName) {
   const normalized = String(officeName || "").toLowerCase().replace(/\(lgu\)/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-  return normalized === "lgu iligan" || normalized.includes("city government of iligan");
+  return normalized === "lgu iligan" || normalized.includes("city government of iligan") || normalized.includes("lace");
 }
 
 function isIliganLguOffice(officeName) {
@@ -486,14 +426,32 @@ function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lg
     }
   };
 
-  takeFirst((item) => String(item.full_name || "").trim().toLowerCase() === "system administrator" || String(item.username || "").trim().toLowerCase() === "admin");
-  takeFirst((item) => lguOfficeIds instanceof Set
-    ? lguOfficeIds.has(String(item.office_id)) || isLguIliganOffice(item.office)
-    : isIliganLguOffice(item.office));
+  // 1. Top Pinned: Admin
+  takeFirst((item) => 
+    String(item.full_name || "").trim().toLowerCase() === "system administrator" || 
+    String(item.username || "").trim().toLowerCase() === "admin" ||
+    String(item.role || "").toUpperCase() === "ADMIN"
+  );
+
+  // 2. Second Pinned: HR / @lace_arrellano
+  takeFirst((item) => 
+    String(item.username || "").trim().toLowerCase() === "lace_arrellano" ||
+    String(item.username || "").trim().toLowerCase().includes("lace") ||
+    (lguOfficeIds instanceof Set
+      ? lguOfficeIds.has(String(item.office_id)) || isLguIliganOffice(item.office)
+      : isIliganLguOffice(item.office))
+  );
 
   if (!groupApproval) return [...pinned, ...ordered];
-  const approved = ordered.filter((item) => item.approved === true);
-  const unapproved = ordered.filter((item) => item.approved !== true);
+
+  // Approved users first (A-Z), then unapproved users (A-Z)
+  const approved = ordered
+    .filter((item) => item.approved === true)
+    .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || ""), undefined, { sensitivity: "base" }));
+  const unapproved = ordered
+    .filter((item) => item.approved !== true)
+    .sort((a, b) => String(a.full_name || "").localeCompare(String(b.full_name || ""), undefined, { sensitivity: "base" }));
+
   return [...pinned, ...approved, ...unapproved];
 }
 let allImplementors = [];
@@ -540,7 +498,7 @@ async function loadImplementorTable(userRole) {
   // Roles has no filter trigger, so its sort-filtration setup can return early.
   // Prepare the complete ordered list here so pinned rows are paginated correctly.
   allImplementors = isRolesPage
-    ? pinSystemAdministratorFirst(defaultStaffData, true, false, rolesLguOfficeIds)
+    ? pinSystemAdministratorFirst(defaultStaffData, true, true, rolesLguOfficeIds)
     : data;
 
   flowDebug("DATA", "Implementor list prepared", {
@@ -580,7 +538,7 @@ async function loadImplementorTable(userRole) {
       allImplementors = pinSystemAdministratorFirst(
         filtered,
         isImplPage || isRolesPage,
-        isImplPage && String(userRole || "").toLowerCase() === "admin",
+        isRolesPage || (isImplPage && String(userRole || "").toLowerCase() === "admin"),
         rolesLguOfficeIds
       );
       currentPage = preferenceStorage.getPaginationPage(paginationStorageKey) || 1;
@@ -1025,6 +983,7 @@ function renderTableRows(implementors, userRole) {
           "users:edit": "edit_users",
           "users:delete": "delete_users",
           "reports:export": "export_reports",
+          "payroll:view": "view_payroll",
         };
         return Boolean(staffPerms[colMap[perm]]);
       };
@@ -1072,7 +1031,7 @@ function renderTableRows(implementors, userRole) {
               ${escHtml(_formatOfficeName(s.office))}
             </span>
           </td>
-          ${["users:view","offices:view-other","analytics:view-global","users:create","users:edit","users:delete","reports:export"].map(perm => {
+          ${["users:view","offices:view-other","analytics:view-global","users:create","users:edit","users:delete","reports:export","payroll:view"].map(perm => {
             const description = ROLE_PERMISSION_DESCRIPTIONS[perm];
             return `
               <td class="px-6 py-4 text-center">
@@ -1573,6 +1532,7 @@ const PERM_COL_MAP = {
   "users:edit": "edit_users",
   "users:delete": "delete_users",
   "reports:export": "export_reports",
+  "payroll:view": "view_payroll",
 };
 const ALL_PERMISSIONS_GRANTED = Object.fromEntries(
   Object.values(PERM_COL_MAP).map((column) => [column, true])

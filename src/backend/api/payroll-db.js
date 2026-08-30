@@ -435,6 +435,7 @@ export async function upsertDbPayrollBudget(officeId = null, amount = 0, staffId
 /**
  * Sets up Supabase Realtime subscription on `payroll_records`, `payroll_budgets`,
  * `beneficiary`, and `batch` tables, along with cross-tab Storage and window focus listeners.
+ * Includes proper lifecycle teardown for Back-Forward Cache (bfcache) compatibility.
  * 
  * @param {Function} onDataChange - Callback invoked when remote or local data changes
  * @returns {Function} Unsubscribe / teardown cleanup function
@@ -443,24 +444,29 @@ export function subscribeToPayrollRealtime(onDataChange) {
   if (typeof onDataChange !== "function") return () => {};
 
   let debounceTimer = null;
+  let isCleanedUp = false;
+
   const triggerSync = (origin = "realtime") => {
+    if (isCleanedUp) return;
     invalidatePayrollCache();
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      onDataChange({ origin });
+      if (!isCleanedUp) {
+        onDataChange({ origin });
+      }
     }, 200);
   };
 
   const channelId = `spes-payroll-sync-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const channel = supabase
+  let channel = supabase
     .channel(channelId)
     .on("postgres_changes", { event: "*", schema: "public", table: "payroll_records" }, () => triggerSync("payroll_records"))
     .on("postgres_changes", { event: "*", schema: "public", table: "payroll_budgets" }, () => triggerSync("payroll_budgets"))
     .on("postgres_changes", { event: "*", schema: "public", table: "beneficiary" }, () => triggerSync("beneficiary"))
     .on("postgres_changes", { event: "*", schema: "public", table: "batch" }, () => triggerSync("batch"))
     .subscribe((status) => {
-      if (import.meta.env.DEV) {
-        console.info("[SPES Payroll Realtime] Channel status:", status);
+      if (import.meta.env.DEV && status !== "CLOSED") {
+        console.info("[SPES Payroll Realtime] Status:", status);
       }
     });
 
@@ -480,11 +486,39 @@ export function subscribeToPayrollRealtime(onDataChange) {
   };
   document.addEventListener("visibilitychange", handleVisibilityChange);
 
+  // Back-Forward Cache (bfcache) & Page Lifecycle Handlers
+  const handlePageHide = () => {
+    if (channel) {
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+    }
+  };
+
+  const handlePageShow = (e) => {
+    if (e.persisted && !isCleanedUp) {
+      triggerSync("bfcache-restore");
+    }
+  };
+
+  window.addEventListener("pagehide", handlePageHide);
+  window.addEventListener("pageshow", handlePageShow);
+  window.addEventListener("beforeunload", handlePageHide);
+
   return () => {
+    isCleanedUp = true;
     if (debounceTimer) clearTimeout(debounceTimer);
     window.removeEventListener("storage", handleStorageChange);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
-    supabase.removeChannel(channel);
+    window.removeEventListener("pagehide", handlePageHide);
+    window.removeEventListener("pageshow", handlePageShow);
+    window.removeEventListener("beforeunload", handlePageHide);
+    if (channel) {
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+      channel = null;
+    }
   };
 }
 // --- END: REALTIME PAYROLL SYNCHRONIZATION SERVICE ---

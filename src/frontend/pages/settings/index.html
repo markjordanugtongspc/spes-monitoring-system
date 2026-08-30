@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -270,6 +270,37 @@
                     </svg>
                     <span id="theme-toggle-text">Dark Mode</span>
                   </button>
+                </div>
+
+                <!-- Counter Animations Toggle with Interactive Hover Preview -->
+                <div id="counter-anim-setting-card" class="group relative flex flex-col gap-3 border border-spes-blue/10 bg-gray-50/60 p-4 transition-all hover:border-spes-blue/30 hover:bg-gray-50/90 dark:border-white/10 dark:bg-white/5 dark:hover:border-spes-yellow/30">
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-bold text-spes-black dark:text-spes-white">Counter Animations</p>
+                        <span id="counter-anim-badge" class="inline-flex shrink-0 bg-gray-200 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-spes-black/60 dark:bg-white/10 dark:text-white/60">Disabled (Fast)</span>
+                      </div>
+                      <p class="text-[11px] text-spes-black/45 dark:text-spes-white/40">Smooth rolling number & currency animations on stats. Hover card to preview.</p>
+                    </div>
+
+                    <!-- Flowbite-style switch toggle -->
+                    <label class="relative inline-flex cursor-pointer items-center shrink-0">
+                      <input type="checkbox" id="toggle-counter-animations" class="peer sr-only" />
+                      <div class="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-spes-blue peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-white/20 dark:peer-checked:bg-spes-yellow dark:peer-checked:after:bg-spes-dark-primary"></div>
+                    </label>
+                  </div>
+
+                  <!-- Live Interactive Preview Strip on Hover -->
+                  <div id="counter-anim-preview-box" class="mt-1 flex items-center justify-between rounded-lg border border-spes-blue/15 bg-white/80 px-3 py-2.5 shadow-xs transition-all dark:border-white/10 dark:bg-spes-dark-primary/60">
+                    <div class="flex items-center gap-2">
+                      <span id="counter-preview-pulse" class="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                      <span class="text-[11px] font-extrabold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Preview:</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span id="counter-preview-currency" class="font-montserrat text-sm font-black tabular-nums text-spes-blue dark:text-spes-yellow">₱5,133.00</span>
+                      <span id="counter-preview-percent" class="inline-flex rounded-md bg-spes-blue/10 px-2 py-0.5 font-montserrat text-xs font-black tabular-nums text-spes-blue dark:bg-spes-yellow/15 dark:text-spes-yellow">100%</span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Text size slider: Normal / Large / Extra Large -->

@@ -665,16 +665,16 @@ export async function loadConverterContext({ includeBeneficiaries = true } = {})
   }
 
   const educationLevels = levelsResult.data?.length ? levelsResult.data : FALLBACK_EDUCATION_LEVELS;
-  console.table(batchesResult.data ?? []);
-  console.table(implementors ?? []);
-  console.table(educationResult.data ?? []);
-  console.table(educationLevels);
-  console.table(gendersResult.data ?? []);
-  console.log(`${LOG_PREFIX} Existing beneficiary rows:`, beneficiariesResult.data?.length ?? 0);
+  if (import.meta.env.DEV) {
+    console.log(`${LOG_PREFIX} Reference data loaded successfully.`);
+  }
   console.groupEnd();
 
   return {
-    batches: batchesResult.data ?? [],
+    batches: (batchesResult.data ?? []).map(b => ({
+      ...b,
+      batch_name: b.batch_name || `Batch ${b.id}`,
+    })),
     implementors: implementors ?? [],
     beneficiaries: beneficiariesResult.data ?? [],
     education: educationResult.data ?? [],
