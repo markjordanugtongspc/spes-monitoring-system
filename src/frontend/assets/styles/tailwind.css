@@ -89,3 +89,43 @@
 .dark * {
   scrollbar-color: rgba(252, 209, 22, 0.25) transparent;
 }
+
+/* ── Hidden-Until-Scroll / Hover Theme-Aligned Scrollbar ── */
+.spes-dashboard-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.25s ease;
+}
+.spes-dashboard-scrollable:hover,
+.spes-dashboard-scrollable:focus-within,
+.spes-dashboard-scrollable.is-scrolling {
+  scrollbar-color: rgba(0, 56, 168, 0.45) transparent;
+}
+.dark .spes-dashboard-scrollable:hover,
+.dark .spes-dashboard-scrollable:focus-within,
+.dark .spes-dashboard-scrollable.is-scrolling {
+  scrollbar-color: rgba(252, 209, 22, 0.45) transparent;
+}
+.spes-dashboard-scrollable::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.spes-dashboard-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+.spes-dashboard-scrollable::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background 0.25s ease;
+}
+.spes-dashboard-scrollable:hover::-webkit-scrollbar-thumb,
+.spes-dashboard-scrollable:focus-within::-webkit-scrollbar-thumb,
+.spes-dashboard-scrollable.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(0, 56, 168, 0.45);
+}
+.dark .spes-dashboard-scrollable:hover::-webkit-scrollbar-thumb,
+.dark .spes-dashboard-scrollable:focus-within::-webkit-scrollbar-thumb,
+.dark .spes-dashboard-scrollable.is-scrolling::-webkit-scrollbar-thumb {
+  background: rgba(252, 209, 22, 0.45);
+}
+

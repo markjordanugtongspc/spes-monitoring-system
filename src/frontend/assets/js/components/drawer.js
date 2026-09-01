@@ -183,6 +183,13 @@ export function initImplementorsDrawer() {
 
   const closeDrawer = () => {
     flowDebug("DRAWER", "Closing implementor details drawer");
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("id");
+      const newUrl = `${window.location.pathname}${params.toString() ? "?" + params.toString() : ""}`;
+      window.history.replaceState(null, "", newUrl);
+      document.querySelectorAll(".impl-row, tr").forEach(r => r.classList.remove("border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse", "bg-spes-blue/10", "dark:bg-spes-yellow/10"));
+    } catch {}
     drawer.classList.remove("translate-y-0", "sm:translate-x-0");
     drawer.classList.add("translate-y-full", "sm:translate-x-full");
     overlay.classList.add("hidden");
@@ -200,6 +207,13 @@ export function initImplementorsDrawer() {
       implementorId: implementorData?.id ?? null,
       next: "populate details and reveal drawer",
     });
+    if (implementorData?.id) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.set("id", implementorData.id);
+        window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+      } catch {}
+    }
     // Reset to page 1
     currentPage = 1;
     updatePaginationUI();

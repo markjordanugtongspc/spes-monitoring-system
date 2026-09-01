@@ -597,8 +597,7 @@ function _drawGenderConnectorLines(el, series, total) {
     text.setAttribute("text-anchor", isRightSide ? "start" : "end");
     text.setAttribute("fill", idx === 0 ? "#4F91FF" : "#FF5B9B");
     text.style.fontFamily = "Inter, sans-serif";
-    text.style.fontSize = "10px";
-    text.style.fontWeight = "bold";
+      text.style.fontWeight = "bold";
     text.style.paintOrder = "stroke";
     text.style.stroke = document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff";
     text.style.strokeWidth = "3px";
@@ -610,7 +609,14 @@ function _drawGenderConnectorLines(el, series, total) {
   el.style.position = "relative";
   el.appendChild(overlay);
 }
-// Chart 3 — Added SPES per Year (colored column per year + trend line)
+
+// --- START: RENDER BENEFICIARIES BY YEAR CHART AND COHORT ANALYTICS ---
+/**
+ * Render Chart 3: Added SPES per Year (columns with smooth trend curve)
+ * and rich database-derived cohort analytics (Ratio, Peak, Annual Avg, Legend).
+ *
+ * @param {Array<Object>} beneficiaries
+ */
 function _renderBeneficiariesByYear(beneficiaries) {
   const el = document.getElementById("column-chart");
   if (!el) return;
@@ -618,15 +624,17 @@ function _renderBeneficiariesByYear(beneficiaries) {
   el.innerHTML = "";
 
   const defaultYears = ["2024", "2025", "2026", "2027"];
-  const detectedYears = beneficiaries.map((beneficiary) => String(beneficiary.year_period ?? "").trim()).filter((year) => /^\d{4}$/.test(year));
+  const detectedYears = beneficiaries
+    .map((beneficiary) => String(beneficiary.year_period ?? "").trim())
+    .filter((year) => /^\d{4}$/.test(year));
   // Keep zero-value year points so the trend remains visible around the active year.
   const targetYears = [...new Set([...defaultYears, ...detectedYears])].sort((a, b) => Number(a) - Number(b));
   const yearColors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6"];
   const countsByYear = {};
-  targetYears.forEach(yr => { countsByYear[yr] = 0; });
+  targetYears.forEach((yr) => { countsByYear[yr] = 0; });
 
   // Only count rows matching the active status mode (NEW default, or SPES BABY)
-  beneficiaries.forEach(b => {
+  beneficiaries.forEach((b) => {
     const yr = String(b.year_period ?? "");
     if (!targetYears.includes(yr)) return;
     if (String(b.return_status || "NEW").toUpperCase() !== _yearStatusMode) return;
@@ -635,8 +643,8 @@ function _renderBeneficiariesByYear(beneficiaries) {
 
   _xStat.yearData = { ...countsByYear };
 
-  const totalData = targetYears.map(yr => countsByYear[yr]);
-  const peak      = Math.max(...totalData);
+  const totalData = targetYears.map((yr) => countsByYear[yr]);
+  const peak      = Math.max(...totalData, 0);
   const modeTotal = totalData.reduce((a, b) => a + b, 0);
 
   // ── % of capacity badge ───────────────────────────────────────
@@ -653,24 +661,90 @@ function _renderBeneficiariesByYear(beneficiaries) {
       </span>`;
   }
 
-  // ── Summary ───────────────────────────────────────────────────
+  // ── Summary & Cohort Insights ──────────────────────────────────
   const summaryEl = document.getElementById("chart-progress-summary");
   if (summaryEl) {
+    let allNewCount = 0;
+    let allBabyCount = 0;
+    beneficiaries.forEach((b) => {
+      if (String(b.return_status || "NEW").toUpperCase() === "SPES BABY") {
+        allBabyCount++;
+      } else {
+        allNewCount++;
+      }
+    });
+    const allTotal = beneficiaries.length;
+    const newPct = allTotal > 0 ? Math.round((allNewCount / allTotal) * 100) : 0;
+    const babyPct = allTotal > 0 ? Math.round((allBabyCount / allTotal) * 100) : 0;
+
+    const activeYearsCount = targetYears.filter((yr) => countsByYear[yr] > 0).length || 1;
+    const avgIntake = Math.round(modeTotal / activeYearsCount);
+
+    let peakYearLabel = targetYears[0] || "N/A";
+    let peakYearVal = 0;
+    targetYears.forEach((yr) => {
+      if (countsByYear[yr] > peakYearVal) {
+        peakYearVal = countsByYear[yr];
+        peakYearLabel = yr;
+      }
+    });
+
     const pills = targetYears.map((yr, i) =>
       `<span class="year-legend-item cursor-pointer inline-flex items-center gap-1 hover:text-spes-blue dark:hover:text-spes-yellow transition-colors duration-150">
-         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${yearColors[i]}"></span>
-         ${yr}: <strong>${countsByYear[yr]}</strong>
+         <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${yearColors[i]}"></span>
+         <span class="font-medium">${yr}:</span> <strong class="font-black text-spes-black dark:text-spes-white">${fmt(countsByYear[yr])}</strong>
        </span>`
     ).join('<span class="text-gray-300 dark:text-white/10">|</span>');
 
     const modeLabel = _yearStatusMode === "SPES BABY" ? "SPES Baby" : "New";
+
     summaryEl.innerHTML = `
-      <div class="flex flex-col gap-1.5 mt-4 border-t border-gray-100 pt-3 dark:border-white/5">
-        <p class="text-[10px] font-semibold text-spes-black/75 dark:text-spes-white/75">
-          Roster Summary: <span class="font-extrabold text-spes-blue dark:text-spes-yellow">${modeTotal} ${modeLabel} students</span> across all years.
-        </p>
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-spes-black/60 dark:text-spes-white/50">
-          ${pills}
+      <div class="flex flex-col gap-3 mt-3 border-t border-gray-100 pt-3 dark:border-white/5">
+        <!-- Quick Insight Cards Grid (Modern Themed Fills, Responsive 3-Column, Rounded-None) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <!-- Card 1: Cohort Ratio -->
+          <div class="rounded-none bg-indigo-50/70 dark:bg-indigo-950/20 p-2.5 sm:p-3 border border-indigo-200/60 dark:border-indigo-500/20 flex flex-col justify-between shadow-xs hover:border-indigo-400 dark:hover:border-indigo-400/40 transition-colors" title="Cohort Breakdown: ${newPct}% New (${fmt(allNewCount)}) vs ${babyPct}% SPES Baby (${fmt(allBabyCount)})">
+            <span class="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">Cohort Ratio</span>
+            <div class="my-1.5 flex items-center justify-between text-[11px] font-black">
+              <span class="text-emerald-600 dark:text-emerald-400">New ${newPct}%</span>
+              <span class="text-gray-300 dark:text-white/20">|</span>
+              <span class="text-[#FF5B9B]">Baby ${babyPct}%</span>
+            </div>
+            <div class="flex h-1.5 w-full overflow-hidden rounded-none bg-gray-200 dark:bg-white/10">
+              <div class="bg-emerald-500 transition-all duration-500" style="width: ${newPct}%" title="New Students: ${newPct}% (${fmt(allNewCount)})"></div>
+              <div class="bg-[#FF5B9B] transition-all duration-500" style="width: ${babyPct}%" title="SPES Baby Students: ${babyPct}% (${fmt(allBabyCount)})"></div>
+            </div>
+          </div>
+
+          <!-- Card 2: Peak Intake -->
+          <div class="rounded-none bg-amber-50/70 dark:bg-amber-950/20 p-2.5 sm:p-3 border border-amber-200/60 dark:border-amber-500/20 flex flex-col justify-between shadow-xs hover:border-amber-400 dark:hover:border-amber-400/40 transition-colors" title="Peak Intake: Year ${peakYearLabel} with ${fmt(peakYearVal)} registered students">
+            <span class="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">Peak Intake</span>
+            <div class="my-1 flex items-baseline gap-1.5">
+              <span class="text-base font-black text-amber-600 dark:text-spes-yellow">${peakYearLabel}</span>
+              <span class="text-[10px] font-bold text-spes-black/70 dark:text-spes-white/70">(${fmt(peakYearVal)})</span>
+            </div>
+            <span class="text-[9px] font-medium text-spes-black/55 dark:text-spes-white/50" title="Highest registered intake period in database">Highest intake period</span>
+          </div>
+
+          <!-- Card 3: Annual Avg -->
+          <div class="rounded-none bg-emerald-50/70 dark:bg-emerald-950/20 p-2.5 sm:p-3 border border-emerald-200/60 dark:border-emerald-500/20 flex flex-col justify-between shadow-xs hover:border-emerald-400 dark:hover:border-emerald-400/40 transition-colors" title="Annual Average: ${fmt(avgIntake)} students per active year across ${activeYearsCount} active years">
+            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Annual Avg</span>
+            <div class="my-1 flex items-baseline gap-1.5">
+              <span class="text-base font-black text-emerald-600 dark:text-emerald-400">${fmt(avgIntake)}</span>
+              <span class="text-[10px] font-bold text-spes-black/70 dark:text-spes-white/70">students / yr</span>
+            </div>
+            <span class="text-[9px] font-medium text-spes-black/55 dark:text-spes-white/50" title="Benchmark intake average across active years">Active intake benchmark</span>
+          </div>
+        </div>
+
+        <!-- Roster Summary & Year Breakdown -->
+        <div class="flex flex-col gap-1 mt-0.5">
+          <p class="text-[9px] font-semibold text-spes-black/75 dark:text-spes-white/75">
+            Roster Summary: <span class="font-extrabold text-spes-blue dark:text-spes-yellow">${fmt(modeTotal)} ${modeLabel} students</span> across all years.
+          </p>
+          <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-spes-black/60 dark:text-spes-white/50">
+            ${pills}
+          </div>
         </div>
       </div>`;
   }
@@ -689,7 +763,7 @@ function _renderBeneficiariesByYear(beneficiaries) {
       {
         name: "Trend",
         type: "line",
-        data: targetYears.map(yr => ({ x: yr, y: countsByYear[yr] }))
+        data: targetYears.map((yr) => ({ x: yr, y: countsByYear[yr] }))
       }
     ],
     chart: { type: "line", height: 180, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
@@ -779,12 +853,13 @@ function _renderBeneficiariesByYear(beneficiaries) {
           });
         });
         span.addEventListener("mouseleave", () => {
-          el.querySelectorAll("path.apexcharts-bar-area").forEach(p => { p.style.opacity = "1"; });
+          el.querySelectorAll("path.apexcharts-bar-area").forEach((p) => { p.style.opacity = "1"; });
         });
       });
     }
   });
 }
+// --- END: RENDER BENEFICIARIES BY YEAR CHART AND COHORT ANALYTICS ---
 
 // Chart 4 — Enrollment by Month (area)
 function _renderEnrollmentByMonth(beneficiaries) {

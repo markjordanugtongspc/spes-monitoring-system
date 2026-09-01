@@ -1855,6 +1855,12 @@ export function initBeneficiaries() {
     // Persist drawer state to URL — short key "b" for beneficiary id
     _setUrlParam("b", b.id);
 
+    const targetRow = document.querySelector(`tr[data-bene-id="${b.id}"]`);
+    if (targetRow) {
+      document.querySelectorAll("tr[data-bene-id]").forEach(r => r.classList.remove("border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse", "bg-spes-blue/10", "dark:bg-spes-yellow/10"));
+      targetRow.classList.add("bg-spes-blue/10", "dark:bg-spes-yellow/10", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+    }
+
     const drawerLabel = document.getElementById("drawer-label");
     if (drawerLabel) {
       drawerLabel.textContent = (b.full_name || "").toUpperCase();
@@ -1991,6 +1997,7 @@ export function initBeneficiaries() {
   const closeDrawer = () => {
     if (!drawer) return;
     _clearUrlParam("b");
+    document.querySelectorAll("tr[data-bene-id]").forEach(r => r.classList.remove("border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse", "bg-spes-blue/10", "dark:bg-spes-yellow/10"));
     const backdrop = document.getElementById("drawer-backdrop");
     if (backdrop) {
       backdrop.classList.remove("opacity-100");
@@ -2270,8 +2277,13 @@ export function initBeneficiaries() {
             </td>
           `;
 
+          const isTarget = new URLSearchParams(window.location.search).get("b") === String(b.id);
+          const rowBg = isTarget
+            ? "bg-spes-blue/10 dark:bg-spes-yellow/10 border-l-4 border-spes-blue dark:border-spes-yellow transition-all duration-500 animate-pulse cursor-pointer"
+            : "bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200 cursor-pointer";
+
           return `
-            <tr title="Click for Details" class="cursor-pointer border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-200" data-bene-id="${b.id}">
+            <tr title="Click for Details" class="border-b border-gray-100 dark:border-white/5 ${rowBg}" data-bene-id="${b.id}">
               ${checkboxTd}
               <td class="px-6 py-4 text-left font-extrabold text-spes-black dark:text-spes-white whitespace-nowrap">
                 <span class="btn-open-drawer cursor-pointer hover:underline hover:text-spes-blue dark:hover:text-spes-yellow">${escHtml(b.full_name?.toUpperCase() || "—")}</span>
@@ -2448,6 +2460,19 @@ export function initBeneficiaries() {
     });
 
     kanbanWrap.innerHTML = cardsHtml;
+
+    // Card click → enter specific batch table
+    kanbanWrap.querySelectorAll(".batch-card").forEach(card => {
+      card.addEventListener("click", (e) => {
+        if (e.target.closest(".btn-edit-batch")) return;
+        const colId = card.getAttribute("data-batch-id");
+        selectedBatchId = colId;
+        _setUrlParam("batch", selectedBatchId);
+        batchSortPanel?.setActive?.(selectedBatchId);
+        currentPage = 1;
+        renderPaginatedTable();
+      });
+    });
 
     if (currentOfficeId === "ALL" && globalImplementorMetric == null) {
       await refreshGlobalSpesSummary(allBeneficiaries);
@@ -3426,42 +3451,48 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
       await loadData();
     }
 
-    // ── Restore beneficiary drawer ────────────────────────────────
+    // ── Restore beneficiary drawer & pulse-highlight ─────────────
     if (urlBene) {
-      const visibleBeneficiaries = getVisibleBeneficiaries();
-      const idx = visibleBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
-      if (idx !== -1) {
-        // Go to the correct page
-        currentPage = Math.floor(idx / rowsPerPage) + 1;
+      const { data: allFreshRecords } = await fetchBeneficiaries({ forceRefresh: false });
+      const recordPool = (allFreshRecords && allFreshRecords.length > 0) ? allFreshRecords : allBeneficiaries;
+      const targetBene = (recordPool || []).find(b => String(b.id) === String(urlBene));
 
-        // renderPaginatedTable might not be in scope here if it's defined inside another block,
-        // but wait, it is hoisted or accessible? We should check if we can call it.
-        // But instead we can just click the pagination button or call renderPaginatedTable if it's available.
-        // Actually, we can dispatch a custom event or just assume renderPaginatedTable is accessible.
-        try {
-          if (typeof renderPaginatedTable === 'function') {
-             renderPaginatedTable();
-          }
-        } catch(e) {}
+      if (targetBene) {
+        const targetBatchId = targetBene.batch_id ? String(targetBene.batch_id) : (targetBene.batch?.id ? String(targetBene.batch.id) : "unassigned");
+        const targetOfficeId = targetBene.staffs?.office_id;
+        const targetOfficeName = targetBene.staffs?.offices?.name || "SPES";
 
-        setTimeout(() => {
-          const row = document.querySelector(`tr[data-bene-id="${urlBene}"]`);
-          if (row) {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Add highlight effect
-            row.classList.add("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+        if (isDirectoryViewer) {
+          await switchToBeneficiariesView(targetOfficeName, "", targetOfficeId || "ALL", targetBene.staff_id, targetBatchId);
+        } else {
+          selectedBatchId = targetBatchId;
+          batchSortPanel?.setActive?.(selectedBatchId);
+          await loadData();
+        }
 
-            // Wait for 1.5 seconds to let the user see the highlight before opening the drawer
-            setTimeout(() => {
-              row.classList.remove("bg-spes-blue/20", "dark:bg-spes-yellow/20", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
-              openDrawer(visibleBeneficiaries[idx], idx);
-            }, 1500);
-          } else {
-            openDrawer(visibleBeneficiaries[idx], idx);
-          }
-        }, 300);
+        const visibleBeneficiaries = getVisibleBeneficiaries();
+        const idx = visibleBeneficiaries.findIndex(b => String(b.id) === String(urlBene));
+        if (idx !== -1) {
+          currentPage = Math.floor(idx / rowsPerPage) + 1;
+          renderPaginatedTable();
+
+          setTimeout(() => {
+            const row = document.querySelector(`tr[data-bene-id="${urlBene}"]`);
+            if (row) {
+              row.scrollIntoView({ behavior: "smooth", block: "center" });
+              row.classList.add(
+                "ring-4", "ring-spes-yellow", "dark:ring-spes-yellow",
+                "bg-spes-yellow/20", "dark:bg-spes-yellow/20",
+                "border-l-8", "border-spes-yellow",
+                "animate-pulse", "transition-all", "duration-500"
+              );
+              setTimeout(() => {
+                row.classList.remove("ring-4", "ring-spes-yellow", "dark:ring-spes-yellow", "animate-pulse");
+              }, 4500);
+            }
+          }, 350);
+        }
       } else {
-        // onRender is sync after fetch, so if not found the id is simply gone
         _clearUrlParam("b");
       }
     }

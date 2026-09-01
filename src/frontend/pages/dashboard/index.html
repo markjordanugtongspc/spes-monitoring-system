@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -68,8 +68,13 @@
           </button>
       </form>
       
+      <!-- Real-time Predictive "Did you mean?" & Smart Suggestion Chips -->
+      <div id="global-search-suggestions" class="mt-2 hidden w-full transition-all duration-200">
+         <!-- Injected via JS dynamically -->
+      </div>
+      
       <!-- Dropdown/Grid for search results -->
-      <div id="global-search-results" class="mt-8 hidden z-50 transition-all duration-300 overflow-y-auto max-h-[70vh] pb-4" style="scrollbar-width: thin;">
+      <div id="global-search-results" class="mt-4 hidden z-50 transition-all duration-300 overflow-y-auto max-h-[70vh] pb-4" style="scrollbar-width: thin;">
          <!-- Results will be injected here via JS -->
       </div>
     </div>
@@ -346,10 +351,10 @@
                 All</a>
             </div>
 
-            <div class="relative overflow-x-auto">
+            <div class="relative overflow-x-auto overflow-y-auto max-h-[255px] spes-dashboard-scrollable rounded-md border border-gray-100 dark:border-white/5">
               <table class="w-full text-left text-sm">
                 <thead
-                  class="bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-white/5 dark:text-spes-white/40">
+                  class="sticky top-0 z-10 bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-spes-dark-primary dark:text-spes-white/40 shadow-xs border-b border-gray-200 dark:border-white/10">
                   <tr>
                     <th class="px-4 py-3 text-left whitespace-nowrap">ID No.</th>
                     <th class="px-6 py-3 text-left">Name</th>

@@ -5,6 +5,7 @@
  */
 import "../styles/tailwind.css";
 import "flowbite";
+import ApexCharts from "apexcharts";
 import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut } from "./rbac/guard.js";
 import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
@@ -491,15 +492,27 @@ async function loadImplementorTable(userRole) {
     undefined,
     { sensitivity: "base" }
   );
+
   const defaultStaffData = isRolesPage
     ? [...data].sort(compareStaffNames)
-    : data;
+    : [...data];
+
+  const isDashboard = !isRolesPage && !isImplPage;
+  if (isDashboard) {
+    // Prioritize ONLINE implementors first on dashboard snapshot so online staff is immediately visible
+    defaultStaffData.sort((a, b) => {
+      const aOnline = String(a.status || "").toUpperCase() === "ONLINE" ? 1 : 0;
+      const bOnline = String(b.status || "").toUpperCase() === "ONLINE" ? 1 : 0;
+      if (aOnline !== bOnline) return bOnline - aOnline;
+      return compareStaffNames(a, b);
+    });
+  }
 
   // Roles has no filter trigger, so its sort-filtration setup can return early.
   // Prepare the complete ordered list here so pinned rows are paginated correctly.
   allImplementors = isRolesPage
     ? pinSystemAdministratorFirst(defaultStaffData, true, true, rolesLguOfficeIds)
-    : data;
+    : defaultStaffData;
 
   flowDebug("DATA", "Implementor list prepared", {
     function: "loadImplementorTable",
@@ -553,10 +566,36 @@ async function loadImplementorTable(userRole) {
       }
 
       renderPaginatedTable(userRole);
+
+      if (urlId) {
+        setTimeout(() => {
+          const targetRow = document.querySelector(`.impl-row[data-impl-info*='"id":${urlId},']`) ||
+                            document.querySelector(`.impl-row[data-impl-info*='"id":${urlId}}']`) ||
+                            document.querySelector(`[data-row-user-id="${urlId}"]`)?.closest("tr");
+          if (targetRow) {
+            targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+            targetRow.classList.add("bg-spes-blue/15", "dark:bg-spes-yellow/15", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+          }
+        }, 250);
+      }
     }
   });
 
   renderPaginatedTable(userRole);
+
+  const initialUrlId = new URLSearchParams(window.location.search).get("id");
+  if (initialUrlId) {
+    setTimeout(() => {
+      const targetRow = document.querySelector(`.impl-row[data-impl-info*='"id":${initialUrlId},']`) ||
+                        document.querySelector(`.impl-row[data-impl-info*='"id":${initialUrlId}}']`) ||
+                        document.querySelector(`[data-row-user-id="${initialUrlId}"]`)?.closest("tr");
+      if (targetRow) {
+        targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        targetRow.classList.add("bg-spes-blue/15", "dark:bg-spes-yellow/15", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+      }
+    }, 300);
+  }
+
   initPaginationEvents(userRole);
 
 }
@@ -925,6 +964,23 @@ function addDragScroll(el) {
 }
 // --- END: DRAG SCROLL HELPER FOR DASHBOARD / IMPLEMENTORS / ROLES ---
 
+// --- START: DASHBOARD AUTO-HIDE SCROLLBAR LISTENER ---
+function initDashboardScrollbarFade() {
+  document.querySelectorAll(".spes-dashboard-scrollable").forEach((el) => {
+    if (el.dataset.scrollFadeBound === "true") return;
+    el.dataset.scrollFadeBound = "true";
+    let timer = null;
+    el.addEventListener("scroll", () => {
+      el.classList.add("is-scrolling");
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        el.classList.remove("is-scrolling");
+      }, 700);
+    }, { passive: true });
+  });
+}
+// --- END: DASHBOARD AUTO-HIDE SCROLLBAR LISTENER ---
+
 function initPaginationEvents(userRole) {
   const previousButton = document.getElementById("prev-page");
   const nextButton = document.getElementById("next-page");
@@ -943,6 +999,7 @@ function initPaginationEvents(userRole) {
 
   const tableWrapper = document.getElementById("staff-table-wrapper") || document.getElementById("roles-table-wrapper") || document.querySelector(".overflow-x-auto");
   if (tableWrapper) addDragScroll(tableWrapper);
+  initDashboardScrollbarFade();
 }
 
 function renderTableRows(implementors, userRole) {
@@ -1212,12 +1269,20 @@ function renderTableRows(implementors, userRole) {
 
     row.addEventListener("click", e => {
       if (e.target.closest("button") || e.target.closest("input")) return;
-      if (window.openImplementorDrawer) {
-        try {
-          const data = JSON.parse(decodeURIComponent(row.getAttribute("data-impl-info")));
+      try {
+        const data = JSON.parse(decodeURIComponent(row.getAttribute("data-impl-info")));
+        if (data?.id) {
+          const params = new URLSearchParams(window.location.search);
+          params.set("id", data.id);
+          window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+
+          document.querySelectorAll(".impl-row, tr").forEach(r => r.classList.remove("border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse", "bg-spes-blue/10", "dark:bg-spes-yellow/10"));
+          row.classList.add("bg-spes-blue/10", "dark:bg-spes-yellow/10", "border-l-4", "border-spes-blue", "dark:border-spes-yellow", "animate-pulse");
+        }
+        if (window.openImplementorDrawer) {
           window.openImplementorDrawer(data);
-        } catch {}
-      }
+        }
+      } catch {}
     });
   });
   document.querySelectorAll(".staff-row-checkbox").forEach((checkbox) => {
@@ -2224,11 +2289,22 @@ function _wireExportsPageButtons() {
 }
 // --- FUNCTION: WIRE QUICK ACCESS EXPORT PAGE BUTTONS (END) ---
 
+// --- START: GLOBAL SMART SEARCH WITH REAL-TIME PREDICTIONS & MULTI-TIER PARSER ---
+/**
+ * Global Search Engine:
+ * - Real-time predictive fuzzy suggestions ("Did you mean?" + autocomplete)
+ * - 1-Token: Global aggregated totals (all implementors & beneficiaries) or primary facet totals
+ * - 2-Tokens: Compound facet queries (e.g., "Total Spes", "Total Male", "Spes Iligan")
+ * - 3+-Tokens: Multi-dimensional deep drilldown (e.g., "Total Spes Iligan", "Total Male Grade 11 Iligan")
+ *
+ * @param {Object} user
+ */
 function initGlobalSearch(user) {
   const overlay = document.getElementById("global-search-overlay");
   const form = document.getElementById("global-search-form");
   const input = document.getElementById("global-search-input");
   const clearBtn = document.getElementById("btn-clear-global-search");
+  const suggestionsContainer = document.getElementById("global-search-suggestions");
   const resultsContainer = document.getElementById("global-search-results");
   const searchContainer = document.getElementById("global-search-container");
 
@@ -2241,6 +2317,79 @@ function initGlobalSearch(user) {
 
   let currentApexChart = null;
 
+  // ── Levenshtein Distance for typo detection ──
+  const calcLevenshtein = (a, b) => {
+    const s1 = String(a || "").toLowerCase();
+    const s2 = String(b || "").toLowerCase();
+    if (!s1.length) return s2.length;
+    if (!s2.length) return s1.length;
+    const row = Array.from({ length: s2.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= s1.length; i++) {
+      let prev = i;
+      for (let j = 1; j <= s2.length; j++) {
+        const val = s1[i - 1] === s2[j - 1] ? row[j - 1] : Math.min(row[j - 1], prev, row[j]) + 1;
+        row[j - 1] = prev;
+        prev = val;
+      }
+      row[s2.length] = prev;
+    }
+    return row[s2.length];
+  };
+
+  const SMART_PRESETS = [
+    "Total",
+    "Total Spes",
+    "Total Male",
+    "Total Female",
+    "Total Implementors",
+    "Total New",
+    "Total SPES Baby",
+    "Spes Iligan",
+    "Total Spes Iligan",
+    "Total Spes Batch 1",
+    "Total Spes Batch 2",
+    "Total Spes of Iligan Batch 1",
+    "Total Male Iligan Batch 1",
+    "Total Female Iligan Batch 1",
+    "Grade 7",
+    "Grade 11",
+    "Grade 12",
+    "1st Year",
+    "College",
+    "Vocational"
+  ];
+
+  const KEYWORD_TYPO_MAP = {
+    tot: "Total",
+    totla: "Total",
+    totall: "Total",
+    spe: "Total Spes",
+    spse: "Total Spes",
+    spes: "Total Spes",
+    bneficiary: "Total Spes",
+    beneficiary: "Total Spes",
+    btch: "Batch 1",
+    batc: "Batch 1",
+    impl: "Total Implementors",
+    implmentor: "Total Implementors",
+    implmentors: "Total Implementors",
+    staff: "Total Implementors",
+    mal: "Total Male",
+    mle: "Total Male",
+    femal: "Total Female",
+    femle: "Total Female",
+    babae: "Total Female",
+    lalaki: "Total Male",
+    iligin: "Total Spes Iligan",
+    ilign: "Total Spes Iligan",
+    iligan: "Total Spes Iligan",
+    lg: "Total Spes LGU",
+    lgu: "Total Spes LGU",
+    colg: "College",
+    colleg: "College",
+    grde: "Grade 11"
+  };
+
   const syncGlobalClearVisibility = () => {
     if (!clearBtn || !input) return;
     const hasValue = input.value.length > 0;
@@ -2250,6 +2399,10 @@ function initGlobalSearch(user) {
 
   const clearGlobalSearch = () => {
     input.value = "";
+    if (suggestionsContainer) {
+      suggestionsContainer.classList.add("hidden");
+      suggestionsContainer.innerHTML = "";
+    }
     resultsContainer.classList.add("hidden");
     resultsContainer.innerHTML = "";
     searchContainer.classList.remove("max-w-5xl");
@@ -2270,32 +2423,31 @@ function initGlobalSearch(user) {
 
   const openSearch = () => {
     overlay.classList.remove("hidden");
-    document.body.classList.add("overflow-hidden"); // Prevent background scrolling
+    document.body.classList.add("overflow-hidden");
     setTimeout(() => {
       overlay.classList.remove("opacity-0");
       searchContainer.classList.remove("scale-95");
       input.focus();
+      renderRealtimeSuggestions(input.value.trim());
     }, 10);
   };
 
   const closeSearch = () => {
     overlay.classList.add("opacity-0");
     searchContainer.classList.add("scale-95");
-    document.body.classList.remove("overflow-hidden"); // Restore background scrolling
+    document.body.classList.remove("overflow-hidden");
     setTimeout(() => {
       overlay.classList.add("hidden");
       clearGlobalSearch();
     }, 300);
   };
 
-  searchButtons.forEach(btn => {
+  searchButtons.forEach((btn) => {
     if (btn) btn.addEventListener("click", openSearch);
   });
-  
+
   overlay?.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      closeSearch();
-    }
+    if (e.target === overlay) closeSearch();
   });
 
   document.addEventListener("keydown", (e) => {
@@ -2304,10 +2456,120 @@ function initGlobalSearch(user) {
     }
   });
 
+  // ── Real-time predictive suggestion renderer ──
+  const renderRealtimeSuggestions = (rawVal) => {
+    if (!suggestionsContainer) return;
+    const q = rawVal.trim().toLowerCase();
+
+    if (!q) {
+      suggestionsContainer.innerHTML = `
+        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-white/90 dark:bg-spes-dark-secondary/90 backdrop-blur-md border border-gray-200 dark:border-white/10 shadow-lg">
+          <span class="text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow mr-1">Quick:</span>
+          ${["Total", "Total Spes", "Total Male", "Total Female", "Total Implementors", "Total Spes Iligan"].map((preset) => `
+            <button type="button" data-search-preset="${preset}" class="cursor-pointer text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-spes-black dark:text-spes-white hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary transition-all duration-150 shadow-xs">
+              ${preset}
+            </button>
+          `).join("")}
+        </div>`;
+      suggestionsContainer.classList.remove("hidden");
+      bindSuggestionChips();
+      return;
+    }
+
+    const matchedSuggestions = [];
+    let isFuzzyCorrection = false;
+    let correctionLabel = "";
+
+    // 1. Direct typo check in dictionary
+    const firstWord = q.split(/\s+/)[0];
+    if (KEYWORD_TYPO_MAP[firstWord] && !SMART_PRESETS.map((p) => p.toLowerCase()).includes(q)) {
+      matchedSuggestions.push(KEYWORD_TYPO_MAP[firstWord]);
+      isFuzzyCorrection = true;
+      correctionLabel = KEYWORD_TYPO_MAP[firstWord];
+    }
+
+    // 2. Prefix & Substring matches from presets
+    SMART_PRESETS.forEach((preset) => {
+      const pLow = preset.toLowerCase();
+      if (pLow.startsWith(q) || pLow.includes(q)) {
+        if (!matchedSuggestions.includes(preset)) matchedSuggestions.push(preset);
+      }
+    });
+
+    // 3. Fuzzy Levenshtein match across tokens if few matches
+    if (matchedSuggestions.length < 3) {
+      SMART_PRESETS.forEach((preset) => {
+        const dist = calcLevenshtein(q, preset);
+        if (dist <= 3 && !matchedSuggestions.includes(preset)) {
+          matchedSuggestions.push(preset);
+          if (!isFuzzyCorrection) {
+            isFuzzyCorrection = true;
+            correctionLabel = preset;
+          }
+        }
+      });
+    }
+
+    // Dynamic compound query builder (e.g. user typed "spes iligan batch 1" or "male batch 2")
+    if (q.includes("batch") && q.includes("ilig") && !matchedSuggestions.includes("Total Spes of Iligan Batch 1")) {
+      matchedSuggestions.unshift("Total Spes of Iligan Batch 1");
+    } else if (q.includes("batch") && !matchedSuggestions.includes("Total Spes Batch 1")) {
+      matchedSuggestions.unshift("Total Spes Batch 1");
+    }
+    if (q.includes("male") && q.includes("ilig") && !matchedSuggestions.includes("Total Male Iligan Batch 1")) {
+      matchedSuggestions.unshift("Total Male Iligan Batch 1");
+    }
+    if (q.includes("female") && q.includes("ilig") && !matchedSuggestions.includes("Total Female Iligan Batch 1")) {
+      matchedSuggestions.unshift("Total Female Iligan Batch 1");
+    }
+    if (q.includes("spes") && q.includes("ilig") && !matchedSuggestions.includes("Total Spes of Iligan")) {
+      matchedSuggestions.unshift("Total Spes of Iligan");
+    }
+
+    const finalSuggestions = matchedSuggestions.slice(0, 5);
+
+    if (finalSuggestions.length === 0) {
+      suggestionsContainer.classList.add("hidden");
+      suggestionsContainer.innerHTML = "";
+      return;
+    }
+
+    suggestionsContainer.innerHTML = `
+      <div class="flex flex-wrap items-center gap-1.5 p-2.5 rounded-lg bg-white/95 dark:bg-spes-dark-secondary/95 backdrop-blur-md border border-gray-200 dark:border-white/10 shadow-xl">
+        <span class="text-[9px] font-black uppercase tracking-wider ${isFuzzyCorrection ? 'text-amber-500 dark:text-amber-400' : 'text-spes-blue dark:text-spes-yellow'} mr-1 flex items-center gap-1">
+          ${isFuzzyCorrection ? `
+            <svg class="h-3 w-3 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg>
+            Did you mean:` : 'Suggestions:'}
+        </span>
+        ${finalSuggestions.map((preset) => `
+          <button type="button" data-search-preset="${preset}" class="cursor-pointer text-[9px] font-bold px-2.5 py-1 rounded-full bg-spes-blue/10 text-spes-blue hover:bg-spes-blue hover:text-white dark:bg-spes-yellow/15 dark:text-spes-yellow dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary transition-all duration-150 shadow-xs active:scale-95">
+            ${preset}
+          </button>
+        `).join("")}
+      </div>`;
+    suggestionsContainer.classList.remove("hidden");
+    bindSuggestionChips();
+  };
+
+  const bindSuggestionChips = () => {
+    suggestionsContainer?.querySelectorAll("[data-search-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const val = btn.getAttribute("data-search-preset");
+        if (input && val) {
+          input.value = val;
+          syncGlobalClearVisibility();
+          suggestionsContainer.classList.add("hidden");
+          performSmartSearch(val, user);
+        }
+      });
+    });
+  };
+
   input?.addEventListener("input", (e) => {
     const query = e.target.value.trim();
+    renderRealtimeSuggestions(query);
 
-    if (query.length < 2) {
+    if (query.length === 0) {
       resultsContainer.classList.add("hidden");
       resultsContainer.innerHTML = "";
       searchContainer.classList.remove("max-w-5xl");
@@ -2322,15 +2584,18 @@ function initGlobalSearch(user) {
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
     const query = input.value.trim();
-    if (query.length >= 2) {
-      performSearch(query, user);
+    if (query.length >= 1) {
+      suggestionsContainer?.classList.add("hidden");
+      performSmartSearch(query, user);
     }
   });
 
-  async function performSearch(query, user) {
-    const roleId = user.role_id;
-    const officeId = user.office_id;
-    const canSearchGlobal = getOfficeAccessScope(user).canViewGlobalStats;
+  // ── Multi-Tier Smart Query Execution ──
+  async function performSmartSearch(rawQuery, currentUser) {
+    const roleId = currentUser.role_id;
+    const officeId = currentUser.office_id;
+    const canSearchGlobal = getOfficeAccessScope(currentUser).canViewGlobalStats;
+
     try {
       resultsContainer.innerHTML = `
         <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -2338,23 +2603,135 @@ function initGlobalSearch(user) {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span class="font-bold tracking-wider uppercase text-xs">Querying database...</span>
+          <span class="font-bold tracking-wider uppercase text-xs">Analyzing smart query...</span>
         </div>`;
       resultsContainer.classList.remove("hidden");
       searchContainer.classList.remove("max-w-lg");
       searchContainer.classList.add("max-w-5xl");
 
-      // Clean query of characters that break PostgREST .or() syntax (like commas and quotes)
-      const safeQuery = query.replace(/[,()"]/g, '').trim();
+      // ── Normalize & Strip Punctuation ──
+      const cleanQuery = rawQuery.replace(/[,()"]/g, " ").trim();
+      const rawTokens = cleanQuery.toUpperCase().split(/\s+/).filter(Boolean);
 
-      // 1. Search offices matching query (by name or location)
-      const { data: matchedOffices } = await supabase
-        .from("offices")
-        .select("id")
-        .or(`name.ilike.%${safeQuery}%,location.ilike.%${safeQuery}%`);
-      const officeIds = (matchedOffices || []).map(o => o.id);
+      // ── Stop Words Discarder (e.g. "of", "in", "at", "on", "ng", "sa", etc.) ──
+      const STOP_WORDS = new Set([
+        "OF", "IN", "AT", "ON", "FOR", "FROM", "AND", "WITH", "THE", "A", "AN",
+        "NG", "SA", "MGA", "NANG", "PARA", "KAY", "NILANG", "ALL", "OF THE"
+      ]);
 
-      // 2. Setup Base Queries — includes education_level and education joins for grade/year level filtering
+      const qTokens = rawTokens.filter((t) => !STOP_WORDS.has(t) || t === "ALL");
+
+      // ── Token Facet Classifiers ──
+      const TOTAL_TOKENS = ["TOTAL", "ALL", "*", "OVERALL", "COUNT", "SUMMARY", "LAHAT"];
+      const SPES_TOKENS = ["SPES", "BENEFICIARY", "BENEFICIARIES", "STUDENT", "STUDENTS"];
+      const IMPL_TOKENS = ["IMPLEMENTOR", "IMPLEMENTORS", "STAFF", "STAFFS", "OFFICER", "OFFICERS", "ADMIN", "ADMINS"];
+      const MALE_TOKENS = ["MALE", "MEN", "MAN", "BOY", "BOYS", "LALAKI"];
+      const FEMALE_TOKENS = ["FEMALE", "WOMEN", "WOMAN", "GIRL", "GIRLS", "BABAE"];
+      const NEW_TOKENS = ["NEW", "NEWCOMER", "FIRST-TIME", "FIRST TIME"];
+      const BABY_TOKENS = ["BABY", "SPES BABY", "RETURNING", "RETURNEE", "RETURNER"];
+      const APPROVED_TOKENS = ["APPROVED"];
+      const PENDING_TOKENS = ["PENDING", "UNAPPROVED"];
+
+      const searchMonths = {
+        JAN: "JANUARY", JANUARY: "JANUARY", FEB: "FEBRUARY", FEBRUARY: "FEBRUARY",
+        MAR: "MARCH", MARCH: "MARCH", APR: "APRIL", APRIL: "APRIL", MAY: "MAY",
+        JUN: "JUNE", JUNE: "JUNE", JUL: "JULY", JULY: "JULY", AUG: "AUGUST", AUGUST: "AUGUST",
+        SEP: "SEPTEMBER", SEPT: "SEPTEMBER", SEPTEMBER: "SEPTEMBER", OCT: "OCTOBER", OCTOBER: "OCTOBER",
+        NOV: "NOVEMBER", NOVEMBER: "NOVEMBER", DEC: "DECEMBER", DECEMBER: "DECEMBER",
+      };
+
+      const hasTotalToken = qTokens.some((t) => TOTAL_TOKENS.includes(t));
+      const hasSpesToken = qTokens.some((t) => SPES_TOKENS.includes(t));
+      const hasImplToken = qTokens.some((t) => IMPL_TOKENS.includes(t));
+      const hasMaleToken = qTokens.some((t) => MALE_TOKENS.includes(t));
+      const hasFemaleToken = qTokens.some((t) => FEMALE_TOKENS.includes(t));
+      const hasNewToken = qTokens.some((t) => NEW_TOKENS.includes(t));
+      const hasBabyToken = qTokens.some((t) => BABY_TOKENS.includes(t));
+      const hasApprovedToken = qTokens.some((t) => APPROVED_TOKENS.includes(t));
+      const hasPendingToken = qTokens.some((t) => PENDING_TOKENS.includes(t));
+      const requestedYear = cleanQuery.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
+      const requestedMonth = Object.entries(searchMonths).find(([term]) => new RegExp(`\\b${term}\\b`, "i").test(cleanQuery))?.[1] || null;
+
+      // ── Smart Batch Parser (supports "Batch 1", "Batch 2", "B1", "Batch-1", etc.) ──
+      let requestedBatchId = null;
+      let requestedBatchLabel = null;
+
+      const batchNumMatch = cleanQuery.match(/\b(?:BATCH|B)\s*[-#]?\s*(\d+)\b/i);
+      if (batchNumMatch) {
+        requestedBatchId = Number(batchNumMatch[1]);
+        requestedBatchLabel = `Batch ${requestedBatchId}`;
+      } else {
+        // Also check against DB batch table names
+        const { data: dbBatches } = await supabase.from("batch").select("id, batch_name");
+        if (dbBatches?.length) {
+          for (const b of dbBatches) {
+            const bName = String(b.batch_name || "").toUpperCase();
+            if (bName && qTokens.includes(bName)) {
+              requestedBatchId = b.id;
+              requestedBatchLabel = b.batch_name;
+              break;
+            }
+          }
+        }
+      }
+
+      // ── Detect Education Levels / Grades ──
+      const eduLevelPatternMap = [
+        { test: /GRADE\s*7|\bG7\b|\bGR7\b/i, pattern: "Grade 7" },
+        { test: /GRADE\s*8|\bG8\b|\bGR8\b/i, pattern: "Grade 8" },
+        { test: /GRADE\s*9|\bG9\b|\bGR9\b/i, pattern: "Grade 9" },
+        { test: /GRADE\s*10|\bG10\b|\bGR10\b/i, pattern: "Grade 10" },
+        { test: /GRADE\s*11|\bG11\b|\bGR11\b|\bSHS\b/i, pattern: "Grade 11" },
+        { test: /GRADE\s*12|\bG12\b|\bGR12\b/i, pattern: "Grade 12" },
+        { test: /1ST\s*YEAR|FIRST\s*YEAR|\b1ST\s*YR\b|FRESHMAN/i, pattern: "1st Year" },
+        { test: /2ND\s*YEAR|SECOND\s*YEAR|\b2ND\s*YR\b|SOPHOMORE/i, pattern: "2nd Year" },
+        { test: /3RD\s*YEAR|THIRD\s*YEAR|\b3RD\s*YR\b/i, pattern: "3rd Year" },
+        { test: /4TH\s*YEAR|FOURTH\s*YEAR|\b4TH\s*YR\b|GRADUATING/i, pattern: "4th Year" },
+        { test: /\bGRADE\b|\bGRADES\b/i, pattern: "Grade", grouped: true },
+        { test: /\bCOLLEGE\b|\bCOLLEGIATE\b|\bTERTIARY\b|\bUNIVERSITY\b/i, pattern: "College", isCat: true },
+        { test: /\bVOCATIONAL\b|\bTVET\b|\bTECH.?VOC\b|\bTESDA\b/i, pattern: "Vocational", isCat: true }
+      ];
+
+      const detectedEdu = eduLevelPatternMap.find((item) => item.test.test(cleanQuery));
+
+      // ── Reserved Words for Facet Stripping ──
+      const reservedWords = new Set([
+        ...TOTAL_TOKENS, ...SPES_TOKENS, ...IMPL_TOKENS, ...MALE_TOKENS,
+        ...FEMALE_TOKENS, ...NEW_TOKENS, ...BABY_TOKENS, ...APPROVED_TOKENS, ...PENDING_TOKENS,
+        ...STOP_WORDS, "GRADE", "YEAR", "1ST", "2ND", "3RD", "4TH", "COLLEGE", "VOCATIONAL",
+        "BATCH", "B1", "B2", "B3", "B4", "B5"
+      ]);
+      if (requestedYear) reservedWords.add(requestedYear);
+      if (requestedMonth) reservedWords.add(requestedMonth);
+      if (requestedBatchId) {
+        reservedWords.add(`BATCH`);
+        reservedWords.add(String(requestedBatchId));
+      }
+
+      // Filter out tokens that were consumed by facets or stop words
+      const residualTokens = qTokens.filter((tok) => !reservedWords.has(tok) && !/^(?:BATCH\d*|B\d+)$/i.test(tok));
+      const residualSearch = residualTokens.join(" ").trim();
+
+      // ── Check Matched Offices from Residual Tokens or Query ──
+      let matchedOfficeIds = [];
+      let matchedOfficeName = null;
+
+      const { data: allDbOffices } = await supabase.from("offices").select("id, name, location");
+      if (allDbOffices?.length) {
+        for (const off of allDbOffices) {
+          const offName = String(off.name || "").toUpperCase();
+          const offLoc = String(off.location || "").toUpperCase();
+          const isLguMatch = (offName.includes("ILIGAN") || offLoc.includes("ILIGAN")) && (cleanQuery.toUpperCase().includes("ILIGAN") || qTokens.includes("ILIGAN") || qTokens.includes("LGU"));
+          const isDirectMatch = residualTokens.some((tok) => tok.length >= 3 && (offName.includes(tok) || offLoc.includes(tok)));
+
+          if (isLguMatch || isDirectMatch) {
+            matchedOfficeIds.push(off.id);
+            if (!matchedOfficeName) matchedOfficeName = off.name;
+          }
+        }
+      }
+
+      // Base query declarations
       let benQuery = supabase
         .from("beneficiary")
         .select(`
@@ -2364,722 +2741,394 @@ function initGlobalSearch(user) {
           education:educ_id(id, name),
           staffs!staff_id${!canSearchGlobal ? '!inner' : ''}(office_id, full_name, offices(name))
         `);
+
       let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
 
-      // ─────────────────────────────────────────────────────────
-      // ─────────────────────────────────────────────────────────────────────
-      // 3. Smart Keyword Intercept
-      //    Keywords → filter beneficiaries + optional groupBy for category view
-      // ─────────────────────────────────────────────────────────────────────
-      const qUpper = query.toUpperCase().trim();
-      const qNorm  = qUpper.replace(/\s+/g, " ");
-      let isKeyword = false;
-      let searchGroupMode = null; // null | "EDUCATION_CAT" | "EDUCATION_LEVEL"
-      let groupMeta = [];  // [{ id, name }] — the groups to display
+      // ── Query Routing & Filtering ──
+      const isGrandGlobalTotal = (qTokens.length === 1 && hasTotalToken && !requestedBatchId && !matchedOfficeIds.length) || (qTokens.length === 2 && hasTotalToken && qTokens.includes("*"));
 
-      // `education_levels` is currently protected by RLS in production, so an
-      // anon lookup can legitimately return an empty array even though
-      // beneficiary.education_level_id contains valid foreign-key values.
-      // Keep the production IDs as a fallback so quick search still resolves
-      // the level filter. DB rows always take precedence when they are visible.
-      const fallbackEducationLevels = [
-        { id: 1, education_id: 1, name: "Grade 11" },
-        { id: 2, education_id: 1, name: "Grade 12" },
-        { id: 3, education_id: 3, name: "1st Year" },
-        { id: 4, education_id: 3, name: "2nd Year" },
-        { id: 5, education_id: 3, name: "3rd Year" },
-        { id: 6, education_id: 3, name: "4th Year" },
-        { id: 8, education_id: 4, name: "Grade 7" },
-        { id: 9, education_id: 4, name: "Grade 8" },
-        { id: 10, education_id: 4, name: "Grade 9" },
-        { id: 11, education_id: 4, name: "Grade 10" },
-      ];
-
-      // ── DB helpers ──
-      const fetchEducRows = async (nameLike) => {
-        const { data, error } = await supabase
-          .from("education")
-          .select("id, name")
-          .ilike("name", `%${nameLike}%`)
-          .order("name");
-        if (error) throw error;
-        return data || [];
-      };
-      const fetchEduLevelRows = async (nameLike) => {
-        const { data, error } = await supabase
-          .from("education_levels")
-          .select("id, education_id, name")
-          .ilike("name", `%${nameLike}%`)
-          .order("education_id")
-          .order("sort_order");
-        if (error) throw error;
-        if (data?.length) return data;
-
-        const needle = String(nameLike ?? "").trim().toLowerCase();
-        return fallbackEducationLevels.filter(level =>
-          level.name.toLowerCase().includes(needle)
-        );
-      };
-
-      // ── TOTAL / ALL ──
-      // Composite period queries: e.g. "male total in july 2026".
-      // Each detected facet becomes an exact database predicate, so the output
-      // is a real aggregate of the matching beneficiary records.
-      const searchMonths = {
-        JAN: "JANUARY", JANUARY: "JANUARY", FEB: "FEBRUARY", FEBRUARY: "FEBRUARY",
-        MAR: "MARCH", MARCH: "MARCH", APR: "APRIL", APRIL: "APRIL", MAY: "MAY",
-        JUN: "JUNE", JUNE: "JUNE", JUL: "JULY", JULY: "JULY", AUG: "AUGUST", AUGUST: "AUGUST",
-        SEP: "SEPTEMBER", SEPT: "SEPTEMBER", SEPTEMBER: "SEPTEMBER", OCT: "OCTOBER", OCTOBER: "OCTOBER",
-        NOV: "NOVEMBER", NOVEMBER: "NOVEMBER", DEC: "DECEMBER", DECEMBER: "DECEMBER",
-      };
-      const requestedMonth = Object.entries(searchMonths).find(([term]) => new RegExp(`\\b${term}\\b`).test(qNorm))?.[1] || null;
-      const requestedYear = qNorm.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
-      const requestsMale = /\b(?:MALE|LALAKI)\b/.test(qNorm);
-      const requestsFemale = /\b(?:FEMALE|BABAE)\b/.test(qNorm);
-      const hasCompositePeriodQuery = Boolean(requestedMonth || requestedYear || requestsMale || requestsFemale);
-
-      if (hasCompositePeriodQuery) {
-        isKeyword = true;
-        staffSearchQuery = null;
-        if (requestsMale) benQuery = benQuery.eq("gender_id", 1);
-        else if (requestsFemale) benQuery = benQuery.eq("gender_id", 2);
-        if (requestedMonth) benQuery = benQuery.eq("month_period", requestedMonth);
-        if (requestedYear) benQuery = benQuery.eq("year_period", requestedYear);
-
-      // ── TOTAL / ALL ──
-      } else if (qNorm === "TOTAL" || qNorm === "ALL") {
-        isKeyword = true;
-
-      // ── GENDER ──
-      } else if (qNorm === "MALE" || qNorm === "LALAKI") {
-        isKeyword = true;
-        benQuery = benQuery.eq("gender_id", 1);
-        staffSearchQuery = null;
-
-      } else if (qNorm === "FEMALE" || qNorm === "BABAE") {
-        isKeyword = true;
-        benQuery = benQuery.eq("gender_id", 2);
-        staffSearchQuery = null;
-
-      // ── SPES / BENEFICIARIES ──
-      } else if (qNorm === "SPES" || qNorm === "BENEFICIARIES" || qNorm === "BENEFICIARY") {
-        isKeyword = true;
-        staffSearchQuery = null;
-
-      // ── IMPLEMENTORS / STAFF ──
-      } else if (["IMPLEMENTORS","IMPLEMENTOR","STAFF","STAFFS","OFFICER","OFFICERS"].includes(qNorm)) {
-        isKeyword = true;
-        benQuery = null;
-
-      // ── RETURN STATUS: NEW ──
-      } else if (qNorm === "NEW" || qNorm === "NEW BENEFICIARY" || qNorm === "FIRST TIME" || qNorm === "NEWCOMER") {
-        isKeyword = true;
-        benQuery = benQuery.eq("return_status", "NEW");
-        staffSearchQuery = null;
-
-      // ── RETURN STATUS: SPES BABY / RETURNING ──
-      } else if (
-        qNorm === "RETURNING" || qNorm === "SPES BABY" || qNorm === "RETURNEE" ||
-        qNorm === "RETURN" || qNorm === "RETURNER" || qNorm === "BABY"
-      ) {
-        isKeyword = true;
-        benQuery = benQuery.eq("return_status", "SPES BABY");
-        staffSearchQuery = null;
-
-      // ── ONGOING (not SPES BABY) ──
-      } else if (qNorm === "ONGOING" || qNorm === "ACTIVE") {
-        isKeyword = true;
-        benQuery = benQuery.neq("return_status", "SPES BABY");
-        staffSearchQuery = null;
-
-      // ── IMPLEMENTOR APPROVAL STATUS ──
-      } else if (qNorm === "APPROVED") {
-        isKeyword = true;
-        benQuery = null;
-        if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", true);
-
-      } else if (qNorm === "PENDING" || qNorm === "UNAPPROVED") {
-        isKeyword = true;
-        benQuery = null;
-        if (staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", false);
-
+      if (isGrandGlobalTotal) {
+        // Grand Total of entire system
+        if (!canSearchGlobal) benQuery = benQuery.eq("staffs.office_id", officeId);
       } else {
-        // ─────────────────────────────────────────────────────────────────
-        // EDUCATION-LEVEL GROUPED SEARCH  (education_levels table)
-        // "grade" → shows ALL grades (7-12) grouped
-        // "year"  → shows ALL year levels (1st-4th) grouped
-        // "grade 7" → only Grade 7
-        // ─────────────────────────────────────────────────────────────────
-
-        // Map what user types → DB ILIKE search pattern for education_levels.name
-        const levelPatternMap = [
-          { test: /^GRADE\s*7$|^G\s*7$|^GR\s*7$/,    pattern: "Grade 7"    },
-          { test: /^GRADE\s*8$|^G\s*8$|^GR\s*8$/,    pattern: "Grade 8"    },
-          { test: /^GRADE\s*9$|^G\s*9$|^GR\s*9$/,    pattern: "Grade 9"    },
-          { test: /^GRADE\s*10$|^G\s*10$|^GR\s*10$/, pattern: "Grade 10"   },
-          { test: /^GRADE\s*11$|^G\s*11$|^GR\s*11$/, pattern: "Grade 11"   },
-          { test: /^GRADE\s*12$|^G\s*12$|^GR\s*12$/, pattern: "Grade 12"   },
-          { test: /^1ST\s*YEAR$|^FIRST\s*YEAR$|^1ST\s*YR$|^YEAR\s*1$|^FRESHMAN$/,  pattern: "1st Year"  },
-          { test: /^2ND\s*YEAR$|^SECOND\s*YEAR$|^2ND\s*YR$|^YEAR\s*2$|^SOPHOMORE$/,pattern: "2nd Year"  },
-          { test: /^3RD\s*YEAR$|^THIRD\s*YEAR$|^3RD\s*YR$|^YEAR\s*3$/,             pattern: "3rd Year"  },
-          { test: /^4TH\s*YEAR$|^FOURTH\s*YEAR$|^4TH\s*YR$|^YEAR\s*4$|^GRADUATING$/,pattern: "4th Year" },
-          // BROAD partial → all matching levels from DB (show grouped)
-          { test: /^GRADE$|^GRADES$/,              pattern: "Grade",      grouped: true },
-          { test: /^YEAR$|^YEARS$|^COL$|^COLL$/,  pattern: "Year",       grouped: true },
-          { test: /^JHS$|^JUNIOR\s*HIGH$/,         pattern: "Grade",      grouped: true },
-          { test: /^SHS$|^SENIOR\s*HIGH$/,         pattern: "Grade 1",    grouped: true }, // partial — catches G11, G12
-          { test: /^VOCAT|^TVET$|^TECH.?VOC$|^TESDA$|^VOCATIONAL$|^NC[1-4]$/, pattern: "Vocational", grouped: false },
-        ];
-
-        let levelPattern = null;
-        let levelGrouped = false;
-        for (const lp of levelPatternMap) {
-          if (lp.test.test(qNorm)) {
-            levelPattern = lp.pattern;
-            levelGrouped = !!lp.grouped;
-            break;
+        // Target Routing
+        if (hasImplToken || hasApprovedToken || hasPendingToken) {
+          if (!hasSpesToken && !hasMaleToken && !hasFemaleToken && !requestedBatchId) {
+            benQuery = null; // Staff only search
           }
+          if (hasApprovedToken && staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", true);
+          if (hasPendingToken && staffSearchQuery) staffSearchQuery = staffSearchQuery.eq("approved", false);
+        } else if (hasSpesToken || hasMaleToken || hasFemaleToken || hasNewToken || hasBabyToken || detectedEdu || requestedBatchId) {
+          staffSearchQuery = null; // SPES only search
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // EDUCATION CATEGORY GROUPED SEARCH  (education table)
-        // "college" → College Graduate, College Level grouped
-        // "vocational" → all vocational categories grouped
-        // ─────────────────────────────────────────────────────────────────
-        const educCatPatternMap = [
-          { test: /^COLLEGE$|^COLLEGIATE$|^TERTIARY$|^UNIVERSITY$/,       pattern: "College",     grouped: true  },
-          { test: /^HIGH\s*SCHOOL$|^HIGHSCHOOL$|^SECONDARY$/,             pattern: "High School", grouped: true  },
-          { test: /^ELEMENTARY$|^ELEM$|^PRIMARY$|^GRADE\s*SCHOOL$/,       pattern: "Elementary",  grouped: true  },
-          { test: /^VOCATIONAL$|^VOCATION$|^TVET$|^TECH.?VOC$|^TESDA$/,  pattern: "Vocational",  grouped: true  },
-          { test: /^EDUCATION$|^EDUC$|^CATEGORY$|^CATEGORIES$/,           pattern: "",            grouped: true  },
-        ];
-
-        let educCatPattern = null;
-        let educCatGrouped = false;
-        for (const ep of educCatPatternMap) {
-          if (ep.test.test(qNorm)) {
-            educCatPattern = ep.pattern;
-            educCatGrouped = ep.grouped;
-            break;
-          }
-        }
-
-        if (levelPattern !== null) {
-          isKeyword = true;
-          staffSearchQuery = null;
-
-          if (levelGrouped) {
-            // Fetch ALL matching levels from DB and group display
-            const rows = await fetchEduLevelRows(levelPattern);
-            if (rows.length > 0) {
-              groupMeta = rows; // [{id, name}]
-              searchGroupMode = "EDUCATION_LEVEL";
-              benQuery = benQuery.in("education_level_id", rows.map(r => r.id));
-            } else {
-              benQuery = benQuery.eq("education_level_id", -999);
-            }
-          } else {
-            // Specific single level
-            const rows = await fetchEduLevelRows(levelPattern);
-            if (rows.length > 0) {
-              groupMeta = rows;
-              searchGroupMode = "EDUCATION_LEVEL";
-              benQuery = benQuery.in("education_level_id", rows.map(r => r.id));
-            } else {
-              benQuery = benQuery.eq("education_level_id", -999);
-            }
-          }
-
-        } else if (educCatPattern !== null) {
-          isKeyword = true;
-          staffSearchQuery = null;
-
-          const rows = await fetchEducRows(educCatPattern);
-          if (rows.length > 0) {
-            groupMeta = rows;
-            searchGroupMode = "EDUCATION_CAT";
-            benQuery = benQuery.in("educ_id", rows.map(r => r.id));
-          } else {
-            benQuery = benQuery.eq("educ_id", -999);
-          }
-
-        } else {
-          // ── Free-text: also search education/education_levels names in DB ──
-          // This allows typing partial education names to be treated as edu search
-          const [eduRows, lvlRows] = await Promise.all([
-            fetchEducRows(safeQuery),
-            fetchEduLevelRows(safeQuery),
-          ]);
-
-          if (eduRows.length > 0 || lvlRows.length > 0) {
-            isKeyword = true;
-            staffSearchQuery = null;
-
-            if (lvlRows.length > 0 && eduRows.length === 0) {
-              groupMeta = lvlRows;
-              searchGroupMode = "EDUCATION_LEVEL";
-              benQuery = benQuery.in("education_level_id", lvlRows.map(r => r.id));
-            } else if (eduRows.length > 0 && lvlRows.length === 0) {
-              groupMeta = eduRows;
-              searchGroupMode = "EDUCATION_CAT";
-              benQuery = benQuery.in("educ_id", eduRows.map(r => r.id));
-            } else {
-              // Both found — combine (flat list, show both badges)
-              const allEduLvlIds = lvlRows.map(r => r.id);
-              const allEduIds    = eduRows.map(r => r.id);
-              groupMeta = [...eduRows, ...lvlRows];
-              searchGroupMode = "EDUCATION_CAT";
-              benQuery = benQuery.or(
-                `educ_id.in.(${allEduIds.join(",")}),education_level_id.in.(${allEduLvlIds.join(",")})`
-              );
-            }
-          }
-        }
-      } // end else (education level / category keywords)
-
-      let beneficiaries = [];
-      let staffResults  = [];
-
-      // ── Execute Queries ──
-      if (isKeyword) {
+        // Apply SPES Filters (Batch, Gender, Status, Education, Office, Period)
         if (benQuery) {
-          if (!canSearchGlobal) benQuery = benQuery.eq("staffs.office_id", officeId);
-          const { data, error } = await benQuery.limit(2000);
-          if (error) throw error;
-          beneficiaries = data || [];
-        }
-        if (staffSearchQuery) {
-          const { data, error } = await staffSearchQuery.limit(1000);
-          if (error) throw error;
-          staffResults = data || [];
-        }
-      } else {
-        if (!canSearchGlobal) {
-          benQuery = benQuery.eq("staffs.office_id", officeId).or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
-        } else {
-          if (officeIds.length > 0) {
-            const { data: staffsInOffice } = await supabase.from("staffs").select("id").in("office_id", officeIds);
-            const sIds = (staffsInOffice || []).map(s => s.id);
-            if (sIds.length > 0) {
-              benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%,staff_id.in.(${sIds.join(",")})`);
+          if (requestedBatchId) benQuery = benQuery.eq("batch_id", requestedBatchId);
+          if (hasMaleToken && !hasFemaleToken) benQuery = benQuery.eq("gender_id", 1);
+          if (hasFemaleToken && !hasMaleToken) benQuery = benQuery.eq("gender_id", 2);
+          if (hasNewToken && !hasBabyToken) benQuery = benQuery.eq("return_status", "NEW");
+          if (hasBabyToken && !hasNewToken) benQuery = benQuery.eq("return_status", "SPES BABY");
+          if (requestedMonth) benQuery = benQuery.eq("month_period", requestedMonth);
+          if (requestedYear) benQuery = benQuery.eq("year_period", requestedYear);
+
+          // Education level filter
+          if (detectedEdu) {
+            if (detectedEdu.isCat) {
+              const { data: educRows } = await supabase.from("education").select("id").ilike("name", `%${detectedEdu.pattern}%`);
+              const ids = (educRows || []).map((r) => r.id);
+              if (ids.length) benQuery = benQuery.in("educ_id", ids);
             } else {
-              benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
+              const { data: lvlRows } = await supabase.from("education_levels").select("id").ilike("name", `%${detectedEdu.pattern}%`);
+              const ids = (lvlRows || []).map((r) => r.id);
+              if (ids.length) benQuery = benQuery.in("education_level_id", ids);
             }
-          } else {
-            benQuery = benQuery.or(`full_name.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%,designated.ilike.%${safeQuery}%`);
           }
+
+          // Office filter
+          if (matchedOfficeIds.length > 0) {
+            const { data: officeStaffs } = await supabase.from("staffs").select("id").in("office_id", matchedOfficeIds);
+            const staffIds = (officeStaffs || []).map((s) => s.id);
+            if (staffIds.length > 0) {
+              benQuery = benQuery.in("staff_id", staffIds);
+            }
+          } else if (residualSearch.length > 0 && !hasTotalToken) {
+            benQuery = benQuery.or(`full_name.ilike.%${residualSearch}%,address.ilike.%${residualSearch}%,designated.ilike.%${residualSearch}%`);
+          }
+
+          if (!canSearchGlobal && officeId) benQuery = benQuery.eq("staffs.office_id", officeId);
         }
 
-        const { data: benData, error: benError } = await benQuery.limit(500);
-        if (benError) throw benError;
-        beneficiaries = benData || [];
-
+        // Apply Staff Filters
         if (staffSearchQuery) {
-          if (officeIds.length > 0) {
-            staffSearchQuery = staffSearchQuery.or(`full_name.ilike.%${safeQuery}%,office_id.in.(${officeIds.join(",")})`).limit(10);
-          } else {
-            staffSearchQuery = staffSearchQuery.ilike("full_name", `%${safeQuery}%`).limit(10);
+          if (matchedOfficeIds.length > 0) {
+            staffSearchQuery = staffSearchQuery.in("office_id", matchedOfficeIds);
+          } else if (residualSearch.length > 0 && !hasTotalToken) {
+            staffSearchQuery = staffSearchQuery.ilike("full_name", `%${residualSearch}%`);
           }
-          const { data: staffs } = await staffSearchQuery;
-          if (staffs) staffResults = staffs;
         }
       }
 
-      renderSearchDashboard(query, beneficiaries || [], staffResults, { searchGroupMode, groupMeta });
+      // Execute Queries
+      let beneficiaries = [];
+      let staffResults = [];
 
+      if (benQuery) {
+        const { data: bData, error: bErr } = await benQuery.limit(2000);
+        if (bErr && import.meta.env.DEV) console.error("[Smart Search] Beneficiary query error:", bErr);
+        beneficiaries = bData || [];
+      }
+
+      if (staffSearchQuery) {
+        const { data: sData, error: sErr } = await staffSearchQuery.limit(1000);
+        if (sErr && import.meta.env.DEV) console.error("[Smart Search] Staff query error:", sErr);
+        staffResults = sData || [];
+      }
+
+      // Active Facet Badges for Visual Card
+      const activeFacets = [];
+      if (hasTotalToken) activeFacets.push("Total");
+      if (hasSpesToken) activeFacets.push("SPES");
+      if (hasImplToken) activeFacets.push("Implementors");
+      if (requestedBatchLabel) activeFacets.push(requestedBatchLabel);
+      if (matchedOfficeIds.length > 0) activeFacets.push(matchedOfficeName ? (matchedOfficeName.includes("ILIGAN") ? "Iligan Office" : matchedOfficeName.slice(0, 16)) : "Office Match");
+      if (hasMaleToken) activeFacets.push("Male");
+      if (hasFemaleToken) activeFacets.push("Female");
+      if (hasNewToken) activeFacets.push("New");
+      if (hasBabyToken) activeFacets.push("SPES Baby");
+      if (requestedYear) activeFacets.push(`Year: ${requestedYear}`);
+      if (requestedMonth) activeFacets.push(`Month: ${requestedMonth}`);
+      if (detectedEdu) activeFacets.push(`Level: ${detectedEdu.pattern}`);
+
+      renderSmartSearchDashboard(cleanQuery, beneficiaries, staffResults, activeFacets);
     } catch (err) {
-      console.error("[Search Error]", err);
-      resultsContainer.innerHTML = `<div class="p-4 text-center text-sm text-red-500 font-bold">Failed to perform search.</div>`;
+      if (import.meta.env.DEV) console.error("[Smart Search] Exception:", err);
+      resultsContainer.innerHTML = `<div class="p-6 text-center text-sm text-red-500 font-black uppercase tracking-wider">Failed to complete search query. Please try again.</div>`;
     }
   }
 
-  function renderSearchDashboard(query, beneficiaries, staffs, opts) {
-    const searchGroupMode = opts?.searchGroupMode || null;
-    const groupMeta       = opts?.groupMeta       || [];
+  // ── Render Search Results & Visual Analytics Dashboard ──
+  function renderSmartSearchDashboard(queryText, beneficiaries, staffs, activeFacets = []) {
+    const totalCount = beneficiaries.length + staffs.length;
 
-    if (beneficiaries.length === 0 && staffs.length === 0) {
-      // Build keyword hint chips — using string concatenation to avoid nested template literals
-      const kwGroups = [
-        { label: "Gender",      chips: ["Male", "Female"] },
-        { label: "Status",      chips: ["New", "Returning", "Ongoing"] },
-        { label: "Junior High", chips: ["Grade 7", "Grade 8", "Grade 9", "Grade 10"] },
-        { label: "Senior High", chips: ["Grade 11", "Grade 12"] },
-        { label: "College",     chips: ["1st Year", "2nd Year", "3rd Year", "4th Year"] },
-        { label: "Category",    chips: ["Vocational", "JHS", "SHS", "College"] },
-        { label: "Records",     chips: ["Total", "SPES", "Implementors"] },
-        { label: "Approval",    chips: ["Approved", "Pending"] },
-      ];
-      let kwHtml = "";
-      kwGroups.forEach(function(grp) {
-        let chipHtml = "";
-        grp.chips.forEach(function(c) {
-          chipHtml += "<button data-kw-chip=\"" + c + "\""
-            + " class=\"cursor-pointer text-[0.5625rem] px-2 py-0.5 rounded bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300 font-bold hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary transition-all uppercase tracking-wide\">"
-            + c + "</button>";
-        });
-        kwHtml += "<div class=\"p-2 bg-gray-50 dark:bg-white/5 rounded-lg border border-gray-100 dark:border-white/5\">"
-          + "<p class=\"text-[0.5rem] font-black uppercase tracking-widest text-spes-blue dark:text-spes-yellow mb-1.5\">" + grp.label + "</p>"
-          + "<div class=\"flex flex-wrap gap-1\">" + chipHtml + "</div></div>";
-      });
+    if (totalCount === 0) {
+      resultsContainer.innerHTML = `
+        <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center">
+          <svg class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+          </svg>
+          <div class="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">No matching records found for &ldquo;${queryText}&rdquo;</div>
+          <p class="text-[0.625rem] text-gray-400 dark:text-white/40 mt-1 mb-4 font-semibold uppercase tracking-wider">Try one of the smart search queries below:</p>
+          <div class="flex flex-wrap items-center justify-center gap-1.5 max-w-xl mx-auto">
+            ${["Total", "Total Spes", "Total Male", "Total Female", "Total Implementors", "Total Spes Iligan", "Grade 11", "College"].map((kw) => `
+              <button type="button" data-fallback-kw="${kw}" class="cursor-pointer text-[9px] font-black px-2.5 py-1 rounded-md bg-spes-blue/10 text-spes-blue hover:bg-spes-blue hover:text-white dark:bg-spes-yellow/15 dark:text-spes-yellow dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary uppercase tracking-wider transition-all duration-150">
+                ${kw}
+              </button>
+            `).join("")}
+          </div>
+        </div>`;
 
-      resultsContainer.innerHTML =
-        "<div class=\"bg-white dark:bg-spes-dark-secondary p-8 rounded-none shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center\">"
-        + "<svg class=\"h-12 w-12 mx-auto text-gray-400 mb-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\" stroke-width=\"1.5\">"
-        + "<path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z\"/></svg>"
-        + "<div class=\"text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest\">No results for &ldquo;" + query + "&rdquo;</div>"
-        + "<p class=\"text-[0.625rem] text-gray-400 dark:text-white/40 mt-2 mb-5 font-semibold uppercase tracking-wider\">Try a keyword below for quick stats</p>"
-        + "<div class=\"grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 text-left max-w-2xl mx-auto\">" + kwHtml + "</div>"
-        + "</div>";
-
-      // Attach click handlers to chips
-      resultsContainer.querySelectorAll("[data-kw-chip]").forEach(function(btn) {
-        btn.addEventListener("click", function() {
-          var kw = btn.getAttribute("data-kw-chip");
-          var inp = document.getElementById("global-search-input");
-          if (inp) { inp.value = kw; inp.dispatchEvent(new Event("input")); }
-          var frm = document.getElementById("global-search-form");
-          if (frm) frm.dispatchEvent(new Event("submit"));
+      resultsContainer.querySelectorAll("[data-fallback-kw]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const kw = btn.getAttribute("data-fallback-kw");
+          if (input && kw) {
+            input.value = kw;
+            syncGlobalClearVisibility();
+            performSmartSearch(kw, user);
+          }
         });
       });
       return;
     }
 
-
-
-    const timestamp = new Date().toLocaleString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric', 
-      minute: '2-digit', 
-      hour12: true 
+    const timestamp = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
     });
 
     resultsContainer.innerHTML = `
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full">
-         <!-- Left Card: Chart (Output Visual) -->
-         <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-none border border-gray-200 dark:border-white/10 shadow-2xl shadow-black/10 dark:shadow-black/40 flex flex-col justify-between">
-            <div>
-               <div class="flex items-center justify-between mb-6">
-                  <h4 id="search-chart-title" class="text-xs font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Gender Distribution</h4>
-                  <div class="flex items-center gap-2 bg-white dark:bg-spes-dark-secondary rounded-lg p-1 border border-gray-100 dark:border-white/5 shadow-xs">
-                     <button id="btn-search-chart-gender" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] font-black uppercase tracking-wider rounded-md transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
-                        </svg>
-                        <span>Gender</span>
-                     </button>
-                     <button id="btn-search-chart-total" class="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                           <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"/>
-                        </svg>
-                        <span>Status</span>
-                     </button>
-                  </div>
-               </div>
-               
-               <div class="relative flex items-center justify-center min-h-[250px] py-2">
-                  <div id="search-donut-chart" class="w-full"></div>
-               </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+        <!-- Left Visual Card: Donut Analytics -->
+        <div class="bg-white dark:bg-spes-dark-secondary p-6 rounded-xl border border-gray-200 dark:border-white/10 shadow-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h4 id="search-chart-title" class="text-xs font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Smart Aggregation</h4>
+              <div class="flex items-center gap-1 bg-gray-100 dark:bg-white/5 rounded-lg p-1 border border-gray-200 dark:border-white/10 shadow-xs">
+                <button id="btn-search-chart-gender" class="cursor-pointer px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs">
+                  Gender
+                </button>
+                <button id="btn-search-chart-status" class="cursor-pointer px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
+                  Status
+                </button>
+                <button id="btn-search-chart-office" class="cursor-pointer px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-md transition-all text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow">
+                  Office
+                </button>
+              </div>
             </div>
-            
-            <p class="text-[0.5625rem] font-bold text-gray-400 dark:text-white/30 uppercase tracking-widest text-center mt-4 pt-4 border-t border-gray-100 dark:border-white/5 leading-relaxed">
-               • Showing aggregated analytics based on your search criteria. Data is dynamically cached for optimized performance.
-            </p>
-         </div>
-         
-         <!-- Right Card: List Details (Modernized Box Cards) -->
-         <div class="bg-spes-blue dark:bg-spes-dark-primary rounded-none shadow-2xl shadow-spes-blue/20 dark:shadow-black/40 border border-transparent overflow-hidden flex flex-col justify-between min-h-[420px]">
-            <!-- Header -->
-            <div class="p-6 text-white flex flex-col gap-1 border-b border-white/10 bg-linear-to-r from-spes-blue to-[#002878] dark:from-spes-dark-primary dark:to-[#0A0A0A]">
-               <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                     <img src="/c_spes.png" class="h-10 w-10 rounded-full bg-white/10 p-1 object-cover" alt="Logo" />
-                     <div>
-                        <h4 class="text-base font-black uppercase tracking-wider font-montserrat">Extra Stats</h4>
-                        <p class="text-[0.625rem] text-white/70 font-semibold tracking-wide">Keyword: "<span id="search-keyword-display" class="font-bold text-spes-yellow">${query}</span>"</p>
-                     </div>
-                  </div>
-                  <div class="text-[0.5625rem] bg-white/10 px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider text-right" id="search-timestamp">
-                     ${timestamp}
-                  </div>
-               </div>
+
+            <div class="relative flex items-center justify-center min-h-[240px] py-1">
+              <div id="search-donut-chart" class="w-full"></div>
             </div>
-            
-            <!-- List Body -->
-            <div id="search-results-list" class="flex-1 p-6 overflow-y-auto max-h-[320px] space-y-3 bg-white dark:bg-spes-dark-secondary">
-               <!-- Injected items -->
+          </div>
+
+          <p class="text-[9px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-wider text-center mt-3 pt-3 border-t border-gray-100 dark:border-white/5 leading-relaxed">
+            • Real-time multi-dimensional aggregation of ${totalCount.toLocaleString()} matching records.
+          </p>
+        </div>
+
+        <!-- Right Card: Extra Stats & Matching Items -->
+        <div class="bg-white dark:bg-spes-dark-secondary rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden flex flex-col justify-between min-h-[420px]">
+          <!-- Header -->
+          <div class="p-5 text-white bg-linear-to-r from-spes-blue to-[#002878] dark:from-spes-dark-primary dark:to-[#0A0A0A] border-b border-white/10">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img src="/c_spes.png" class="h-9 w-9 rounded-full bg-white/10 p-1 object-cover" alt="SPES" />
+                <div>
+                  <h4 class="text-sm font-black uppercase tracking-wider font-montserrat">Smart Report</h4>
+                  <p class="text-[9px] text-white/80 font-semibold tracking-wide">
+                    Query: "<span class="font-bold text-spes-yellow">${queryText}</span>" · <strong>${totalCount.toLocaleString()} found</strong>
+                  </p>
+                </div>
+              </div>
+              <div class="text-[9px] bg-white/15 px-2.5 py-1 rounded font-bold uppercase tracking-wider text-right">
+                ${timestamp}
+              </div>
             </div>
-            
-            <!-- Footer -->
-            <div class="p-4 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 text-center flex flex-col gap-1">
-               <span class="text-[0.5625rem] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-white/30">End of Report</span>
-               <span class="text-[8px] font-bold uppercase tracking-widest text-gray-300 dark:text-white/20">Generated by 2026 GIP Monitor</span>
-            </div>
-         </div>
+
+            <!-- Active Facets Banner -->
+            ${activeFacets.length > 0 ? `
+              <div class="mt-3 flex flex-wrap items-center gap-1">
+                ${activeFacets.map((facet) => `
+                  <span class="inline-flex items-center rounded bg-white/20 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">
+                    ${facet}
+                  </span>
+                `).join("")}
+              </div>
+            ` : ""}
+          </div>
+
+          <!-- List Body -->
+          <div id="search-results-list" class="flex-1 p-5 overflow-y-auto max-h-[300px] space-y-2.5 bg-gray-50/50 dark:bg-white/[0.02]" style="scrollbar-width: thin;">
+            <!-- Rendered below -->
+          </div>
+
+          <!-- Footer -->
+          <div class="p-3 bg-gray-50 dark:bg-white/5 border-t border-gray-100 dark:border-white/5 text-center flex items-center justify-between text-[8px] font-bold text-gray-400 dark:text-white/30 uppercase tracking-widest">
+            <span>SPES Smart Intelligence</span>
+            <span>2026 GIP Monitor</span>
+          </div>
+        </div>
       </div>`;
 
-    // Populate List
+    // Populate Right Card Items
     const listContainer = document.getElementById("search-results-list");
     let listHtml = "";
-    
-    // Highlight helper
-    const highlight = (text, q) => {
-      if (!text) return "N/A";
-      const regex = new RegExp(`(${q})`, "gi");
-      return text.toString().replace(regex, `<mark class="search-highlight-match bg-spes-yellow text-spes-dark-primary px-1 rounded font-bold transition-all duration-500">$1</mark>`);
+
+    const highlightText = (text, q) => {
+      if (!text) return "—";
+      const escaped = q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const regex = new RegExp(`(${escaped})`, "gi");
+      return String(text).replace(regex, `<mark class="bg-spes-yellow text-spes-dark-primary px-1 rounded font-bold">$1</mark>`);
     };
 
     if (beneficiaries.length > 0) {
-      if (searchGroupMode && groupMeta.length > 0) {
-        // ── GROUPED MODE: show summary cards per education category / level ──
-        // Map group id → array of beneficiaries
-        const groupBuckets = {};
-        const getBucketKey = (b) => {
-          if (searchGroupMode === "EDUCATION_LEVEL") return b.education_level_id;
-          return b.educ_id; // EDUCATION_CAT
-        };
-        const groupMetaMap = {};
-        groupMeta.forEach(g => {
-          groupBuckets[g.id] = [];
-          groupMetaMap[g.id] = g.name;
-        });
-        // Uncategorized bucket
-        let uncatBucket = [];
-
-        beneficiaries.forEach(b => {
-          const key = getBucketKey(b);
-          if (key != null && groupBuckets[key] !== undefined) {
-            groupBuckets[key].push(b);
-          } else {
-            uncatBucket.push(b);
-          }
-        });
-
-        listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-3 mt-0">
-          ${searchGroupMode === "EDUCATION_LEVEL" ? "By Grade / Year Level" : "By Education Category"}
-          <span class="ml-2 font-normal text-gray-400">(Total: ${beneficiaries.length})</span>
-        </h5>`;
-
-        // Sort group meta by name for display
-        const sortedMeta = [...groupMeta].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedMeta.forEach(grp => {
-          const bucket = groupBuckets[grp.id] || [];
-          const total  = bucket.length;
-          if (total === 0) return;
-          const males   = bucket.filter(b => b.gender_id === 1).length;
-          const females = bucket.filter(b => b.gender_id === 2).length;
-          const newC    = bucket.filter(b => !b.return_status || b.return_status.toUpperCase() !== "SPES BABY").length;
-          const retC    = bucket.filter(b => b.return_status && b.return_status.toUpperCase() === "SPES BABY").length;
-
-          // Compact list preview (max 5)
-          let previewHtml = "";
-          bucket.slice(0, 5).forEach(b => {
-            let officeName = "N/A";
-            if (b.staffs && b.staffs.offices) {
-              let ln = b.staffs.offices.name || "N/A";
-              officeName = ln.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU" : ln.split(" ")[0];
-            }
-            let officeParam = b.staffs?.office_id ? `&office=${b.staffs.office_id}` : "";
-            let batchParam  = b.batch_id ? `&batch=${b.batch_id}` : "";
-            const isBaby    = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
-            const dotColor  = isBaby ? "bg-[#FF5B9B]" : "bg-emerald-500";
-            previewHtml += `<a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer flex items-center gap-1.5 py-1 hover:opacity-75 transition-opacity">
-              <span class="h-1.5 w-1.5 rounded-full ${dotColor} shrink-0"></span>
-              <span class="text-[0.5625rem] font-bold uppercase text-spes-black dark:text-white truncate">${b.full_name}</span>
-              <span class="text-[0.5rem] text-gray-400 dark:text-gray-500 shrink-0 ml-auto">${officeName}</span>
-            </a>`;
-          });
-          if (bucket.length > 5) {
-            previewHtml += `<p class="text-[0.5rem] text-gray-400 dark:text-white/30 font-bold uppercase tracking-widest mt-1">+ ${bucket.length - 5} more</p>`;
-          }
-
-          listHtml += `
-            <div class="rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden mb-3">
-              <!-- Group Header -->
-              <div class="flex items-center justify-between px-3 py-2 bg-spes-blue/5 dark:bg-spes-yellow/5 border-b border-gray-100 dark:border-white/5">
-                <span class="text-[0.625rem] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">${grp.name}</span>
-                <span class="text-[0.625rem] font-black text-spes-black dark:text-white">${total.toLocaleString()} <span class="font-normal text-gray-400">beneficiaries</span></span>
-              </div>
-              <!-- Stats Row -->
-              <div class="grid grid-cols-4 divide-x divide-gray-100 dark:divide-white/5 bg-gray-50 dark:bg-white/[0.02]">
-                <div class="text-center py-1.5 px-1">
-                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">Male</p>
-                  <p class="text-xs font-black text-spes-black dark:text-white">${males}</p>
-                </div>
-                <div class="text-center py-1.5 px-1">
-                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-gray-400 dark:text-white/30">Female</p>
-                  <p class="text-xs font-black text-spes-black dark:text-white">${females}</p>
-                </div>
-                <div class="text-center py-1.5 px-1">
-                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-emerald-400/80">New</p>
-                  <p class="text-xs font-black text-emerald-600 dark:text-emerald-400">${newC}</p>
-                </div>
-                <div class="text-center py-1.5 px-1">
-                  <p class="text-[0.5rem] font-bold uppercase tracking-widest text-[#FF5B9B]/80">Return</p>
-                  <p class="text-xs font-black text-[#FF5B9B]">${retC}</p>
-                </div>
-              </div>
-              <!-- Mini List Preview -->
-              ${previewHtml ? `<div class="px-3 py-2 bg-white dark:bg-spes-dark-secondary space-y-0 divide-y divide-gray-50 dark:divide-white/5">${previewHtml}</div>` : ""}
-            </div>`;
-        });
-
-        if (uncatBucket.length > 0) {
-          listHtml += `<p class="text-[0.5rem] text-gray-400 dark:text-white/30 font-bold uppercase tracking-widest mt-2">+ ${uncatBucket.length} uncategorized</p>`;
+      listHtml += `<div class="text-[9px] font-black uppercase tracking-widest text-spes-blue dark:text-spes-yellow mb-1">SPES Beneficiaries (${beneficiaries.length.toLocaleString()})</div>`;
+      beneficiaries.slice(0, 50).forEach((b) => {
+        let officeName = "N/A";
+        if (b.staffs && b.staffs.offices) {
+          const longName = b.staffs.offices.name || "N/A";
+          officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
         }
 
-      } else {
-        // ── FLAT MODE: original per-beneficiary list ──
-        listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">SPES List (${beneficiaries.length})</h5>`;
-        beneficiaries.forEach(b => {
-          let officeName = "N/A";
-          if (b.staffs && b.staffs.offices) {
-            let longName = b.staffs.offices.name || "N/A";
-            officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
-          }
+        const isBaby = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
+        const statusClass = isBaby ? "bg-[#FF5B9B]/10 text-[#FF5B9B]" : "bg-emerald-500/10 text-emerald-500";
+        const statusLabel = isBaby ? "SPES BABY" : "NEW";
+        const genderBadge = b.gender_id === 1
+          ? '<span class="text-[#4F91FF] font-black">M</span>'
+          : '<span class="text-[#FF5B9B] font-black">F</span>';
 
-          const isSpesBaby = b.return_status && b.return_status.toUpperCase() === "SPES BABY";
-          const statusClass = isSpesBaby ? "bg-[#FF5B9B]/10 text-[#FF5B9B]" : "bg-emerald-500/10 text-emerald-500";
-          const statusLabel = isSpesBaby ? "RETURNING" : "ONGOING";
+        const officeParam = b.staffs?.office_id ? `&office=${b.staffs.office_id}` : "";
+        const batchParam = b.batch_id ? `&batch=${b.batch_id}` : "";
 
-          const eduLevelName = b.education_level?.name || null;
-          const eduCatName   = b.education?.name || null;
-          const eduBadge = eduLevelName
-            ? `<span class="ml-1.5 text-[0.5rem] px-1.5 py-0.5 rounded bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow font-black uppercase tracking-wider">${eduLevelName}</span>`
-            : eduCatName
-              ? `<span class="ml-1.5 text-[0.5rem] px-1.5 py-0.5 rounded bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow font-black uppercase tracking-wider">${eduCatName}</span>`
-              : "";
-
-          let officeParam = "";
-          if (b.staffs && b.staffs.office_id) officeParam = `&office=${b.staffs.office_id}`;
-          let batchParam = "";
-          if (b.batch_id) batchParam = `&batch=${b.batch_id}`;
-
-          listHtml += `
-            <a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 hover:scale-[1.01] transition-all duration-200">
-               <div class="flex-1 min-w-0 mr-2">
-                  <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide truncate">${highlight(b.full_name, query)}</div>
-                  <div class="flex items-center flex-wrap gap-x-1 text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">
-                    <span>${highlight(officeName, query)}</span>${eduBadge}
-                  </div>
-               </div>
-               <span class="shrink-0 text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
-                  SPES - ${statusLabel}
-               </span>
-            </a>`;
-        });
+        listHtml += `
+          <a href="../beneficiaries/?b=${b.id}${officeParam}${batchParam}" class="cursor-pointer block flex items-center justify-between p-2.5 bg-white dark:bg-spes-dark-primary rounded-lg border border-gray-100 dark:border-white/5 hover:border-spes-blue/40 dark:hover:border-spes-yellow/40 hover:scale-[1.01] transition-all duration-150 shadow-xs">
+            <div class="flex-1 min-w-0 mr-2">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-black uppercase text-spes-black dark:text-white truncate">${highlightText(b.full_name, queryText)}</span>
+                <span class="text-[9px]">${genderBadge}</span>
+              </div>
+              <div class="flex items-center gap-2 text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase mt-0.5 truncate">
+                <span>${highlightText(officeName, queryText)}</span>
+                <span>·</span>
+                <span>${b.month_period || ""} ${b.year_period || ""}</span>
+              </div>
+            </div>
+            <span class="shrink-0 text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${statusClass}">
+              ${statusLabel}
+            </span>
+          </a>`;
+      });
+      if (beneficiaries.length > 50) {
+        listHtml += `<p class="text-center text-[9px] font-bold uppercase text-gray-400 dark:text-white/30 py-1">+ ${beneficiaries.length - 50} more records</p>`;
       }
     }
 
     if (staffs.length > 0) {
-      listHtml += `<h5 class="text-[0.625rem] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow mb-2 mt-4 first:mt-0">Implementors (${staffs.length})</h5>`;
-      staffs.forEach(s => {
+      listHtml += `<div class="text-[9px] font-black uppercase tracking-widest text-spes-blue dark:text-spes-yellow mt-3 mb-1">Implementors (${staffs.length.toLocaleString()})</div>`;
+      staffs.slice(0, 30).forEach((s) => {
         let officeName = "N/A";
         if (s.offices) {
-          let longName = s.offices.name || "N/A";
+          const longName = s.offices.name || "N/A";
           officeName = longName.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : longName;
         }
-
-        // Fix boolean TRUE showing instead of APPROVED
         const isApproved = s.approved === true || s.approved === "Approved" || s.approved === "TRUE";
-        const statusClass = isApproved
-          ? "bg-spes-blue/10 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow"
-          : "bg-amber-500/10 text-amber-500";
+        const statusClass = isApproved ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-500";
         const statusText = isApproved ? "APPROVED" : "PENDING";
 
         listHtml += `
-          <a href="../implementors/?id=${s.id}" class="cursor-pointer block flex items-center justify-between p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 hover:border-spes-yellow/40 hover:scale-[1.01] transition-all duration-200">
-             <div>
-                <div class="text-xs font-black uppercase text-spes-black dark:text-white tracking-wide">${highlight(s.full_name, query)}</div>
-                <div class="text-[0.625rem] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">${highlight(officeName, query)}</div>
-             </div>
-             <span class="text-[0.5625rem] px-2.5 py-1 rounded font-black uppercase tracking-wider ${statusClass}">
-                STAFF - ${statusText}
-             </span>
-          </a>
-        `;
+          <a href="../implementors/?id=${s.id}" class="cursor-pointer block flex items-center justify-between p-2.5 bg-white dark:bg-spes-dark-primary rounded-lg border border-gray-100 dark:border-white/5 hover:border-spes-yellow/40 hover:scale-[1.01] transition-all duration-150 shadow-xs">
+            <div>
+              <div class="text-xs font-black uppercase text-spes-black dark:text-white">${highlightText(s.full_name, queryText)}</div>
+              <div class="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase mt-0.5">${highlightText(officeName, queryText)}</div>
+            </div>
+            <span class="text-[8px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${statusClass}">
+              ${statusText}
+            </span>
+          </a>`;
       });
     }
 
     listContainer.innerHTML = listHtml;
-    
-    setTimeout(() => {
-      document.querySelectorAll('.search-highlight-match').forEach(el => {
-        el.className = "underline decoration-emerald-500 decoration-2 font-bold text-emerald-600 dark:text-emerald-400 bg-transparent transition-all duration-500";
-      });
-    }, 2000);
 
-    // Chart Configuration Helper
-    let chartMode = "GENDER"; // "GENDER" | "TOTAL" | "GROUP"
-
-    // Color palette for group breakdown
-    const groupColors = ["#0038A8","#EFB800","#4F91FF","#FF5B9B","#10B981","#F59E0B","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#84CC16"];
+    // ── Chart Construction ──
+    let chartMode = "GENDER";
 
     const getChartOptions = (mode) => {
       let series = [];
       let labels = [];
       let colors = [];
-      let totalLabel = "TOTAL SPES";
+      let totalLabel = "TOTAL";
 
-      if (mode === "GROUP" && searchGroupMode && groupMeta.length > 0) {
-        // Grouped mode: one slice per group
-        const sortedMeta = [...groupMeta].sort((a, b) => a.name.localeCompare(b.name));
-        sortedMeta.forEach((grp, idx) => {
-          const cnt = beneficiaries.filter(b => {
-            if (searchGroupMode === "EDUCATION_LEVEL") return b.education_level_id === grp.id;
-            return b.educ_id === grp.id;
-          }).length;
-          if (cnt > 0) {
-            series.push(cnt);
-            labels.push(grp.name.toUpperCase());
-            colors.push(groupColors[idx % groupColors.length]);
-          }
-        });
-        totalLabel = "TOTAL";
-
-      } else if (mode === "GENDER") {
+      if (mode === "GENDER") {
         let male = 0;
         let female = 0;
-        beneficiaries.forEach(b => {
+        beneficiaries.forEach((b) => {
           if (b.gender_id === 1) male++;
           else if (b.gender_id === 2) female++;
         });
         series = [male, female];
         labels = ["MALE", "FEMALE"];
         colors = ["#4F91FF", "#FF5B9B"];
-        totalLabel = "TOTAL SPES";
-      } else {
-        // Status breakdown
-        let news = 0;
-        let returning = 0;
-        beneficiaries.forEach(b => {
-          if (b.return_status && b.return_status.toUpperCase() === "SPES BABY") returning++;
-          else news++;
+        totalLabel = "GENDER TOTAL";
+      } else if (mode === "STATUS") {
+        let newCount = 0;
+        let babyCount = 0;
+        beneficiaries.forEach((b) => {
+          if (String(b.return_status || "NEW").toUpperCase() === "SPES BABY") babyCount++;
+          else newCount++;
         });
-        series = [news, returning];
-        labels = ["NEW", "RETURNING"];
-        colors = ["#10B981", "#EF4444"];
-        totalLabel = "AGGREGATE";
+        if (staffs.length > 0 && beneficiaries.length === 0) {
+          const approved = staffs.filter((s) => s.approved === true).length;
+          const pending = staffs.length - approved;
+          series = [approved, pending];
+          labels = ["APPROVED", "PENDING"];
+          colors = ["#10B981", "#F59E0B"];
+          totalLabel = "STAFF TOTAL";
+        } else {
+          series = [newCount, babyCount];
+          labels = ["NEW", "SPES BABY"];
+          colors = ["#10B981", "#FF5B9B"];
+          totalLabel = "STATUS TOTAL";
+        }
+      } else if (mode === "OFFICE") {
+        const officeCounts = {};
+        beneficiaries.forEach((b) => {
+          const name = b.staffs?.offices?.name || "Unassigned";
+          const shortName = name.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : name.slice(0, 16);
+          officeCounts[shortName] = (officeCounts[shortName] || 0) + 1;
+        });
+        staffs.forEach((s) => {
+          const name = s.offices?.name || "Unassigned";
+          const shortName = name.includes("CITY GOVERNMENT OF ILIGAN (LGU)") ? "LGU - ILIGAN" : name.slice(0, 16);
+          officeCounts[shortName] = (officeCounts[shortName] || 0) + 1;
+        });
+
+        const sorted = Object.entries(officeCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+        labels = sorted.map(([k]) => k.toUpperCase());
+        series = sorted.map(([, v]) => v);
+        colors = ["#0038A8", "#2563EB", "#3B82F6", "#60A5FA", "#93C5FD", "#FCD116"];
+        totalLabel = "OFFICE TOTAL";
+      }
+
+      if (series.reduce((a, b) => a + b, 0) === 0) {
+        series = [1];
+        labels = ["NO DATA"];
+        colors = ["#94A3B8"];
       }
 
       return {
         series,
-        chart: { type: "donut", height: 240, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
+        chart: { type: "donut", height: 230, toolbar: { show: false }, fontFamily: "Inter, sans-serif" },
         labels,
         colors,
         legend: { position: "bottom", fontWeight: 800, fontSize: "10px" },
         stroke: { show: false },
         dataLabels: { enabled: false },
-        tooltip: { enabled: false },
+        tooltip: {
+          theme: "dark",
+          y: { formatter: (val) => `${Number(val).toLocaleString()} records` }
+        },
         plotOptions: {
           pie: {
             donut: {
               size: "72%",
               labels: {
                 show: true,
-                name:  { show: true, fontSize: "9px", fontWeight: 700, offsetY: -5, color: "#64748b" },
+                name: { show: true, fontSize: "9px", fontWeight: 700, offsetY: -5, color: "#64748b" },
                 value: { show: true, fontSize: "16px", fontWeight: 900, offsetY: 5, formatter: (v) => Number(v).toLocaleString() },
                 total: {
                   show: true,
@@ -3097,9 +3146,7 @@ function initGlobalSearch(user) {
     };
 
     const renderChartInstance = (mode) => {
-      if (currentApexChart) {
-        currentApexChart.destroy();
-      }
+      if (currentApexChart) currentApexChart.destroy();
       const el = document.getElementById("search-donut-chart");
       if (el) {
         currentApexChart = new ApexCharts(el, getChartOptions(mode));
@@ -3107,12 +3154,11 @@ function initGlobalSearch(user) {
       }
     };
 
-    // Render Initial Chart
     renderChartInstance(chartMode);
 
-    // Switcher Logic
     const btnGender = document.getElementById("btn-search-chart-gender");
-    const btnTotal = document.getElementById("btn-search-chart-total");
+    const btnStatus = document.getElementById("btn-search-chart-status");
+    const btnOffice = document.getElementById("btn-search-chart-office");
     const titleEl = document.getElementById("search-chart-title");
 
     const activeClass = "bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-primary shadow-xs font-black";
@@ -3122,18 +3168,31 @@ function initGlobalSearch(user) {
       if (chartMode === "GENDER") return;
       chartMode = "GENDER";
       if (titleEl) titleEl.textContent = "Gender Distribution";
-      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
-      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnGender.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnStatus.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnOffice.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
       renderChartInstance(chartMode);
     });
 
-    btnTotal?.addEventListener("click", () => {
-      if (chartMode === "TOTAL") return;
-      chartMode = "TOTAL";
+    btnStatus?.addEventListener("click", () => {
+      if (chartMode === "STATUS") return;
+      chartMode = "STATUS";
       if (titleEl) titleEl.textContent = "Status Breakdown";
-      btnGender.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
-      btnTotal.className = `cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-[0.5625rem] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnGender.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnStatus.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
+      btnOffice.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      renderChartInstance(chartMode);
+    });
+
+    btnOffice?.addEventListener("click", () => {
+      if (chartMode === "OFFICE") return;
+      chartMode = "OFFICE";
+      if (titleEl) titleEl.textContent = "Office Distribution";
+      btnGender.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnStatus.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${inactiveClass}`;
+      btnOffice.className = `cursor-pointer px-2.5 py-1 text-[9px] uppercase tracking-wider rounded-md transition-all ${activeClass}`;
       renderChartInstance(chartMode);
     });
   }
 }
+// --- END: GLOBAL SMART SEARCH WITH REAL-TIME PREDICTIONS & MULTI-TIER PARSER ---
