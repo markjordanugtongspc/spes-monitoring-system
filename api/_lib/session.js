@@ -95,3 +95,24 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
   return staff;
 }
 
+// --- START: GET PORTAL REDIRECT URL ---
+/**
+ * Resolves the appropriate destination DOLE Portal dashboard URL based on the staff account.
+ * - Admin (role_id === 1) → https://dole-portal.vercel.app/src/pages/user/admin/dashboard/
+ * - Staff / Officer (role_id !== 1) → https://dole-portal.vercel.app/src/pages/user/staff/dashboard/
+ *
+ * @param {object} staff - Staff record or user payload
+ * @returns {string} Fully qualified Portal destination URL
+ */
+export function getPortalRedirectUrl(staff = {}) {
+  const roleId = Number(staff?.role_id);
+  const roleStr = String(staff?.role || staff?.role_label || "").toLowerCase();
+  const isAdmin = roleId === 1 || roleStr.includes("admin");
+
+  const baseUrl = process.env.PORTAL_BASE_URL || "https://dole-portal.vercel.app";
+  return isAdmin
+    ? `${baseUrl.replace(/\/+$/, "")}/src/pages/user/admin/dashboard/`
+    : `${baseUrl.replace(/\/+$/, "")}/src/pages/user/staff/dashboard/`;
+}
+// --- END: GET PORTAL REDIRECT URL ---
+

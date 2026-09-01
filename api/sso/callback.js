@@ -1,5 +1,5 @@
 import { createSupabaseAdmin } from '../_lib/supabase-admin.js';
-import { createSessionCookie } from '../_lib/session.js';
+import { createSessionCookie, getPortalRedirectUrl } from '../_lib/session.js';
 
 const portalConsumeUrl = () => String(process.env.PORTAL_SSO_CONSUME_URL || '').trim();
 const portalClientSecret = () => String(process.env.PORTAL_SSO_CLIENT_SECRET || '').trim();
@@ -80,7 +80,8 @@ export default async function handler(req, res) {
         view_other_offices: Boolean(staff.perm_view_other_offices),
         view_global_stats: Boolean(staff.perm_view_global_stats),
         view_payroll: Boolean(staff.perm_view_payroll),
-      }
+      },
+      portal_url: getPortalRedirectUrl(staff)
     };
 
     res.setHeader('Cache-Control', 'no-store');

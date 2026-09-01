@@ -88,7 +88,8 @@ export async function loginImplementor(username, password) {
       role_id:     resolvedRoleId || null,
       office_id:   implementor.office_id || null,
       status:      "ONLINE",
-      permissions: dbPermissions
+      permissions: dbPermissions,
+      portal_url:  getPortalDashboardUrl({ role: roleName, role_id: resolvedRoleId })
     };
 
     // Update status to ONLINE in Supabase and fetch approved status
@@ -385,3 +386,48 @@ export function validateAdminAccess(customSession = null) {
   return { allowed: true, session };
 }
 // --- END: ADMIN ACCESS VALIDATOR ---
+
+// --- START: GET PORTAL DASHBOARD URL ---
+/**
+ * Resolves the exact DOLE Portal dashboard URL dynamically based on user role.
+ * - Admin → /src/pages/user/admin/dashboard/
+ * - Staff/Officer → /src/pages/user/staff/dashboard/
+ *
+ * @param {object|string|number} [userOrRole] - User session object or role string/id
+ * @returns {string} Fully qualified Portal destination URL
+ */
+export function getPortalDashboardUrl(userOrRole = null) {
+  let user = userOrRole;
+  if (!user) {
+    try {
+      const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
+      user = raw ? JSON.parse(raw) : null;
+    } catch {
+      user = null;
+    }
+  }
+
+  const roleStr = typeof user === "object"
+    ? String(user?.role || user?.role_label || "").toLowerCase()
+    : String(user || "").toLowerCase();
+  const roleId = typeof user === "object" ? Number(user?.role_id) : NaN;
+
+  const isAdmin = roleStr.includes("admin") || roleId === 1;
+  const baseUrl = "https://dole-portal.vercel.app";
+
+  return isAdmin
+    ? `${baseUrl}/src/pages/user/admin/dashboard/`
+    : `${baseUrl}/src/pages/user/staff/dashboard/`;
+}
+// --- END: GET PORTAL DASHBOARD URL ---
+
+// --- START: REDIRECT TO PORTAL DASHBOARD ---
+/**
+ * Redirects the active user to their corresponding Portal dashboard path.
+ * @param {object|string|number} [userOrRole]
+ */
+export function redirectToPortalDashboard(userOrRole = null) {
+  const targetUrl = getPortalDashboardUrl(userOrRole);
+  window.location.href = targetUrl;
+}
+// --- END: REDIRECT TO PORTAL DASHBOARD ---

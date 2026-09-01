@@ -113,6 +113,15 @@ export async function applyPermissions(userRole) {
   }
 
   highlightSidebarActiveLink();
+
+  // Dynamically update DOLE Portal links based on authenticated role
+  const portalTargetUrl = (userRole === "admin" || session?.role === "admin" || Number(session?.role_id) === 1)
+    ? "https://dole-portal.vercel.app/src/pages/user/admin/dashboard/"
+    : "https://dole-portal.vercel.app/src/pages/user/staff/dashboard/";
+
+  document.querySelectorAll("#sidebar-portal-link, [data-nav-item='portal'], a[href*='dole-portal.vercel.app']").forEach(link => {
+    link.setAttribute("href", portalTargetUrl);
+  });
 }
 
 /**
@@ -122,6 +131,15 @@ export async function applyPermissions(userRole) {
  * @param {string} [navId] - e.g. "overview", "beneficiaries", "payroll", "implementor-list", "roles", "exports", "settings", "about-developer", "auto-import"
  */
 export function highlightSidebarActiveLink(navId) {
+  const session = getSession();
+  const portalTargetUrl = (session?.role === "admin" || Number(session?.role_id) === 1)
+    ? "https://dole-portal.vercel.app/src/pages/user/admin/dashboard/"
+    : "https://dole-portal.vercel.app/src/pages/user/staff/dashboard/";
+
+  document.querySelectorAll("#sidebar-portal-link, [data-nav-item='portal'], a[href*='dole-portal.vercel.app']").forEach(link => {
+    link.setAttribute("href", portalTargetUrl);
+  });
+
   let targetNavId = navId;
   if (!targetNavId) {
     const path = window.location.pathname;
