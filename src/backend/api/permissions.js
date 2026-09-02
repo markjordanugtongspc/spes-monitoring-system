@@ -1,10 +1,11 @@
 /**
  * SPES Portal — Individual Staff Permissions API
- * Optional RBAC grants are stored on each `staffs` row.
+ * Reads/writes from the `staff_permissions` table (FK to staffs.id).
+ * Migrated from flat `perm_*` columns on `staffs`.
  */
 import { supabase } from "./supabase.js";
 
-const CACHE_KEY = "spes_staff_permissions_v3";
+const CACHE_KEY = "spes_staff_permissions_v4";
 const CACHE_TTL = 10 * 60 * 1000;
 const PERMISSION_FIELDS = [
   "view_users",
@@ -17,12 +18,21 @@ const PERMISSION_FIELDS = [
   "view_payroll",
 ];
 
+// --- START: NORMALIZE STAFF PERMISSIONS from staff_permissions row ---
+/**
+ * Maps a staff_permissions row to a normalized permissions object.
+ * Fields on `staff_permissions` use plain names (no perm_ prefix).
+ * @param {object} row
+ * @returns {Record<string, boolean>}
+ */
 function normalizeStaffPermissions(row = {}) {
   return Object.fromEntries(
-    PERMISSION_FIELDS.map((field) => [field, Boolean(row[`perm_${field}`])])
+    PERMISSION_FIELDS.map((field) => [field, Boolean(row[field])])
   );
 }
+// --- END: NORMALIZE STAFF PERMISSIONS ---
 
+// --- START: PERMISSIONS CACHE HELPERS ---
 function _readCache() {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
@@ -43,69 +53,56 @@ function _writeCache(data) {
     sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
   } catch {}
 }
+// --- END: PERMISSIONS CACHE HELPERS ---
 
+// --- START: INVALIDATE PERMISSIONS CACHE ---
 export function invalidatePermissionsCache() {
   try {
     sessionStorage.removeItem(CACHE_KEY);
   } catch {}
 }
+// --- END: INVALIDATE PERMISSIONS CACHE ---
 
-/** Returns a permission map keyed by staff id. */
+// --- START: FETCH ALL STAFF PERMISSIONS (staff_permissions table) ---
+/** Returns a permission map keyed by staff_id. */
 export async function fetchAllStaffPermissions({ forceRefresh = false } = {}) {
   if (!forceRefresh) {
     const cached = _readCache();
     if (cached) return { data: cached };
   }
 
-  // Try fetching with perm_view_payroll, fallback if column does not exist yet
-  let result = await supabase
-    .from("staffs")
+  const result = await supabase
+    .from("staff_permissions")
     .select(`
-      id,
-      perm_view_users,
-      perm_create_users,
-      perm_edit_users,
-      perm_delete_users,
-      perm_export_reports,
-      perm_view_other_offices,
-      perm_view_global_stats,
-      perm_view_payroll
-    `)
-    .is("archive_at", null);
-
-  if (result.error && (result.error.code === "42703" || result.error.code === "PGRST204" || result.error.code === "PGRST100" || String(result.error.message || "").includes("perm_view_payroll"))) {
-    // Column perm_view_payroll not yet in DB, fallback query
-    result = await supabase
-      .from("staffs")
-      .select(`
-        id,
-        perm_view_users,
-        perm_create_users,
-        perm_edit_users,
-        perm_delete_users,
-        perm_export_reports,
-        perm_view_other_offices,
-        perm_view_global_stats
-      `)
-      .is("archive_at", null);
-  }
+      staff_id,
+      view_users,
+      create_users,
+      edit_users,
+      delete_users,
+      export_reports,
+      view_other_offices,
+      view_global_stats,
+      view_payroll
+    `);
 
   if (result.error) {
     if (import.meta.env.DEV) {
-      console.error("[SPES Permissions] fetchAllStaff error:", result.error.code);
+      console.error("[SPES Permissions] fetchAllStaff error:", result.error.code, result.error.message);
     }
     return { data: {}, error: "Could not load individual staff permissions." };
   }
 
   const map = {};
   for (const row of result.data ?? []) {
-    if (row.id != null) map[row.id] = normalizeStaffPermissions(row);
+    if (row.staff_id != null) map[row.staff_id] = normalizeStaffPermissions(row);
   }
 
   _writeCache(map);
   return { data: map };
 }
+// --- END: FETCH ALL STAFF PERMISSIONS ---
 
+// --- START: FETCH SINGLE STAFF PERMISSIONS by staff_id ---
 export async function fetchStaffPermissions(staffId, options = {}) {
   const numericId = Number.parseInt(staffId, 10);
   if (!Number.isInteger(numericId) || numericId < 1) {
@@ -117,47 +114,30 @@ export async function fetchStaffPermissions(staffId, options = {}) {
     if (cached?.[numericId]) return { data: cached[numericId] };
   }
 
-  let result = await supabase
-    .from("staffs")
+  const { data: row, error } = await supabase
+    .from("staff_permissions")
     .select(`
-      id,
-      perm_view_users,
-      perm_create_users,
-      perm_edit_users,
-      perm_delete_users,
-      perm_export_reports,
-      perm_view_other_offices,
-      perm_view_global_stats,
-      perm_view_payroll
+      staff_id,
+      view_users,
+      create_users,
+      edit_users,
+      delete_users,
+      export_reports,
+      view_other_offices,
+      view_global_stats,
+      view_payroll
     `)
-    .eq("id", numericId)
+    .eq("staff_id", numericId)
     .maybeSingle();
 
-  if (result.error && (result.error.code === "42703" || result.error.code === "PGRST204" || result.error.code === "PGRST100" || String(result.error.message || "").includes("perm_view_payroll"))) {
-    result = await supabase
-      .from("staffs")
-      .select(`
-        id,
-        perm_view_users,
-        perm_create_users,
-        perm_edit_users,
-        perm_delete_users,
-        perm_export_reports,
-        perm_view_other_offices,
-        perm_view_global_stats
-      `)
-      .eq("id", numericId)
-      .maybeSingle();
-  }
-
-  if (result.error) {
+  if (error) {
     if (import.meta.env.DEV) {
-      console.error("[SPES Permissions] fetchStaff error:", result.error.code);
+      console.error("[SPES Permissions] fetchStaff error:", error.code, error.message);
     }
     return { data: null, error: "Could not load this staff account's permissions." };
   }
 
-  const permissions = result.data ? normalizeStaffPermissions(result.data) : null;
+  const permissions = row ? normalizeStaffPermissions(row) : null;
   const cached = _readCache() || {};
   if (permissions) {
     cached[numericId] = permissions;
@@ -165,9 +145,12 @@ export async function fetchStaffPermissions(staffId, options = {}) {
   }
   return { data: permissions };
 }
+// --- END: FETCH SINGLE STAFF PERMISSIONS ---
 
+// --- START: UPSERT STAFF PERMISSIONS via /api/permissions route ---
 /**
  * Update optional permissions for one or more selected staff accounts.
+ * The secure API route writes to `staff_permissions` table.
  *
  * @param {number|number[]} staffIds
  * @param {Partial<Record<string, boolean>>} updates

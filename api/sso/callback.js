@@ -50,9 +50,11 @@ export default async function handler(req, res) {
       .from('staffs')
       .select(`
         id, username, full_name, email, role_id, office_id, approved, archive_at,
-        perm_view_users, perm_create_users, perm_edit_users, perm_delete_users,
-        perm_export_reports, perm_view_other_offices, perm_view_global_stats,
-        perm_view_payroll, roles(name)
+        staff_permissions!staff_id(
+          view_users, create_users, edit_users, delete_users,
+          export_reports, view_other_offices, view_global_stats, view_payroll
+        ),
+        roles(name)
       `)
       .eq('id', externalUserId)
       .maybeSingle();
@@ -60,6 +62,7 @@ export default async function handler(req, res) {
       return renderError(res, 'The assigned SPES account is no longer active.');
     }
 
+    const sp = staff.staff_permissions ?? {};
     const displaySession = {
       id: Number(staff.id),
       username: staff.username,
@@ -72,14 +75,14 @@ export default async function handler(req, res) {
       status: 'ONLINE',
       approved: true,
       permissions: {
-        view_users: Boolean(staff.perm_view_users),
-        create_users: Boolean(staff.perm_create_users),
-        edit_users: Boolean(staff.perm_edit_users),
-        delete_users: Boolean(staff.perm_delete_users),
-        export_reports: Boolean(staff.perm_export_reports),
-        view_other_offices: Boolean(staff.perm_view_other_offices),
-        view_global_stats: Boolean(staff.perm_view_global_stats),
-        view_payroll: Boolean(staff.perm_view_payroll),
+        view_users: Boolean(sp.view_users),
+        create_users: Boolean(sp.create_users),
+        edit_users: Boolean(sp.edit_users),
+        delete_users: Boolean(sp.delete_users),
+        export_reports: Boolean(sp.export_reports),
+        view_other_offices: Boolean(sp.view_other_offices),
+        view_global_stats: Boolean(sp.view_global_stats),
+        view_payroll: Boolean(sp.view_payroll),
       },
       portal_url: getPortalRedirectUrl(staff)
     };

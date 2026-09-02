@@ -159,11 +159,9 @@ export async function registerImplementor(staffData) {
           email: staffData.email,
           password: staffData.password, // DB handles hashing
           office_id: staffData.office_id,
-          address: staffData.address || null,
           phone: staffData.phone || null,
           religion: staffData.religion || null,
           language: staffData.language || null,
-          blood_type: staffData.blood_type || null,
           status: "OFFLINE", // Default status
           role_id: 2, // 2 = Officer role by default
           approved: false, // New accounts must be explicitly approved
@@ -219,13 +217,13 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     let query = supabase
       .from("staffs")
       .select(`
-        id, full_name, username, email, address, phone, created_at,
-        religion, language, blood_type, status, approved,
+        id, full_name, username, email, phone, created_at,
+        religion, language, status, approved, started_at, ended_at,
         archive_at, role_id, office_id, beneficiary_id,
-        perm_view_users, perm_create_users, perm_edit_users,
-        perm_delete_users, perm_export_reports,
-        perm_view_other_offices, perm_view_global_stats,
-        perm_view_payroll,
+        staff_permissions!staff_id(
+          view_users, create_users, edit_users, delete_users,
+          export_reports, view_other_offices, view_global_stats, view_payroll
+        ),
         roles   ( id, name ),
         offices ( id, name, location ),
         beneficiary!beneficiary_id(full_name, return_status)
@@ -236,68 +234,46 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);
     }
-    let { data, error } = await query;
-
-    if (error && (error.code === "42703" || error.code === "PGRST204" || error.code === "PGRST100" || String(error.message || "").includes("perm_view_payroll"))) {
-      // Fallback query if perm_view_payroll column is not yet migrated in DB
-      let fallbackQuery = supabase
-        .from("staffs")
-        .select(`
-          id, full_name, username, email, address, phone, created_at,
-          religion, language, blood_type, status, approved,
-          archive_at, role_id, office_id, beneficiary_id,
-          perm_view_users, perm_create_users, perm_edit_users,
-          perm_delete_users, perm_export_reports,
-          perm_view_other_offices, perm_view_global_stats,
-          roles   ( id, name ),
-          offices ( id, name, location ),
-          beneficiary!beneficiary_id(full_name, return_status)
-        `)
-        .order("created_at", { ascending: false, nullsFirst: false })
-        .order("id", { ascending: false });
-      if (!access.canViewOtherOffices && officeId) {
-        fallbackQuery = fallbackQuery.eq("office_id", officeId);
-      }
-      const retry = await fallbackQuery;
-      data = retry.data;
-      error = retry.error;
-    }
+    const { data, error } = await query;
 
     if (error) {
-      if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code);
+      if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code, error.message);
       return [];
     }
 
-    const list = (data ?? []).map((s) => ({
-      id:              s.id,
-      created_at:      s.created_at,
-      full_name:       s.full_name,
-      username:        s.username,
-      email:           s.email,
-      office:          s.offices?.name || (s.office_id ? String(s.office_id) : "N/A"),
-      office_location: s.offices?.location || "N/A",
-      office_id:       s.office_id,
-      role:            s.roles?.name ? s.roles.name.toUpperCase() : "N/A",
-      role_id:         s.role_id,
-      status:          s.archive_at ? "ARCHIVED" : (s.status || "OFFLINE"),
-      archive_at:      s.archive_at,
-      address:         s.address || "",
-      phone:           s.phone || "",
-      religion:        s.religion || "",
-      language:        s.language || "",
-      blood_type:      s.blood_type || "",
-      approved:        s.approved || false,
-      permissions: {
-        view_users: Boolean(s.perm_view_users),
-        create_users: Boolean(s.perm_create_users),
-        edit_users: Boolean(s.perm_edit_users),
-        delete_users: Boolean(s.perm_delete_users),
-        export_reports: Boolean(s.perm_export_reports),
-        view_other_offices: Boolean(s.perm_view_other_offices),
-        view_global_stats: Boolean(s.perm_view_global_stats),
-        view_payroll: Boolean(s.perm_view_payroll),
-      },
-    }));
+    const list = (data ?? []).map((s) => {
+      const sp = s.staff_permissions ?? {};
+      return {
+        id:              s.id,
+        created_at:      s.created_at,
+        full_name:       s.full_name,
+        username:        s.username,
+        email:           s.email,
+        office:          s.offices?.name || (s.office_id ? String(s.office_id) : "N/A"),
+        office_location: s.offices?.location || "N/A",
+        office_id:       s.office_id,
+        role:            s.roles?.name ? s.roles.name.toUpperCase() : "N/A",
+        role_id:         s.role_id,
+        status:          s.archive_at ? "ARCHIVED" : (s.status || "OFFLINE"),
+        archive_at:      s.archive_at,
+        started_at:      s.started_at || null,
+        ended_at:        s.ended_at || null,
+        phone:           s.phone || "",
+        religion:        s.religion || "",
+        language:        s.language || "",
+        approved:        s.approved || false,
+        permissions: {
+          view_users:         Boolean(sp.view_users),
+          create_users:       Boolean(sp.create_users),
+          edit_users:         Boolean(sp.edit_users),
+          delete_users:       Boolean(sp.delete_users),
+          export_reports:     Boolean(sp.export_reports),
+          view_other_offices: Boolean(sp.view_other_offices),
+          view_global_stats:  Boolean(sp.view_global_stats),
+          view_payroll:       Boolean(sp.view_payroll),
+        },
+      };
+    });
 
     _writeImplCache(cacheKey, list);
     return list;

@@ -21,7 +21,7 @@ export async function fetchOwnProfile(id) {
 
   const { data, error } = await supabase
     .from("staffs")
-    .select("id, full_name, username, email, address, religion, language, blood_type, phone, status, role_id, office_id, offices(name), roles(name)")
+    .select("id, full_name, username, email, religion, language, phone, status, role_id, office_id, offices(name), roles(name)")
     .eq("id", id)
     .single();
 
@@ -65,10 +65,8 @@ export async function updateOwnProfile(id, payload) {
   // Whitelist — never touch username / email / role / office here.
   const update = {
     full_name:  fullName,
-    address:    str(payload.address),
     religion:   str(payload.religion),
     language:   str(payload.language),
-    blood_type: str(payload.blood_type),
     phone:      str(payload.phone),
     updated_at: new Date().toISOString(),
   };
@@ -87,7 +85,7 @@ export async function updateOwnProfile(id, payload) {
     .from("staffs")
     .update(update)
     .eq("id", id)
-    .select("id, full_name, address, religion, language, blood_type, phone")
+    .select("id, full_name, religion, language, phone")
     .single();
 
   if (error) {

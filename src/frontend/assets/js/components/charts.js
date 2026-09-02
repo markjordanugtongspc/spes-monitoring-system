@@ -24,9 +24,9 @@ function _showNoData(el, msg = "No data available") {
 function _tooltipClass() {
   const isDark = document.documentElement.classList.contains("dark");
   if (isDark) {
-    return "p-2.5 bg-[#243447] text-white rounded-md shadow-lg border border-white/10 text-[11px] font-sans";
+    return "p-3 bg-[#1a2332]/95 text-white rounded-lg shadow-2xl border border-white/10 text-[11px] font-sans backdrop-blur-md";
   } else {
-    return "p-2.5 bg-white text-slate-800 rounded-md shadow-lg border border-gray-200 text-[11px] font-sans";
+    return "p-3 bg-white/95 text-slate-800 rounded-lg shadow-2xl border border-slate-200/80 text-[11px] font-sans backdrop-blur-md ring-1 ring-black/5";
   }
 }
 
@@ -213,7 +213,9 @@ export async function initDashboardCharts() {
     globalStaffs,
   };
 
+  _cachedStaffs = chartStaffs;
   _renderImplementorsByOffice(chartStaffs);
+  _setupCard1Switcher();
   const filteredBeneficiaries = _renderDashboardPeriodData();
   _setupTrendsSwitcher();
   _setupYearStatusSwitcher();
@@ -359,6 +361,231 @@ function _renderImplementorsByOffice(staffs) {
   }
 }
 
+// --- START: CHART 1B — IMPLEMENTOR DEPLOYMENTS COLUMN CHART ---
+// --- START: CHART 1B — IMPLEMENTOR DEPLOYMENTS COLUMN CHART ---
+export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
+  const el = typeof elOrId === "string" ? document.getElementById(elOrId) : (elOrId || document.getElementById("deployment-column-chart"));
+  if (!el) return;
+  _xChart.deployments?.destroy();
+  el.innerHTML = "";
+
+  const monthMap = {};
+  const monthOffices = {};
+  const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  let earliestDate = null;
+  let latestDate = null;
+
+  function _fmtNoticeOfCommence(start, end) {
+    if (!start) return "N/A";
+    const sMonth = start.toLocaleString("en-US", { month: "short" }).toUpperCase();
+    const sDay = start.getDate();
+    const sYear = start.getFullYear();
+    if (!end) return `${sMonth} ${sDay}, ${sYear}`;
+    const eMonth = end.toLocaleString("en-US", { month: "short" }).toUpperCase();
+    const eDay = end.getDate();
+    const eYear = end.getFullYear();
+    if (sYear === eYear && sMonth === eMonth) {
+      return `${sMonth} ${sDay} - ${eDay} ${sYear}`;
+    } else if (sYear === eYear) {
+      return `${sMonth} ${sDay} - ${eMonth} ${eDay} ${sYear}`;
+    } else {
+      return `${sMonth} ${sDay}, ${sYear} - ${eMonth} ${eDay}, ${eYear}`;
+    }
+  }
+
+  (staffs || []).forEach(s => {
+    const rawStart = s.started_at || s.created_at;
+    if (!rawStart) return;
+    const dStart = new Date(rawStart);
+    if (isNaN(dStart.getTime())) return;
+
+    const dEnd = s.ended_at ? new Date(s.ended_at) : new Date(dStart.getTime() + 20 * 24 * 60 * 60 * 1000);
+
+    if (!earliestDate || dStart < earliestDate) earliestDate = dStart;
+    if (!latestDate || dEnd > latestDate) latestDate = dEnd;
+
+    const monthKey = `${MONTH_NAMES[dStart.getMonth()]} '${String(dStart.getFullYear()).slice(-2)}`;
+    const sortVal = dStart.getFullYear() * 100 + dStart.getMonth();
+
+    if (!monthMap[monthKey]) {
+      monthMap[monthKey] = { count: 0, sortVal };
+      monthOffices[monthKey] = {};
+    }
+    monthMap[monthKey].count += 1;
+
+    let officeName = s.offices?.name || (s.office_id ? `Office #${s.office_id}` : "Unknown Office");
+    if (officeName.includes("CITY GOVERNMENT OF ILIGAN (LGU)")) {
+      officeName = "LGU - ILIGAN";
+    }
+
+    if (!monthOffices[monthKey][officeName]) {
+      monthOffices[monthKey][officeName] = {
+        officeName,
+        dateRange: _fmtNoticeOfCommence(dStart, dEnd),
+        implementors: []
+      };
+    }
+
+    monthOffices[monthKey][officeName].implementors.push(s.full_name || s.username || "Implementor");
+  });
+
+  const sortedEntries = Object.entries(monthMap).sort((a, b) => a[1].sortVal - b[1].sortVal);
+  const categories = sortedEntries.map(([k]) => k);
+  const values = sortedEntries.map(([, v]) => v.count);
+
+  if (!values.length) return _showNoData(el, "No deployment history available");
+
+  const _c1b = new ApexCharts(el, {
+    series: [{ name: "Deployed Implementors", data: values }],
+    chart: {
+      type: "bar",
+      height: 220,
+      toolbar: { show: false },
+      fontFamily: "Inter, sans-serif",
+      parentHeightOffset: 0
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: "40%",
+        borderRadius: 2,
+        dataLabels: { position: "top" }
+      }
+    },
+    colors: ["#0038A8"],
+    dataLabels: {
+      enabled: true,
+      formatter: fmt,
+      offsetY: -18,
+      style: { fontSize: "10px", fontWeight: 800, colors: ["#64748b"] }
+    },
+    xaxis: {
+      categories,
+      labels: {
+        show: true,
+        style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" }
+      },
+      axisBorder: { show: true, color: "rgba(100, 116, 139, 0.15)" },
+      axisTicks: { show: true, color: "rgba(100, 116, 139, 0.15)" }
+    },
+    yaxis: {
+      labels: { style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" } }
+    },
+    grid: {
+      show: true,
+      borderColor: "rgba(100, 116, 139, 0.1)",
+      strokeDashArray: 4,
+      xaxis: { lines: { show: false } },
+      yaxis: { lines: { show: true } }
+    },
+    tooltip: {
+      theme: "dark",
+      followCursor: false,
+      intersect: false,
+      shared: false,
+      offsetY: -6,
+      marker: { show: false },
+      x: { show: false },
+      fixed: { enabled: false },
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        const month = categories[dataPointIndex];
+        const val = series[seriesIndex][dataPointIndex];
+        const officesObj = monthOffices[month] || {};
+        const officeList = Object.values(officesObj);
+
+        const isDark = document.documentElement.classList.contains("dark");
+
+        const renderedOffices = officeList.slice(0, 4).map(item => {
+          const implListStr = item.implementors.join(", ");
+          return `
+            <div class="rounded-md p-2 border space-y-1.5 ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50/95 border-slate-200'}">
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-extrabold text-[11px] truncate max-w-[140px] ${isDark ? 'text-white' : 'text-slate-900'}" title="${esc(item.officeName)}">${esc(item.officeName)}</span>
+                <span class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow' : 'bg-amber-100 text-amber-900 border border-amber-300/60'}">${esc(item.dateRange)}</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-[10px] ${isDark ? 'text-white/80' : 'text-slate-700 font-semibold'}">
+                <svg class="h-3.5 w-3.5 text-spes-blue shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <span class="truncate max-w-[210px] ${isDark ? 'text-white/90' : 'text-slate-800 font-medium'}" title="${esc(implListStr)}">${esc(implListStr)}</span>
+              </div>
+            </div>`;
+        }).join("");
+
+        const moreOffices = officeList.length > 4 ? `<div class="text-[9px] font-bold text-center pt-0.5 ${isDark ? 'text-white/50' : 'text-slate-500'}">+${officeList.length - 4} more offices</div>` : "";
+
+        return `
+          <div class="${_tooltipClass()} min-w-[230px] max-w-[320px]">
+            <div class="flex items-center justify-between border-b pb-1.5 mb-2 ${isDark ? 'border-white/10' : 'border-slate-200'}">
+              <span class="font-black text-[11px] uppercase tracking-wider ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">${month} Deployments</span>
+              <span class="rounded-full px-2 py-0.5 text-[9px] font-black ${isDark ? 'bg-spes-blue/30 text-white' : 'bg-spes-blue/10 text-spes-blue'}">${val} Total</span>
+            </div>
+            <div class="space-y-1.5">
+              ${renderedOffices}
+              ${moreOffices}
+            </div>
+          </div>`;
+      }
+    }
+  });
+  _c1b.render();
+  _xChart.deployments = _c1b;
+
+  // Timeline summary below the column chart
+  const summaryEl = document.getElementById("deployment-summary");
+  if (summaryEl) {
+    const minStr = earliestDate ? earliestDate.toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "N/A";
+    const maxStr = latestDate ? latestDate.toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "Present";
+    summaryEl.innerHTML = `
+      <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[10px] font-semibold text-spes-black/75 dark:text-spes-white/75">
+        <span>Deployment Span: <strong class="text-spes-blue dark:text-spes-yellow uppercase">${minStr} – ${maxStr}</strong></span>
+        <span class="text-spes-black/50 dark:text-spes-white/50">${staffs.length} total assigned</span>
+      </div>`;
+  }
+}
+// --- END: CHART 1B ---
+// --- END: CHART 1B ---
+
+// --- START: CARD 1 DUAL VIEW SWITCHER ---
+let _card1View = 1;
+let _cachedStaffs = [];
+
+function _setupCard1Switcher() {
+  const btnOffice = document.getElementById("btn-card1-view-office");
+  const btnTimeline = document.getElementById("btn-card1-view-timeline");
+  const titleEl = document.getElementById("card1-title");
+  const wrapperDist = document.getElementById("distribution-chart-wrapper");
+  const wrapperDeploy = document.getElementById("deployment-chart-wrapper");
+
+  if (!btnOffice || !btnTimeline) return;
+
+  const activeClass = "bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow font-black";
+  const inactiveClass = "text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow";
+  const baseClass = "cursor-pointer rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-wider transition-all duration-200 ";
+
+  const _switchView = (view) => {
+    _card1View = view;
+    if (_card1View === 1) {
+      btnOffice.className = baseClass + activeClass;
+      btnTimeline.className = baseClass + inactiveClass;
+      if (titleEl) titleEl.textContent = "Total Implementors";
+      wrapperDist?.classList.remove("hidden");
+      wrapperDeploy?.classList.add("hidden");
+      if (_xChart.distribution) _xChart.distribution.render();
+    } else {
+      btnOffice.className = baseClass + inactiveClass;
+      btnTimeline.className = baseClass + activeClass;
+      if (titleEl) titleEl.textContent = "Deployment Timeline";
+      wrapperDist?.classList.add("hidden");
+      wrapperDeploy?.classList.remove("hidden");
+      renderDeploymentColumnChart("deployment-column-chart", _cachedStaffs);
+    }
+  };
+
+  btnOffice.onclick = () => _switchView(1);
+  btnTimeline.onclick = () => _switchView(2);
+}
+// --- END: CARD 1 DUAL VIEW SWITCHER ---
+
 // Chart 2 — SPES Beneficiaries Gender Distribution (Male / Female)
 function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], globalStaffs = []) {
   const el = document.getElementById("spes-gender-chart");
@@ -403,25 +630,26 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
   }
 
   _xStat.totalBenef = beneficiaries.length;
-  _xStat.male   = male;
+  _xStat.male = male;
   _xStat.female = female;
 
-  // Show real counts in the header. This keeps the scope explicit: Admin sees
-  // the full permitted roster while staff sees only its assigned-office roster.
   const studentBadge = document.getElementById("badge-student-metric");
   if (studentBadge) {
     studentBadge.innerHTML = `
-      <span class="inline-flex items-center gap-1 rounded-full bg-[#4F91FF]/15 px-1.5 py-0.5 text-[8px] text-[#4F91FF] sm:px-2 sm:text-[9px]">
-        <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        Male <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(male)}</span>
+      <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#4F91FF]/15 px-1.5 py-0.5 text-[8px] sm:px-2 sm:text-[9px] text-[#4F91FF] whitespace-nowrap">
+        <svg class="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 9V3h-6M14.5 9.5 21 3M10 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        <span>MALE</span> <span class="font-mono underline decoration-2 underline-offset-2 leading-none">${compactCount(male)}</span>
       </span>
-      <span class="inline-flex items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-1.5 py-0.5 text-[8px] text-[#FF5B9B] sm:px-2 sm:text-[9px]">
-        <svg class="h-3 w-3" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        Female <span class="border-b-2 border-current pb-0.5 leading-none">${compactCount(female)}</span>
+      <span class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FF5B9B]/15 px-1.5 py-0.5 text-[8px] sm:px-2 sm:text-[9px] text-[#FF5B9B] whitespace-nowrap">
+        <svg class="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 15V21M9 18h6M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        <span>FEMALE</span> <span class="font-mono underline decoration-2 underline-offset-2 leading-none">${compactCount(female)}</span>
       </span>`;
-    studentBadge.className = "flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:px-2.5 sm:py-1 sm:text-[9px] md:text-[10px]";
+    studentBadge.className = "flex shrink-0 whitespace-nowrap items-center gap-1 rounded-full bg-gray-100 p-0.5 text-[8px] font-black uppercase leading-tight shadow-sm dark:bg-white/5 sm:gap-1.5 sm:p-1 sm:text-[9px]";
     studentBadge.title = `Male ${fmt(male)} | Female ${fmt(female)}`;
   }
+
+  const isDark = document.documentElement.classList.contains("dark");
+  const strokeColor = isDark ? "#1f293d" : "#ffffff";
 
   const chart = new ApexCharts(el, {
     series,
@@ -429,15 +657,30 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
     labels,
     colors: ["#4F91FF", "#FF5B9B"], // Male Blue, Female Pink
     legend: { position: "bottom", fontWeight: 800, fontSize: "11px" },
-    stroke: { show: false },
+    stroke: { show: true, width: 3, colors: [strokeColor] },
     dataLabels: { enabled: false },
-    tooltip: { enabled: false },
+    tooltip: {
+      theme: "dark",
+      custom: function({ series: s, seriesIndex: sIdx, w }) {
+        const lbl = w.globals.labels[sIdx];
+        const val = s[sIdx];
+        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : "0.0";
+        const col = w.config.colors[sIdx];
+        return `
+          <div class="${_tooltipClass()}">
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${col}"></span>
+              <span class="font-bold">${lbl}: <strong class="font-black">${fmt(val)}</strong> (${pct}%)</span>
+            </div>
+          </div>`;
+      }
+    },
     plotOptions: {
       pie: {
         startAngle: 225,
         endAngle: 585,
         donut: {
-          size: "75%",
+          size: "74%",
           labels: {
             show: true,
             name:  { show: true, fontSize: "10px", fontWeight: 700, offsetY: -5, color: "#64748b" },
@@ -458,18 +701,16 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
 
   _xChart.gender = chart;
   chart.render().then(() => {
-    _drawGenderConnectorLines(el, series, total);
+    setTimeout(() => _drawGenderConnectorLines(el, series, total), 60);
+    setTimeout(() => _drawGenderConnectorLines(el, series, total), 300);
   });
 
   if (!el.dataset.resizeListenerAttached) {
     el.dataset.resizeListenerAttached = "true";
     window.addEventListener("resize", () => {
-      setTimeout(() => {
-        _drawGenderConnectorLines(el, series, total);
-      }, 150);
+      setTimeout(() => _drawGenderConnectorLines(el, series, total), 150);
     });
   }
-
 }
 
 function _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs) {
@@ -529,7 +770,9 @@ function _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs) {
   }
 }
 
+// --- START: DRAW GENDER CONNECTOR LINES WITH IMPROVED CALLOUTS ---
 function _drawGenderConnectorLines(el, series, total) {
+  if (!el || !total) return;
   const pieGroup = el.querySelector(".apexcharts-pie");
   if (!pieGroup) return;
 
@@ -537,6 +780,8 @@ function _drawGenderConnectorLines(el, series, total) {
   const containerRect = el.getBoundingClientRect();
   const containerWidth = Math.max(el.clientWidth, containerRect.width);
   const containerHeight = Math.max(el.clientHeight, containerRect.height);
+  if (containerWidth === 0 || containerHeight === 0) return;
+
   const centerX = (rect.left - containerRect.left) + rect.width / 2;
   const centerY = (rect.top - containerRect.top) + rect.height / 2;
   const radius = Math.min(rect.width, rect.height) / 2;
@@ -552,8 +797,12 @@ function _drawGenderConnectorLines(el, series, total) {
   overlay.style.width = "100%";
   overlay.style.height = "100%";
 
+  const isDark = document.documentElement.classList.contains("dark");
+  const strokeHalo = isDark ? "#1e293b" : "#ffffff";
+
   const startAngleDegrees = 225;
   let currentAngle = -Math.PI / 2 + (startAngleDegrees * Math.PI) / 180;
+
   series.forEach((val, idx) => {
     if (val === 0) return;
     const angleSpan = (val / total) * 2 * Math.PI;
@@ -562,53 +811,67 @@ function _drawGenderConnectorLines(el, series, total) {
 
     const cos = Math.cos(midAngle);
     const sin = Math.sin(midAngle);
+    const color = idx === 0 ? "#4F91FF" : "#FF5B9B";
+
     const startX = centerX + cos * radius;
     const startY = centerY + sin * radius;
-    const verticalOffset = idx === 0 ? -12 : 0;
-    const endX = centerX + cos * (radius + 28);
-    const endY = centerY + sin * (radius + 28) + verticalOffset;
-    const isRightSide = cos > 0 || (Math.abs(cos) < 1e-5 && sin < 0);
-    const estimatedLabelWidth = 64;
-    const horizontalPadding = 8;
-    let elbowY = Math.min(containerHeight - 22, Math.max(14, endY));
-    let textX;
-    let elbowX;
+    const endX = centerX + cos * (radius + 22);
+    const endY = centerY + sin * (radius + 22);
+    const isRightSide = cos >= 0;
 
+    let elbowX = isRightSide ? endX + 24 : endX - 24;
+    let textX = isRightSide ? elbowX + 4 : elbowX - 4;
+    let elbowY = Math.min(containerHeight - 16, Math.max(16, endY));
+
+    // Clamp elbowX within bounds
     if (isRightSide) {
-      textX = Math.min(containerWidth - estimatedLabelWidth - horizontalPadding, endX + 30);
-      textX = Math.max(centerX + 8, textX);
-      elbowX = textX - 5;
+      elbowX = Math.min(containerWidth - 65, elbowX);
+      textX = elbowX + 4;
     } else {
-      textX = Math.max(estimatedLabelWidth + horizontalPadding, endX - 30);
-      textX = Math.min(centerX - 8, textX);
-      elbowX = textX + 5;
+      elbowX = Math.max(65, elbowX);
+      textX = elbowX - 4;
     }
+
+    // Leader line with dot start
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", startX);
+    dot.setAttribute("cy", startY);
+    dot.setAttribute("r", "2.5");
+    dot.setAttribute("fill", color);
+    dot.setAttribute("stroke", strokeHalo);
+    dot.setAttribute("stroke-width", "1.5");
+    overlay.appendChild(dot);
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", `M ${startX} ${startY} L ${endX} ${endY} L ${elbowX} ${elbowY}`);
-    path.setAttribute("stroke", "#94a3b8");
-    path.setAttribute("stroke-width", "1");
+    path.setAttribute("stroke", color);
+    path.setAttribute("stroke-width", "1.5");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
     path.setAttribute("fill", "none");
+    path.setAttribute("opacity", "0.85");
     overlay.appendChild(path);
 
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", textX);
-    text.setAttribute("y", elbowY + 4);
+    text.setAttribute("y", elbowY + 3.5);
     text.setAttribute("text-anchor", isRightSide ? "start" : "end");
-    text.setAttribute("fill", idx === 0 ? "#4F91FF" : "#FF5B9B");
+    text.setAttribute("fill", color);
+    text.style.fontSize = "10px";
     text.style.fontFamily = "Inter, sans-serif";
-      text.style.fontWeight = "bold";
+    text.style.fontWeight = "900";
     text.style.paintOrder = "stroke";
-    text.style.stroke = document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff";
-    text.style.strokeWidth = "3px";
+    text.style.stroke = strokeHalo;
+    text.style.strokeWidth = "2.5px";
     text.style.strokeLinejoin = "round";
-    text.textContent = `${val} (${Math.round((val / total) * 100)}%)`;
+    text.textContent = `${val.toLocaleString()} (${((val / total) * 100).toFixed(0)}%)`;
     overlay.appendChild(text);
   });
 
   el.style.position = "relative";
   el.appendChild(overlay);
 }
+// --- END: DRAW GENDER CONNECTOR LINES ---
 
 // --- START: RENDER BENEFICIARIES BY YEAR CHART AND COHORT ANALYTICS ---
 /**

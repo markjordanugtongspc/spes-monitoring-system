@@ -88,11 +88,9 @@ export function initRegisterHandler() {
       email: email,
       password: password,
       office_id: parseInt(officeId, 10),
-      address: address || null,
       phone: phone || null,
       religion: religion || null,
       language: language || null,
-      blood_type: bloodType || null
     };
 
     try {

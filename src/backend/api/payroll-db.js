@@ -64,7 +64,7 @@ export async function fetchDbPayrollRecords({ forceRefresh = false, officeId = n
   try {
     let query = supabase
       .from("payroll_records")
-      .select("id, beneficiary_id, office_id, stipend_amount, days_worked, payment_status, date_paid, notes, created_at, updated_at")
+      .select("id, beneficiary_id, office_id, stipend_amount, days_worked, payment_status, date_paid, paid_at, paid_by, notes, created_at, updated_at")
       .order("id", { ascending: true });
 
     if (officeId && officeId !== "ALL" && officeId !== "all") {
@@ -117,10 +117,11 @@ export async function upsertDbPayrollRecord(beneficiaryId, officeId = null, payl
   const cleanOfficeId = officeId ? Number(officeId) : null;
   const stipendAmount = payload.stipend_amount !== undefined ? Number(payload.stipend_amount) : 5133.00;
   const daysWorked = payload.days_worked !== undefined ? Number(payload.days_worked) : 20;
-  const paymentStatus = payload.payment_status || "PENDING";
   const datePaid = paymentStatus === "PAID" ? (payload.date_paid || new Date().toISOString()) : null;
+  const paidAt = paymentStatus === "PAID" ? (payload.paid_at || payload.date_paid || new Date().toISOString()) : null;
   const notes = payload.notes !== undefined ? String(payload.notes).trim() : null;
   const updatedBy = payload.updated_by ? Number(payload.updated_by) : null;
+  const paidBy = paymentStatus === "PAID" ? (payload.paid_by ? Number(payload.paid_by) : updatedBy) : null;
 
   const recordPayload = {
     beneficiary_id: bId,
@@ -129,12 +130,16 @@ export async function upsertDbPayrollRecord(beneficiaryId, officeId = null, payl
     days_worked: daysWorked,
     payment_status: paymentStatus,
     date_paid: datePaid,
+    paid_at: paidAt,
     notes: notes,
     updated_at: new Date().toISOString(),
   };
 
   if (updatedBy) {
     recordPayload.updated_by = updatedBy;
+  }
+  if (paidBy) {
+    recordPayload.paid_by = paidBy;
   }
 
   try {
@@ -178,6 +183,7 @@ export async function bulkUpsertDbPayrollStatus(items = [], newStatus = "PAID", 
 
   const now = new Date().toISOString();
   const datePaid = newStatus === "PAID" ? now : null;
+  const paidAt = newStatus === "PAID" ? now : null;
   const cleanStaffId = staffId ? Number(staffId) : null;
 
   const recordsToUpsert = items.map(item => {
@@ -193,11 +199,15 @@ export async function bulkUpsertDbPayrollStatus(items = [], newStatus = "PAID", 
       days_worked: days,
       payment_status: newStatus,
       date_paid: datePaid,
+      paid_at: paidAt,
       updated_at: now,
     };
 
     if (cleanStaffId) {
       row.updated_by = cleanStaffId;
+      if (newStatus === "PAID") {
+        row.paid_by = cleanStaffId;
+      }
     }
     return row;
   }).filter(r => Boolean(r.beneficiary_id));
@@ -272,6 +282,9 @@ export async function bulkUpsertDbPayrollRecords(items = [], commonUpdates = {},
     const datePaid = status === "PAID"
       ? (typeof item === "object" && item.date_paid ? item.date_paid : now)
       : null;
+    const paidAt = status === "PAID"
+      ? (typeof item === "object" && item.paid_at ? item.paid_at : (typeof item === "object" && item.date_paid ? item.date_paid : now))
+      : null;
 
     const row = {
       beneficiary_id: bId,
@@ -280,12 +293,16 @@ export async function bulkUpsertDbPayrollRecords(items = [], commonUpdates = {},
       days_worked: days,
       payment_status: status,
       date_paid: datePaid,
+      paid_at: paidAt,
       notes: notes,
       updated_at: now,
     };
 
     if (cleanStaffId) {
       row.updated_by = cleanStaffId;
+      if (status === "PAID") {
+        row.paid_by = cleanStaffId;
+      }
     }
     return row;
   }).filter(r => Boolean(r.beneficiary_id));
@@ -339,7 +356,7 @@ export async function fetchDbPayrollBudgets({ forceRefresh = false } = {}) {
   try {
     const { data, error } = await supabase
       .from("payroll_budgets")
-      .select("id, office_id, amount, set_by, updated_at");
+      .select("id, office_id, amount, set_by, updated_at, modified_by, modified_at");
 
     if (error) {
       if (error.code === "42P01") {
@@ -400,10 +417,12 @@ export async function upsertDbPayrollBudget(officeId = null, amount = 0, staffId
     office_id: cleanOfficeId,
     amount: cleanAmount,
     updated_at: new Date().toISOString(),
+    modified_at: new Date().toISOString(),
   };
 
   if (staffId) {
     payload.set_by = Number(staffId);
+    payload.modified_by = Number(staffId);
   }
 
   try {

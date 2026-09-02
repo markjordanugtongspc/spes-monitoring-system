@@ -12,10 +12,7 @@ const ALLOWED_FIELDS = [
   "view_payroll",
 ];
 
-const STAFF_PERMISSION_COLUMNS = Object.fromEntries(
-  ALLOWED_FIELDS.map((field) => [field, `perm_${field}`])
-);
-
+// --- START: PERMISSIONS API HANDLER - POST to update staff_permissions table ---
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -40,18 +37,18 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Select between 1 and 200 valid staff accounts." });
     }
 
-    const payload = { updated_at: new Date().toISOString() };
+    // Build permission payload (only allowed fields, no perm_ prefix)
+    const permPayload = {};
     for (const field of ALLOWED_FIELDS) {
       if (field in (req.body?.updates || {})) {
-        payload[STAFF_PERMISSION_COLUMNS[field]] = Boolean(req.body.updates[field]);
+        permPayload[field] = Boolean(req.body.updates[field]);
       }
     }
-    const permissionUpdates = Object.entries(payload)
-      .filter(([field]) => field !== "updated_at");
-    if (!permissionUpdates.length) {
+    if (!Object.keys(permPayload).length) {
       return res.status(400).json({ error: "At least one permission update is required." });
     }
 
+    // Verify target staff accounts exist, not admin, not archived if granting
     const { data: targets, error: targetError } = await supabase
       .from("staffs")
       .select("id, role_id, approved, archive_at")
@@ -66,56 +63,38 @@ export default async function handler(req, res) {
     if (targets.some((staff) => Number(staff.role_id) === 1)) {
       return res.status(400).json({ error: "Administrator permissions cannot be modified." });
     }
-    const grantsPermission = permissionUpdates.some(([, enabled]) => enabled);
+    const grantsPermission = Object.values(permPayload).some((v) => v === true);
     if (grantsPermission && targets.some((staff) => !staff.approved || staff.archive_at)) {
       return res.status(409).json({
         error: "Permissions can only be granted to approved, active staff accounts.",
       });
     }
 
-    let { data, error } = await supabase
-      .from("staffs")
-      .update(payload)
-      .in("id", staffIds)
+    // UPSERT into staff_permissions (one row per staff_id, UNIQUE constraint)
+    const now = new Date().toISOString();
+    const rows = staffIds.map((id) => ({
+      staff_id: id,
+      ...permPayload,
+      updated_at: now,
+    }));
+
+    const { data, error } = await supabase
+      .from("staff_permissions")
+      .upsert(rows, { onConflict: "staff_id", ignoreDuplicates: false })
       .select(`
-        id,
-        perm_view_users,
-        perm_create_users,
-        perm_edit_users,
-        perm_delete_users,
-        perm_export_reports,
-        perm_view_other_offices,
-        perm_view_global_stats,
-        perm_view_payroll
+        staff_id,
+        view_users,
+        create_users,
+        edit_users,
+        delete_users,
+        export_reports,
+        view_other_offices,
+        view_global_stats,
+        view_payroll
       `);
 
-    if (error && (error.code === "42703" || error.code === "PGRST204" || error.code === "PGRST100" || String(error.message || "").includes("perm_view_payroll"))) {
-      delete payload.perm_view_payroll;
-      const retry = await supabase
-        .from("staffs")
-        .update(payload)
-        .in("id", staffIds)
-        .select(`
-          id,
-          perm_view_users,
-          perm_create_users,
-          perm_edit_users,
-          perm_delete_users,
-          perm_export_reports,
-          perm_view_other_offices,
-          perm_view_global_stats
-        `);
-      data = retry.data;
-      error = retry.error;
-    }
-
     if (error) {
-      console.error("[SPES API] staff permissions update failed:", error.code, error.message);
-      if (error.code === "42703" || error.code === "PGRST204") {
-        return res.status(409).json({
-          error: "The individual staff permissions migration has not been applied.",
-        });
-      }
+      console.error("[SPES API] staff_permissions upsert failed:", error.code, error.message);
       return res.status(500).json({ error: "Failed to update permissions." });
     }
 
@@ -125,3 +104,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "The secure permissions service is not configured." });
   }
 }
+// --- END: PERMISSIONS API HANDLER ---
+

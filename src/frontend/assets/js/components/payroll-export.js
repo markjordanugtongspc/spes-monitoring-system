@@ -20,6 +20,7 @@ export const PAYROLL_EXPORT_COLUMNS = [
   { key: "stipend_amount", label: "Stipend Amount (₱)",     default: true,  group: "payroll" },
   { key: "payment_status", label: "Payment Status",         default: true,  group: "payroll" },
   { key: "date_paid",      label: "Date Paid (GMT+08)",     default: true,  group: "payroll" },
+  { key: "paid_by",        label: "Disbursed By (Officer)", default: false, group: "payroll" },
   { key: "notes",          label: "Auditing Remarks / Notes", default: true, group: "payroll" },
   
   // Demographics & Profile Settings
@@ -360,8 +361,13 @@ export async function generateExcelPayrollReport(beneficiaries, selectedCols = [
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
         cell.alignment = { vertical: "middle", horizontal: "center" };
       } else if (c.key === "date_paid") {
-        cell.value = p.date_paid ? _formatTimestampHelper(p.date_paid) : "—";
+        const rawDate = p.paid_at || p.date_paid;
+        cell.value = rawDate ? _formatTimestampHelper(rawDate) : "—";
         cell.font = { name: "Calibri", size: 9, color: { argb: isPaid ? _XL.paidText : _XL.muted } };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      } else if (c.key === "paid_by") {
+        cell.value = p.paid_by ? `Officer #${p.paid_by}` : (isPaid ? "System/Admin" : "—");
+        cell.font = { name: "Calibri", size: 9, color: { argb: _XL.ink } };
         cell.alignment = { vertical: "middle", horizontal: "center" };
       } else if (c.key === "notes") {
         cell.value = p.notes || "—";
@@ -495,7 +501,8 @@ export function generateCsvPayrollReport(beneficiaries, selectedCols = []) {
       if (c.key === "days_worked") return escCsvField(p.days_worked || 20);
       if (c.key === "stipend_amount") return escCsvField(p.stipend_amount || 5133.00);
       if (c.key === "payment_status") return escCsvField(p.payment_status || "PENDING");
-      if (c.key === "date_paid") return escCsvField(p.date_paid ? _formatTimestampHelper(p.date_paid) : "");
+      if (c.key === "date_paid") return escCsvField((p.paid_at || p.date_paid) ? _formatTimestampHelper(p.paid_at || p.date_paid) : "");
+      if (c.key === "paid_by") return escCsvField(p.paid_by ? `Officer #${p.paid_by}` : (p.payment_status === "PAID" ? "System/Admin" : ""));
       if (c.key === "notes") return escCsvField(p.notes || "");
       if (c.key === "gender") return escCsvField(_resolveGender(b));
       if (c.key === "age") return escCsvField(b.age || "");

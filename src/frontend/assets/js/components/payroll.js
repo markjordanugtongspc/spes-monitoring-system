@@ -836,7 +836,7 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       const isPaid = p.payment_status === "PAID";
       const isPending = p.payment_status === "PENDING";
 
-      const datePaidFormatted = isPaid && p.date_paid ? formatPhilippineTimestamp(p.date_paid) : "";
+      const datePaidFormatted = isPaid && (p.paid_at || p.date_paid) ? formatPhilippineTimestamp(p.paid_at || p.date_paid) : "";
       const tooltipText = isPaid
         ? (datePaidFormatted ? `Disbursed on: ${datePaidFormatted}` : `Disbursed to Beneficiary (PAID)`)
         : "";

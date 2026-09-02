@@ -262,10 +262,8 @@ export async function initSettings() {
 
   // ── Editable fields ─────────────────────────────────────────
   _setVal("set-full-name", profile.full_name);
-  _setVal("set-address", profile.address);
   _setVal("set-religion", profile.religion);
   _setVal("set-language", profile.language);
-  _setVal("set-blood-type", profile.blood_type);
 
   // ── Password UX ─────────────────────────────────────────────
   _wirePasswordToggle("set-pw-toggle", "set-password");
@@ -281,10 +279,8 @@ export async function initSettings() {
   _g("btn-settings-reset")?.addEventListener("click", () => {
     hideErr();
     _setVal("set-full-name", profile.full_name);
-    _setVal("set-address", profile.address);
     _setVal("set-religion", profile.religion);
     _setVal("set-language", profile.language);
-    _setVal("set-blood-type", profile.blood_type);
     _setVal("set-password", "");
     _setVal("set-password-confirm", "");
     _renderStrength("");
@@ -325,10 +321,8 @@ export async function initSettings() {
 
     const values = {
       full_name:  _g("set-full-name")?.value.trim() ?? "",
-      address:    _g("set-address")?.value.trim() ?? "",
       religion:   _g("set-religion")?.value.trim() ?? "",
       language:   _g("set-language")?.value.trim() ?? "",
-      blood_type: _g("set-blood-type")?.value.trim() ?? "",
     };
 
     const pw  = _g("set-password")?.value ?? "";
@@ -349,17 +343,15 @@ export async function initSettings() {
 
     // Sync the cached session so the sidebar / header reflect the new name immediately.
     try {
-      const updated = { ...session, full_name: values.full_name, address: values.address,
-        religion: values.religion, language: values.language, blood_type: values.blood_type };
+      const updated = { ...session, full_name: values.full_name,
+        religion: values.religion, language: values.language };
       localStorage.setItem("spes_session", JSON.stringify(updated));
     } catch {}
 
     // Update local copy so Reset uses fresh values + clear password inputs
     profile.full_name = values.full_name;
-    profile.address = values.address;
     profile.religion = values.religion;
     profile.language = values.language;
-    profile.blood_type = values.blood_type;
     _setVal("set-password", "");
     _setVal("set-password-confirm", "");
     _renderStrength("");

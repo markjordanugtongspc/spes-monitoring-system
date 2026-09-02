@@ -62,10 +62,11 @@ export function readSession(req) {
 }
 
 export async function requireAdmin(req, res, supabase) {
-  return requireAdminOrAuthorized(req, res, supabase, "perm_edit_users");
+  return requireAdminOrAuthorized(req, res, supabase, "edit_users");
 }
 
-export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm = "perm_edit_users") {
+// --- START: REQUIRE ADMIN OR AUTHORIZED - checks staff session and permissions from staff_permissions table ---
+export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm = "edit_users") {
   const session = readSession(req);
   if (!session) {
     res.status(401).json({ error: "Your secure session is missing or expired. Please sign in again." });
@@ -74,7 +75,12 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
 
   const { data: staff, error } = await supabase
     .from("staffs")
-    .select("id, role_id, approved, archive_at, perm_edit_users, perm_view_users, perm_create_users, perm_delete_users, perm_view_other_offices")
+    .select(`
+      id, role_id, approved, archive_at,
+      staff_permissions!staff_id(
+        edit_users, view_users, create_users, delete_users, view_other_offices
+      )
+    `)
     .eq("id", session.staffId)
     .maybeSingle();
 
@@ -83,8 +89,9 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
     return null;
   }
 
+  const sp = staff.staff_permissions ?? {};
   const isAdmin = Number(staff.role_id) === 1;
-  const hasPerm = Boolean(staff[requiredPerm]) || Boolean(staff.perm_edit_users);
+  const hasPerm = Boolean(sp[requiredPerm]) || Boolean(sp["edit_users"]);
   const isAuthorized = !staff.archive_at && staff.approved && (isAdmin || hasPerm);
 
   if (!isAuthorized) {
@@ -94,6 +101,7 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
 
   return staff;
 }
+// --- END: REQUIRE ADMIN OR AUTHORIZED ---
 
 // --- START: GET PORTAL REDIRECT URL ---
 /**

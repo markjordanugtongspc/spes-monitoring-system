@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-// ── Supabase Realtime Permissions Listener ────────────────────────
+// --- START: SUPABASE REALTIME PERMISSIONS LISTENER (staff_permissions table) ---
 function setupRealtimePermissionsListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   if (!session || !session.id || session.role === "admin") return;
@@ -92,6 +92,7 @@ function setupRealtimePermissionsListener() {
     "export_reports",
     "view_other_offices",
     "view_global_stats",
+    "view_payroll",
   ];
 
   supabase
@@ -99,14 +100,14 @@ function setupRealtimePermissionsListener() {
     .on(
       "postgres_changes",
       {
-        event: "UPDATE",
+        event: "*",
         schema: "public",
-        table: "staffs",
-        filter: `id=eq.${session.id}`
+        table: "staff_permissions",
+        filter: `staff_id=eq.${session.id}`
       },
       async (payload) => {
         const permissionChanged = permissionFields.some((field) => (
-          Boolean(payload.new?.[`perm_${field}`]) !== Boolean(session.permissions?.[field])
+          Boolean(payload.new?.[field]) !== Boolean(session.permissions?.[field])
         ));
         if (!permissionChanged) return;
 
@@ -137,5 +138,6 @@ function setupRealtimePermissionsListener() {
     )
     .subscribe();
 }
+// --- END: SUPABASE REALTIME PERMISSIONS LISTENER ---
 
 setupRealtimePermissionsListener();

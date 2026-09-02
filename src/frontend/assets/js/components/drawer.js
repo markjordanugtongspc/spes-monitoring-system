@@ -243,11 +243,51 @@ export function initImplementorsDrawer() {
     }
     document.getElementById("drawer-impl-office-location").textContent = implementorData.office_location || "—";
     document.getElementById("drawer-impl-email").textContent = implementorData.email || "---";
-    
-    document.getElementById("drawer-impl-address").textContent = implementorData.address || "—";
+
+    // --- START: POPULATE USERNAME, STARTED (replaces address/blood_type) ---
+    const usernameEl = document.getElementById("drawer-impl-username");
+    if (usernameEl) usernameEl.textContent = implementorData.username || "---";
+
+    // Format started_at as readable date-time or "N/A"
+    const startedEl = document.getElementById("drawer-impl-started");
+    if (startedEl) {
+      if (implementorData.started_at) {
+        const d = new Date(implementorData.started_at);
+        startedEl.textContent = d.toLocaleString("en-PH", {
+          month: "short", day: "numeric", year: "numeric",
+          hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila"
+        });
+      } else {
+        startedEl.textContent = "N/A";
+      }
+    }
+
+    // Wire copy buttons
+    const btnCopyUsername = document.getElementById("btn-copy-username");
+    const btnCopyEmail = document.getElementById("btn-copy-email");
+    const _flashCopied = (btn) => {
+      const svg = btn.querySelector("svg");
+      if (!svg) return;
+      const orig = svg.outerHTML;
+      svg.outerHTML; // no-op, just reference
+      btn.innerHTML = `<svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+      btn.title = "Copied!";
+      setTimeout(() => { btn.innerHTML = orig; btn.title = btn.dataset.originalTitle || btn.title; }, 1500);
+    };
+    if (btnCopyUsername) {
+      btnCopyUsername.onclick = () => {
+        navigator.clipboard.writeText(implementorData.username || "").then(() => _flashCopied(btnCopyUsername)).catch(() => {});
+      };
+    }
+    if (btnCopyEmail) {
+      btnCopyEmail.onclick = () => {
+        navigator.clipboard.writeText(implementorData.email || "").then(() => _flashCopied(btnCopyEmail)).catch(() => {});
+      };
+    }
+    // --- END: POPULATE USERNAME, EMAIL-DETAIL, STARTED ---
+
     document.getElementById("drawer-impl-religion").textContent = implementorData.religion || "—";
     document.getElementById("drawer-impl-language").textContent = implementorData.language || "—";
-    document.getElementById("drawer-impl-blood").textContent = implementorData.blood_type || "—";
     document.getElementById("drawer-impl-phone").textContent = implementorData.phone || "—";
 
     const approvedEl = document.getElementById("drawer-impl-approved");
@@ -625,11 +665,21 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       }
 
       document.getElementById("aif-role").value = staffData.role_id || "";
-      document.getElementById("aif-address").value = staffData.address || "";
       document.getElementById("aif-religion").value = staffData.religion || "";
       document.getElementById("aif-language").value = staffData.language || "";
-      document.getElementById("aif-blood-type").value = staffData.blood_type || "";
       document.getElementById("aif-phone").value = staffData.phone || "";
+
+      // --- START: POPULATE DEPLOYMENT DATES (started_at / ended_at) ---
+      const _fmtDateInput = (iso) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
+      };
+      const startedInput = document.getElementById("aif-started-at");
+      const endedInput = document.getElementById("aif-ended-at");
+      if (startedInput) startedInput.value = _fmtDateInput(staffData.started_at);
+      if (endedInput) endedInput.value = _fmtDateInput(staffData.ended_at);
+      // --- END: POPULATE DEPLOYMENT DATES ---
       
       const approvedToggle = document.getElementById("aif-approved");
       approvedToggle.checked = Boolean(staffData.approved);
@@ -705,6 +755,22 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   closeBtn?.addEventListener("click", closeDrawer);
   overlay.addEventListener("click", closeDrawer);
 
+  // --- START: AUTO-CALCULATE END DATE (+20 DAYS) ---
+  const _startedInput = document.getElementById("aif-started-at");
+  const _endedInput = document.getElementById("aif-ended-at");
+  const _autoComputeEndDate = () => {
+    if (!_startedInput || !_endedInput || !_startedInput.value) return;
+    const startVal = new Date(_startedInput.value);
+    if (isNaN(startVal.getTime())) return;
+    const endVal = new Date(startVal);
+    endVal.setDate(endVal.getDate() + 20);
+    _endedInput.value = `${String(endVal.getMonth() + 1).padStart(2, "0")}/${String(endVal.getDate()).padStart(2, "0")}/${endVal.getFullYear()}`;
+  };
+  _startedInput?.addEventListener("change", _autoComputeEndDate);
+  _startedInput?.addEventListener("input", _autoComputeEndDate);
+  _startedInput?.addEventListener("changeDate", _autoComputeEndDate);
+  // --- END: AUTO-CALCULATE END DATE (+20 DAYS) ---
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     _hideError();
@@ -715,19 +781,26 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     if (!currentEditId && !pwd) return _showError("Password is required.");
     if (pwd && pwd !== confirmPwd) return _showError("Passwords do not match.");
 
+    // --- START: BUILD EDIT/CREATE PAYLOAD ---
+    const _parseDate = (strVal) => {
+      if (!strVal) return null;
+      const d = new Date(strVal);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    };
     const payload = {
       full_name:  document.getElementById("aif-full-name").value.trim(),
       username:   document.getElementById("aif-username").value.trim(),
       email:      document.getElementById("aif-email").value.trim() || null,
       office_id:  document.getElementById("aif-office").value || null,
       role_id:    document.getElementById("aif-role").value || null,
-      address:    document.getElementById("aif-address").value.trim() || null,
       religion:   document.getElementById("aif-religion").value.trim() || null,
       language:   document.getElementById("aif-language").value.trim() || null,
-      blood_type: document.getElementById("aif-blood-type").value || null,
       phone:      document.getElementById("aif-phone").value.trim() || null,
+      started_at: _parseDate(document.getElementById("aif-started-at")?.value),
+      ended_at:   _parseDate(document.getElementById("aif-ended-at")?.value),
       approved:   document.getElementById("aif-approved")?.checked || false,
     };
+    // --- END: BUILD EDIT/CREATE PAYLOAD ---
     
     if (pwd && !currentEditId) {
       payload.password = pwd;

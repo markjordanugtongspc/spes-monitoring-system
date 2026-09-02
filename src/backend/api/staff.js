@@ -261,26 +261,27 @@ export async function updateStaffApprovalBulk(ids, approved) {
   return { success: true, data };
 }
 
-// ── Input sanitiser ────────────────────────────────────────────
+// --- START: STAFF INPUT SANITISER ---
 function _sanitize(p) {
   const str = (v) => String(v ?? "").trim() || null;
   return {
-    full_name:  String(p.full_name ?? "").trim(),
-    username:   String(p.username ?? "").trim().toLowerCase(),
-    email:      String(p.email ?? "").trim().toLowerCase(),
-    password:   String(p.password ?? "").trim(),
-    address:    str(p.address),
-    phone:      str(p.phone),
-    religion:   str(p.religion),
-    language:   str(p.language),
-    blood_type: str(p.blood_type),
-    role_id:    p.role_id ? parseInt(p.role_id, 10) : null,
-    office_id:  p.office_id ? parseInt(p.office_id, 10) : null,
+    full_name:      String(p.full_name ?? "").trim(),
+    username:       String(p.username ?? "").trim().toLowerCase(),
+    email:          String(p.email ?? "").trim().toLowerCase(),
+    password:       String(p.password ?? "").trim(),
+    phone:          str(p.phone),
+    religion:       str(p.religion),
+    language:       str(p.language),
+    started_at:     p.started_at ? new Date(p.started_at).toISOString() : null,
+    ended_at:       p.ended_at   ? new Date(p.ended_at).toISOString()   : null,
+    role_id:        p.role_id    ? parseInt(p.role_id, 10)    : null,
+    office_id:      p.office_id  ? parseInt(p.office_id, 10)  : null,
     beneficiary_id: p.beneficiary_id ? parseInt(p.beneficiary_id, 10) : null,
-    status:     str(p.status) ?? "OFFLINE",
-    approved:   Boolean(p.approved),
+    status:         str(p.status) ?? "OFFLINE",
+    approved:       Boolean(p.approved),
   };
 }
+// --- END: STAFF INPUT SANITISER ---
 // ── Fetch ──────────────────────────────────────────────────────
 /**
  * Fetch the minimal global roster needed by Dashboard Card 1.
@@ -289,7 +290,7 @@ function _sanitize(p) {
 export async function fetchGlobalStaffMetricRoster() {
   const { data, error } = await supabase
     .from("staffs")
-    .select("id, office_id, offices!office_id(id, name, location)")
+    .select("id, full_name, username, office_id, started_at, ended_at, created_at, offices!office_id(id, name, location)")
     .is("archive_at", null)
     .neq("role_id", 1)
     .order("id", { ascending: true });
@@ -346,10 +347,11 @@ async function _authorizeStaffMutation(ids, permissionColumn) {
   return { allowed: true, session, access };
 }
 
+// --- START: FETCH STAFFS with office and role join ---
 export async function fetchStaffs(options = {}) {
   let query = supabase
     .from("staffs")
-    .select("id, role_id, office_id, offices!office_id(id, name, location), full_name, username, email, phone, status, approved, created_at, archive_at, beneficiary_id, roles!role_id(id, name)")
+    .select("id, role_id, office_id, offices!office_id(id, name, location), full_name, username, email, phone, status, approved, created_at, archive_at, beneficiary_id, started_at, ended_at, roles!role_id(id, name)")
     .is("archive_at", null)
     .neq("role_id", 1)
     .order("id", { ascending: true });
@@ -367,3 +369,4 @@ export async function fetchStaffs(options = {}) {
 
   return { data: data ?? [] };
 }
+// --- END: FETCH STAFFS ---

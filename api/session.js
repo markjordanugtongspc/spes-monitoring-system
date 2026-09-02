@@ -1,39 +1,20 @@
 import { createSupabaseAdmin } from "./_lib/supabase-admin.js";
 import { clearSessionCookie, createSessionCookie } from "./_lib/session.js";
 
-const STAFF_PERMISSION_SELECT = `
-  perm_view_users,
-  perm_create_users,
-  perm_edit_users,
-  perm_delete_users,
-  perm_export_reports,
-  perm_view_other_offices,
-  perm_view_global_stats,
-  perm_view_payroll
-`;
-
-const STAFF_PERMISSION_FALLBACK_SELECT = `
-  perm_view_users,
-  perm_create_users,
-  perm_edit_users,
-  perm_delete_users,
-  perm_export_reports,
-  perm_view_other_offices,
-  perm_view_global_stats
-`;
-
+// --- START: NORMALIZE PERMISSIONS from staff_permissions row ---
 function normalizeStaffPermissions(row = {}) {
   return {
-    view_users: Boolean(row.perm_view_users),
-    create_users: Boolean(row.perm_create_users),
-    edit_users: Boolean(row.perm_edit_users),
-    delete_users: Boolean(row.perm_delete_users),
-    export_reports: Boolean(row.perm_export_reports),
-    view_other_offices: Boolean(row.perm_view_other_offices),
-    view_global_stats: Boolean(row.perm_view_global_stats),
-    view_payroll: Boolean(row.perm_view_payroll),
+    view_users: Boolean(row.view_users),
+    create_users: Boolean(row.create_users),
+    edit_users: Boolean(row.edit_users),
+    delete_users: Boolean(row.delete_users),
+    export_reports: Boolean(row.export_reports),
+    view_other_offices: Boolean(row.view_other_offices),
+    view_global_stats: Boolean(row.view_global_stats),
+    view_payroll: Boolean(row.view_payroll),
   };
 }
+// --- END: NORMALIZE PERMISSIONS ---
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -71,25 +52,23 @@ export default async function handler(req, res) {
       });
     }
 
-    let staffAccess = {};
-    const { data: selectData, error: accessError } = await supabase
-      .from("staffs")
-      .select(STAFF_PERMISSION_SELECT)
-      .eq("id", data.user.id)
+    // --- START: FETCH PERMISSIONS from staff_permissions table after successful login ---
+    let staffPerms = {};
+    const { data: permRow, error: permError } = await supabase
+      .from("staff_permissions")
+      .select(`
+        view_users, create_users, edit_users, delete_users,
+        export_reports, view_other_offices, view_global_stats, view_payroll
+      `)
+      .eq("staff_id", data.user.id)
       .maybeSingle();
 
-    if (accessError) {
-      const fallback = await supabase
-        .from("staffs")
-        .select(STAFF_PERMISSION_FALLBACK_SELECT)
-        .eq("id", data.user.id)
-        .maybeSingle();
-      staffAccess = fallback.data || {};
-    } else {
-      staffAccess = selectData || {};
+    if (!permError && permRow) {
+      staffPerms = permRow;
     }
 
-    data.user.permissions = normalizeStaffPermissions(staffAccess);
+    data.user.permissions = normalizeStaffPermissions(staffPerms);
+    // --- END: FETCH PERMISSIONS ---
 
     res.setHeader("Set-Cookie", createSessionCookie(data.user));
     return res.status(200).json({ success: true, user: data.user });
