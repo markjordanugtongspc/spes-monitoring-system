@@ -18,22 +18,50 @@
   </script>
   <style>
     /* ── Dashboard Statistics Print Rules ────────────────────── */
-    @media screen { #dashboard-print-area { display: none !important; } }
-    @media print {
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      html, body { background: #fff !important; height: auto !important; width: 100% !important; }
-      aside, #sidebar-toggle-btn { display: none !important; }
-      body > main {
-        margin: 0 !important; padding: 0 !important;
-        min-height: 0 !important; height: auto !important;
-        width: 100% !important; max-width: 100% !important;
+    @media screen {
+      #dashboard-print-area {
+        display: none !important;
       }
-      body > main > *:not(#dashboard-print-area) { display: none !important; }
+    }
+
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      html,
+      body {
+        background: #fff !important;
+        height: auto !important;
+        width: 100% !important;
+      }
+
+      aside,
+      #sidebar-toggle-btn {
+        display: none !important;
+      }
+
+      body>main {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      body>main>*:not(#dashboard-print-area) {
+        display: none !important;
+      }
+
       #dashboard-print-area {
         display: block !important;
-        width: 100% !important; max-width: 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
         position: static !important;
-        margin: 0 !important; padding: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         overflow: visible !important;
       }
     }
@@ -45,37 +73,70 @@
   <!-- ════════════════════════════════════════════════════ -->
   <!-- GLOBAL SEARCH OVERLAY                                -->
   <!-- ════════════════════════════════════════════════════ -->
-  <div id="global-search-overlay" class="fixed inset-0 z-[999] flex items-start justify-center pt-24 bg-spes-black/50 dark:bg-spes-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+  <div id="global-search-overlay"
+    class="fixed inset-0 z-[999] flex items-start justify-center pt-24 bg-spes-black/50 dark:bg-spes-black/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
     <div id="global-search-container" class="w-full max-w-lg px-4 scale-95 transition-transform duration-300">
-      <form id="global-search-form" class="flex items-center w-full space-x-2 relative">   
-          <label for="global-search-input" class="sr-only">Search</label>
-          <div class="relative w-full shadow-2xl rounded-lg">
-              <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                  <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3"/></svg>
-              </div>
-              <input type="text" id="global-search-input" class="block w-full ps-10 pe-12 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold" placeholder="Search Spes, Total..." required autocomplete="off" />
-              <button type="button" id="btn-clear-global-search" class="group absolute inset-y-0 end-2 hidden w-8 cursor-pointer items-center justify-center text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-500" aria-label="Clear search">
-                  <svg class="h-5 w-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12"/></svg>
-                  <span role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 z-[80] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-red-600 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wider text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                    Clear
-                    <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-red-600"></span>
-                  </span>
-              </button>
-              </div>
-          <button type="submit" class="inline-flex items-center text-white bg-spes-blue hover:bg-spes-blue/90 box-border border border-transparent shadow-lg font-black tracking-widest uppercase rounded-lg text-xs px-5 py-3.5 focus:outline-none transition-transform active:scale-95 cursor-pointer">
-              <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2.5" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
-              Search
+      <form id="global-search-form" class="flex items-center w-full space-x-2 relative">
+        <label for="global-search-input" class="sr-only">Search</label>
+        <div class="relative w-full shadow-2xl rounded-lg">
+          <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+              fill="none" viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                d="M8 8v8m0-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8-8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0a4 4 0 0 1-4 4h-1a3 3 0 0 0-3 3" />
+            </svg>
+          </div>
+          <input type="text" id="global-search-input"
+            class="block w-full ps-10 pe-12 py-3.5 bg-white dark:bg-spes-dark-secondary border border-gray-300 dark:border-white/10 text-spes-black dark:text-white text-sm rounded-lg focus:ring-spes-blue focus:border-spes-blue shadow-xs placeholder-gray-400 dark:placeholder-gray-500 font-bold"
+            placeholder="Search Spes, Total..." required autocomplete="off" />
+          <button type="button" id="btn-clear-global-search"
+            class="group absolute inset-y-0 end-2 hidden w-8 cursor-pointer items-center justify-center text-red-500 transition-colors hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-red-500"
+            aria-label="Clear search">
+            <svg class="h-5 w-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                d="M6 18 18 6M6 6l12 12" />
+            </svg>
+            <span role="tooltip"
+              class="pointer-events-none absolute bottom-full left-1/2 z-[80] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-red-600 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wider text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+              Clear
+              <span
+                class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-red-600"></span>
+            </span>
           </button>
+        </div>
+        <button type="submit"
+          class="inline-flex items-center text-white bg-spes-blue hover:bg-spes-blue/90 box-border border border-transparent shadow-lg font-black tracking-widest uppercase rounded-lg text-xs px-5 py-3.5 focus:outline-none transition-transform active:scale-95 cursor-pointer">
+          <svg class="w-4 h-4 me-1.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="2.5"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+          </svg>
+          Search
+        </button>
       </form>
-      
+
+      <!-- Rose-colored Pro-Tip Banner for Comma Separated Tokens -->
+      <div id="global-search-csv-tip"
+        class="mt-2.5 flex items-center justify-between gap-2 px-3.5 py-2 rounded-lg bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-[10px] font-bold tracking-wide shadow-xs backdrop-blur-md">
+        <div class="flex items-center gap-2 truncate">
+          <svg class="h-4 w-4 shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+          </svg>
+          <span class="truncate"><strong class="uppercase font-black tracking-wider text-rose-600 dark:text-rose-300">Pro Tip:</strong> Separate tokens with commas (e.g. <span class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-200 font-mono text-[9px] font-black">TOTAL, SPES, ILIGAN, FEMALE, BATCH 1</span>) for pinpoint accuracy!</span>
+        </div>
+      </div>
+
       <!-- Real-time Predictive "Did you mean?" & Smart Suggestion Chips -->
       <div id="global-search-suggestions" class="mt-2 hidden w-full transition-all duration-200">
-         <!-- Injected via JS dynamically -->
+        <!-- Injected via JS dynamically -->
       </div>
-      
+
       <!-- Dropdown/Grid for search results -->
-      <div id="global-search-results" class="mt-4 hidden z-50 transition-all duration-300 overflow-y-auto max-h-[70vh] pb-4" style="scrollbar-width: thin;">
-         <!-- Results will be injected here via JS -->
+      <div id="global-search-results"
+        class="mt-4 hidden z-50 transition-all duration-300 overflow-y-auto max-h-[70vh] pb-4"
+        style="scrollbar-width: thin;">
+        <!-- Results will be injected here via JS -->
       </div>
     </div>
   </div>
@@ -85,17 +146,17 @@
   <!-- Main Content -->
   <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
     <!-- Top Enterprise Banner -->
-    <header class="relative overflow-hidden -mt-px bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+    <header class="relative overflow-visible -mt-px bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
       <!-- Background Image Layer -->
       <div
-        class="absolute -top-12 inset-x-0 bottom-0 z-0 bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
+        class="absolute -top-12 inset-x-0 bottom-0 z-0 overflow-hidden bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
       </div>
       <!-- Primary Color Overlay (Reduced Opacity) -->
       <div
         class="absolute -top-12 inset-x-0 bottom-0 z-0 bg-gradient-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
       </div>
 
-      <div class="relative z-30 mx-auto max-w-7xl 2xl:max-w-[2200px]">
+      <div class="relative z-40 mx-auto max-w-7xl 2xl:max-w-[2200px]">
         <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div class="order-2 min-w-0 sm:order-1">
             <h1 class="font-montserrat text-3xl font-black text-spes-white">Dashboard</h1>
@@ -111,36 +172,55 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              <span id="real-time-clock" class="whitespace-nowrap tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
+              <span id="real-time-clock"
+                class="whitespace-nowrap tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
             </div>
             <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
-            <div id="dashboard-period-selector" role="group" aria-label="Dashboard period filters" class="relative order-3 flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md bg-spes-blue/25 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:order-none sm:w-auto sm:min-w-72 sm:text-xs">
-              <button id="dashboard-period-all" type="button" class="cursor-pointer shrink-0 whitespace-nowrap rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3 sm:py-1.5">All Time</button>
+            <div id="dashboard-period-selector" role="group" aria-label="Dashboard period filters"
+              class="relative order-3 flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md bg-spes-blue/25 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:order-none sm:w-auto sm:min-w-72 sm:text-xs">
+              <button id="dashboard-period-all" type="button"
+                class="cursor-pointer shrink-0 whitespace-nowrap rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3 sm:py-1.5">All
+                Time</button>
 
               <div class="relative min-w-0">
-                <button id="dashboard-year-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
+                <button id="dashboard-year-dropdown-btn" type="button" aria-expanded="false"
+                  class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
                   <span id="dashboard-selected-year" class="truncate whitespace-nowrap">All Years</span>
-                  <svg id="dashboard-year-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
+                  <svg id="dashboard-year-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" />
+                  </svg>
                 </button>
-                <div id="dashboard-year-dropdown-menu" class="absolute left-0 top-full z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                <div id="dashboard-year-dropdown-menu"
+                  class="absolute left-0 top-full z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
                   <div id="dashboard-year-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>
 
               <div class="relative min-w-0">
-                <button id="dashboard-month-dropdown-btn" type="button" aria-expanded="false" class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
+                <button id="dashboard-month-dropdown-btn" type="button" aria-expanded="false"
+                  class="cursor-pointer flex max-w-24 items-center gap-1 rounded-sm px-2 py-2 text-white transition-colors hover:bg-white/10 hover:text-spes-yellow sm:max-w-none sm:px-3 sm:py-1.5">
                   <span id="dashboard-selected-month" class="truncate whitespace-nowrap">All Months</span>
-                  <svg id="dashboard-month-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" /></svg>
+                  <svg id="dashboard-month-dropdown-icon" class="h-2.5 w-2.5 shrink-0 transition-transform duration-200"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m19 9-7 7-7-7" />
+                  </svg>
                 </button>
-                <div id="dashboard-month-dropdown-menu" class="absolute right-0 top-full z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                <div id="dashboard-month-dropdown-menu"
+                  class="absolute right-0 top-full z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
                   <div id="dashboard-month-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>
-              <button id="dashboard-period-clear" type="button" aria-label="Clear period filters" class="group relative hidden h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/10 hover:text-spes-yellow focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-spes-yellow">
-                <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12" /></svg>
-                <span role="tooltip" class="pointer-events-none absolute top-full left-1/2 z-[80] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white opacity-0 shadow-xl ring-1 ring-white/10 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-spes-dark-primary">
+              <button id="dashboard-period-clear" type="button" aria-label="Clear period filters"
+                class="group relative hidden h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-sm text-white/80 transition-colors hover:bg-white/10 hover:text-spes-yellow focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-spes-yellow">
+                <svg class="h-3.5 w-3.5" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+                <span role="tooltip"
+                  class="pointer-events-none absolute top-full left-1/2 z-[80] mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-spes-blue px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-white opacity-0 shadow-xl ring-1 ring-white/10 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-spes-dark-primary">
                   Clear filters
-                  <span class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-spes-blue dark:border-b-spes-dark-primary"></span>
+                  <span
+                    class="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-spes-blue dark:border-b-spes-dark-primary"></span>
                 </span>
               </button>
             </div>
@@ -150,37 +230,42 @@
     </header>
 
     <!-- Dashboard Grid -->
-    <div id="main-dashboard-container" class="relative z-20 mx-auto mt-4 lg:-mt-16 max-w-7xl 2xl:max-w-[2200px] px-4 sm:px-6 pb-12 flex flex-col">
+    <div id="main-dashboard-container"
+      class="relative z-20 mx-auto mt-4 lg:-mt-16 max-w-7xl 2xl:max-w-[2200px] px-4 sm:px-6 pb-12 flex flex-col">
       <!-- Top Row: Metric Cards -->
-      <div id="dashboard-metrics-container" class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3 order-2 lg:order-1 transition-all duration-300">
+      <div id="dashboard-metrics-container"
+        class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3 order-2 lg:order-1 transition-all duration-300">
         <!-- Card 1: Total Implementors -->
         <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
           <div class="mb-4 flex items-start justify-between border-b border-gray-100 pb-4 dark:border-white/5">
             <div class="flex flex-col items-start gap-3">
-              <h3 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Total Implementors</h3>
+              <h3
+                class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Total Implementors</h3>
             </div>
-            <span id="badge-staff-metric" class="mt-1 flex items-center justify-center rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
+            <span id="badge-staff-metric"
+              class="mt-1 flex items-center justify-center rounded-full bg-spes-blue/5 px-2.5 py-1 text-[10px] font-black uppercase text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">...</span>
           </div>
           <div id="distribution-chart" class="h-[220px] pr-2">
             <!-- Flowbite Widget Skeleton (Horizontal Bars) -->
             <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent space-y-4">
-                <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2.5"></div>
-                <div class="w-48 h-2 mb-6 bg-gray-200 dark:bg-white/10 rounded-full"></div>
-                <div class="space-y-4">
-                    <div class="flex items-center gap-3">
-                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[80%]"></div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[60%]"></div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[45%]"></div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[30%]"></div>
-                    </div>
+              <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-32 mb-2.5"></div>
+              <div class="w-48 h-2 mb-6 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[80%]"></div>
                 </div>
-                <span class="sr-only">Loading...</span>
+                <div class="flex items-center gap-3">
+                  <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[60%]"></div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[45%]"></div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="h-4 bg-gray-200 dark:bg-white/10 rounded-lg w-[30%]"></div>
+                </div>
+              </div>
+              <span class="sr-only">Loading...</span>
             </div>
           </div>
           <!-- Roster summary — populated by _renderImplementorsByOffice() -->
@@ -191,41 +276,53 @@
         <div class="rounded-md border border-white/20 bg-white p-6 shadow-xl dark:bg-spes-dark-primary">
           <div class="mb-4 flex flex-col items-start border-b border-gray-100 pb-4 dark:border-white/5">
             <div class="flex flex-col items-start gap-3">
-              <h3 class="whitespace-nowrap font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Total Gender Stats</h3>
+              <h3
+                class="whitespace-nowrap font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Total Gender Stats</h3>
             </div>
-            <span id="badge-student-metric" class="mt-3 flex w-fit max-w-full flex-nowrap items-center justify-start gap-1.5 rounded-full bg-emerald-500/5 px-2.5 py-1 text-[8px] font-black uppercase leading-tight text-emerald-500 sm:mt-3 sm:justify-start sm:text-[10px]">...</span>
+            <span id="badge-student-metric"
+              class="mt-3 flex w-fit max-w-full flex-nowrap items-center justify-start gap-1.5 rounded-full bg-emerald-500/5 px-2.5 py-1 text-[8px] font-black uppercase leading-tight text-emerald-500 sm:mt-3 sm:justify-start sm:text-[10px]">...</span>
           </div>
           <div id="spes-gender-chart" class="h-[250px] pr-4">
             <!-- Card Placeholder Skeleton -->
             <div role="status" class="w-full p-4 animate-pulse md:p-6 bg-transparent">
-                <div class="flex items-center justify-center h-28 w-full bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse mb-4">
-                    <svg class="w-8 h-8 text-gray-400 dark:text-white/20" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM9 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm5.697 2.395v-.733l1.269-1.219v2.984l-1.268-1.032Z"/>
-                    </svg>
-                    <span class="sr-only">Loading...</span>
-                </div>
-                <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48 mb-2.5"></div>
-                <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mb-1.5"></div>
-                <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+              <div
+                class="flex items-center justify-center h-28 w-full bg-gray-200 dark:bg-white/10 rounded-lg animate-pulse mb-4">
+                <svg class="w-8 h-8 text-gray-400 dark:text-white/20" aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linejoin="round" stroke-width="2"
+                    d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM9 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm5.697 2.395v-.733l1.269-1.219v2.984l-1.268-1.032Z" />
+                </svg>
+                <span class="sr-only">Loading...</span>
+              </div>
+              <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-48 mb-2.5"></div>
+              <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full mb-1.5"></div>
+              <div class="h-1.5 bg-gray-200 dark:bg-white/10 rounded-full"></div>
             </div>
           </div>
-          <div id="gender-roster-summary" class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 empty:hidden"></div>
+          <div id="gender-roster-summary" class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 empty:hidden">
+          </div>
         </div>
 
         <!-- Card 3: Added SPES per Year -->
         <div class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col">
           <div class="mb-4 flex flex-col items-start sm:flex-row sm:items-start sm:justify-between">
             <div class="flex w-full flex-col items-start gap-3 sm:w-auto">
-              <h3 class="whitespace-nowrap font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Added SPES per Year</h3>
+              <h3
+                class="whitespace-nowrap font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+                Added SPES per Year</h3>
               <!-- NEW / SPES BABY toggle (default NEW) -->
-              <div class="flex w-full max-w-full items-center rounded-full bg-gray-100 p-0.5 sm:w-auto dark:bg-white/5 shadow-sm border border-black/5 dark:border-white/5">
+              <div
+                class="flex w-full max-w-full items-center rounded-full bg-gray-100 p-0.5 sm:w-auto dark:bg-white/5 shadow-sm border border-black/5 dark:border-white/5">
                 <button type="button" id="btn-year-status-new"
                   class="min-w-0 basis-1/2 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1 text-center sm:basis-auto sm:min-w-0 sm:flex-none sm:px-2.5 sm:py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 bg-white text-emerald-600 shadow-sm dark:bg-white/10 dark:text-emerald-400">New</button>
                 <button type="button" id="btn-year-status-baby"
-                  class="min-w-0 basis-1/2 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1 text-center sm:basis-auto sm:min-w-0 sm:flex-none sm:px-2.5 sm:py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-300">SPES Baby</button>
+                  class="min-w-0 basis-1/2 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1 text-center sm:basis-auto sm:min-w-0 sm:flex-none sm:px-2.5 sm:py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-300">SPES
+                  Baby</button>
               </div>
             </div>
-            <div id="added-students-percentage" class="mt-1 flex items-center justify-center sm:ml-auto sm:mt-0 sm:self-start">
+            <div id="added-students-percentage"
+              class="mt-1 flex items-center justify-center sm:ml-auto sm:mt-0 sm:self-start">
               <div class="h-6 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-white/10"></div>
             </div>
           </div>
@@ -249,29 +346,26 @@
       </div>
 
       <!-- Bottom Row -->
-      <div id="dashboard-details-container" class="grid grid-cols-1 gap-6 lg:grid-cols-3 order-3 lg:order-3 transition-all duration-300">
+      <div id="dashboard-details-container"
+        class="grid grid-cols-1 gap-6 lg:grid-cols-3 order-3 lg:order-3 transition-all duration-300">
         <!-- Trends -->
         <div
           class="rounded-md border border-white/20 bg-white p-5 shadow-xl dark:bg-spes-dark-primary flex flex-col justify-between">
           <div>
             <div class="mb-4 flex items-center justify-between gap-2">
-              <h3
-                id="trends-title"
+              <h3 id="trends-title"
                 class="font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
                 Enrollment Timeline</h3>
-              
+
               <!-- Switcher Button (Modern Toggle/Pill) -->
-              <div class="flex items-center rounded-lg bg-gray-100 p-0.5 dark:bg-white/5 shadow-sm border border-black/5 dark:border-white/5">
-                <button
-                  type="button"
-                  id="btn-toggle-timeline"
+              <div
+                class="flex items-center rounded-lg bg-gray-100 p-0.5 dark:bg-white/5 shadow-sm border border-black/5 dark:border-white/5">
+                <button type="button" id="btn-toggle-timeline"
                   class="cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 bg-white text-spes-blue shadow-sm dark:bg-white/10 dark:text-spes-yellow"
                   data-tooltip-target="tooltip-toggle-timeline">
                   Timeline
                 </button>
-                <button
-                  type="button"
-                  id="btn-toggle-education"
+                <button type="button" id="btn-toggle-education"
                   class="cursor-pointer rounded-md px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all duration-200 text-gray-500 hover:text-spes-blue dark:text-gray-400 dark:hover:text-spes-yellow"
                   data-tooltip-target="tooltip-toggle-education">
                   Education
@@ -283,15 +377,15 @@
             <div id="mini-trends" class="h-[185px]">
               <!-- Flowbite Widget Skeleton (Chart) -->
               <div role="status" class="w-full p-4 animate-pulse bg-transparent">
-                  <div class="flex items-baseline space-x-3 h-28 pt-2">
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-8"></div>
-                      <div class="w-full h-14 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-10"></div>
-                      <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
-                  </div>
-                  <span class="sr-only">Loading...</span>
+                <div class="flex items-baseline space-x-3 h-28 pt-2">
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-8"></div>
+                  <div class="w-full h-14 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-10"></div>
+                  <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-24"></div>
+                </div>
+                <span class="sr-only">Loading...</span>
               </div>
             </div>
 
@@ -299,12 +393,12 @@
             <div id="education-chart" class="hidden h-[185px]">
               <!-- Flowbite Widget Skeleton (Chart) -->
               <div role="status" class="w-full p-4 animate-pulse bg-transparent">
-                  <div class="flex items-baseline space-x-3 h-28 pt-2 justify-center">
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-12"></div>
-                      <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
-                      <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
-                  </div>
-                  <span class="sr-only">Loading...</span>
+                <div class="flex items-baseline space-x-3 h-28 pt-2 justify-center">
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-12"></div>
+                  <div class="w-full h-20 bg-gray-200 dark:bg-white/10 rounded-t-lg"></div>
+                  <div class="w-full bg-gray-200 dark:bg-white/10 rounded-t-lg h-16"></div>
+                </div>
+                <span class="sr-only">Loading...</span>
               </div>
             </div>
           </div>
@@ -314,8 +408,10 @@
                 Enrolled</p>
               <div id="metric-total-enrolled" class="flex items-center justify-center gap-1 h-6 mt-1">
                 <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
               </div>
             </div>
             <div class="text-center">
@@ -323,8 +419,10 @@
                 Monthly</p>
               <div id="metric-avg-monthly" class="flex items-center justify-center gap-1 h-6 mt-1">
                 <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
               </div>
             </div>
             <div class="text-center">
@@ -332,15 +430,18 @@
                 Growth</p>
               <div id="metric-growth" class="flex items-center justify-center gap-1 h-6 mt-1">
                 <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
-                <span class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.2s]"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full bg-spes-black dark:bg-spes-white animate-bounce [animation-delay:0.4s]"></span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Recent Implementors Table (Compact Snapshot) -->
-        <div id="dashboard-implementors-panel" class="hidden lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
+        <div id="dashboard-implementors-panel"
+          class="hidden lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
           <div>
             <div class="mb-4 flex items-center justify-between">
               <h3
@@ -351,7 +452,8 @@
                 All</a>
             </div>
 
-            <div class="relative overflow-x-auto overflow-y-auto max-h-[255px] spes-dashboard-scrollable rounded-md border border-gray-100 dark:border-white/5">
+            <div
+              class="relative overflow-x-auto overflow-y-auto max-h-[255px] spes-dashboard-scrollable rounded-md border border-gray-100 dark:border-white/5">
               <table class="w-full text-left text-sm">
                 <thead
                   class="sticky top-0 z-10 bg-gray-50 text-[10px] font-bold uppercase tracking-wider text-spes-black/40 dark:bg-spes-dark-primary dark:text-spes-white/40 shadow-xs border-b border-gray-200 dark:border-white/10">
@@ -367,37 +469,67 @@
                 <tbody id="staff-table-body">
                   <!-- Tabular List Skeleton Rows (3 Rows) -->
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div>
+                    </td>
                   </tr>
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div>
+                    </td>
                   </tr>
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-12 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8 mx-auto"></div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -405,15 +537,20 @@
           </div>
           <!-- Toggle Switcher Button -->
           <div class="absolute bottom-5 right-5">
-            <button id="toggle-to-spes" data-permission="users:view" class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
+            <button id="toggle-to-spes" data-permission="users:view"
+              class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
               <span>SPES List</span>
-              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L19 10m0 0l-5.5 5.5M19 10H5" /></svg>
+              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L19 10m0 0l-5.5 5.5M19 10H5" />
+              </svg>
             </button>
           </div>
         </div>
 
         <!-- Recent Beneficiaries Table (Compact Snapshot) -->
-        <div id="dashboard-beneficiaries-panel" class="lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
+        <div id="dashboard-beneficiaries-panel"
+          class="lg:col-span-2 rounded-md border border-white/20 bg-white p-5 pb-12 shadow-xl dark:bg-spes-dark-primary relative min-h-[360px] flex flex-col justify-between">
           <div>
             <div class="mb-4 flex items-center justify-between">
               <h3
@@ -439,44 +576,76 @@
                 <tbody id="dashboard-beneficiary-table-body">
                   <!-- Tabular List Skeleton Rows (4 Rows) -->
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-32"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
                   </tr>
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
                   </tr>
                   <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-30"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
                   </tr>
-                                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
-                    <td class="px-4 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div></td>
+                  <tr class="animate-pulse border-b border-gray-100 dark:border-white/5">
+                    <td class="px-4 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-8"></div>
+                    </td>
                     <td class="px-6 py-4">
                       <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mb-2"></div>
                       <div class="h-2 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div>
                     </td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div></td>
-                    <td class="px-6 py-4"><div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div></td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-24 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-20 mx-auto"></div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2.5 bg-gray-200 dark:bg-white/10 rounded-full w-16 mx-auto"></div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -484,8 +653,12 @@
           </div>
           <!-- Toggle Switcher Button -->
           <div class="absolute bottom-5 right-5">
-            <button id="toggle-to-implementors" data-permission="users:view" class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
-              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L5 14m0 0l5.5-5.5M5 14H19" /></svg>
+            <button id="toggle-to-implementors" data-permission="users:view"
+              class="hidden cursor-pointer inline-flex items-center gap-1 text-[11px] font-black uppercase text-spes-blue hover:underline dark:text-spes-yellow transition-all">
+              <svg class="h-3.5 w-3.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                stroke-width="2.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L5 14m0 0l5.5-5.5M5 14H19" />
+              </svg>
               <span>Implementors List</span>
             </button>
           </div>
@@ -495,112 +668,158 @@
       <!-- ════════════════════════════════════════════════════ -->
       <!-- QUICK ACCESS HUB (PARALLELOGRAM QUICK ACCESS) -->
       <!-- ════════════════════════════════════════════════════ -->
-      <div id="quick-access-hub-section" class="mt-0 mb-6 lg:mt-0 lg:mb-8 transition-all duration-300 order-1 lg:order-2">
-        <h3 class="mb-6 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">Quick Access Hub</h3>
-        
+      <div id="quick-access-hub-section"
+        class="mt-0 mb-6 lg:mt-0 lg:mb-8 transition-all duration-300 order-1 lg:order-2">
+        <h3
+          class="mb-6 font-montserrat text-[10px] font-black uppercase tracking-[0.2em] text-spes-blue dark:text-spes-yellow">
+          Quick Access Hub</h3>
+
         <!-- 1. Normal View (Shown when stats are visible) -->
         <div id="quick-access-normal-desktop" class="hidden lg:grid grid-cols-8 gap-6 justify-items-center">
           <!-- Add Implementor -->
           <div class="flex flex-col items-center gap-3" data-permission="users:view">
-            <a href="../implementors/#add" id="quick-add-implementor" data-tooltip-target="tooltip-add-implementor" class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
+            <a href="../implementors/#add" id="quick-add-implementor" data-tooltip-target="tooltip-add-implementor"
+              class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
               </div>
             </a>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add Implementor</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add
+              Implementor</span>
           </div>
-          
+
           <!-- Add Beneficiary -->
           <div class="flex flex-col items-center gap-3">
-            <a href="../beneficiaries/#add" id="quick-add-beneficiary" data-tooltip-target="tooltip-add-beneficiary" class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
+            <a href="../beneficiaries/#add" id="quick-add-beneficiary" data-tooltip-target="tooltip-add-beneficiary"
+              class="group cursor-pointer h-14 w-16 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center rounded-sm">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
             </a>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add Beneficiary</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center">Add
+              Beneficiary</span>
           </div>
 
           <!-- Export -->
           <div class="flex flex-col items-center gap-3">
-            <button id="quick-audit" data-tooltip-target="tooltip-audit" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-audit" data-tooltip-target="tooltip-audit"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export</span>
           </div>
 
           <!-- Export Stats -->
           <div class="flex flex-col items-center gap-3">
-            <button id="quick-export" data-tooltip-target="tooltip-export" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-export" data-tooltip-target="tooltip-export"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <svg class="h-6 w-6 group-hover:-translate-y-1 transition-transform" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export Stats</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Export
+              Stats</span>
           </div>
 
           <!-- Roles Setup -->
           <div class="flex flex-col items-center gap-3">
-            <button id="quick-roles" data-tooltip-target="tooltip-roles" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-roles" data-tooltip-target="tooltip-roles"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Roles Setup</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 text-center">Roles
+              Setup</span>
           </div>
 
-                    <!-- Search Up -->
+          <!-- Search Up -->
           <div class="flex flex-col items-center gap-3 quick-search-btn-container">
-            <button id="quick-search" data-tooltip-target="tooltip-search" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-search" data-tooltip-target="tooltip-search"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                <svg class="h-6 w-6 group-hover:scale-110 transition-transform duration-300" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                 </svg>
               </div>
             </button>
-            <span class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Search Up</span>
+            <span
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Search
+              Up</span>
           </div>
 
           <!-- Theme Toggle -->
           <div class="flex flex-col items-center gap-3">
-            <button id="quick-settings" data-tooltip-target="tooltip-settings" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-settings" data-tooltip-target="tooltip-settings"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                <svg class="h-6 w-6 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-                <svg class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500 hidden dark:block text-spes-black/50 dark:text-spes-white/50 group-hover:text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                <svg
+                  class="h-6 w-6 group-hover:rotate-90 transition-transform duration-500 hidden dark:block text-spes-black/50 dark:text-spes-white/50 group-hover:text-spes-dark-primary"
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
             </button>
-            <span id="quick-settings-text" class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Dark Mode</span>
+            <span id="quick-settings-text"
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Dark
+              Mode</span>
           </div>
 
           <!-- Hide/Show Stats Toggle -->
           <div class="flex flex-col items-center gap-3">
-            <button id="quick-toggle-stats" data-tooltip-target="tooltip-toggle-stats" class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-toggle-stats" data-tooltip-target="tooltip-toggle-stats"
+              class="group cursor-pointer h-14 w-16 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-15deg] hover:scale-110 active:scale-95 transition-all duration-200 shadow-sm flex items-center justify-center rounded-sm hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[15deg]">
-                <svg id="hide-stats-icon" class="h-6 w-6 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                <svg id="hide-stats-icon" class="h-6 w-6 group-hover:scale-110 transition-transform" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                 </svg>
-                <svg id="show-stats-icon" class="h-6 w-6 group-hover:scale-110 transition-transform hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg id="show-stats-icon" class="h-6 w-6 group-hover:scale-110 transition-transform hidden" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </div>
             </button>
-            <span id="quick-toggle-stats-text" class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Hide Stats</span>
+            <span id="quick-toggle-stats-text"
+              class="text-[10px] font-black uppercase tracking-wider text-spes-black/70 dark:text-spes-white/70 text-center whitespace-nowrap">Hide
+              Stats</span>
           </div>
         </div>
 
@@ -611,115 +830,164 @@
           <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
             <!-- Giant Centered Show Stats Button -->
             <div class="flex flex-col items-center gap-4">
-              <button id="quick-toggle-stats-expanded" data-tooltip-target="tooltip-toggle-stats-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+              <button id="quick-toggle-stats-expanded" data-tooltip-target="tooltip-toggle-stats-expanded"
+                class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg id="hide-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  <svg id="hide-stats-icon-expanded"
+                    class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                   </svg>
-                  <svg id="show-stats-icon-expanded" class="h-12 w-12 group-hover:scale-110 transition-transform duration-300 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <svg id="show-stats-icon-expanded"
+                    class="h-12 w-12 group-hover:scale-110 transition-transform duration-300 hidden" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
-                  <span id="quick-toggle-stats-expanded-inner-text" class="text-[11px] font-black uppercase tracking-widest">Stats</span>
+                  <span id="quick-toggle-stats-expanded-inner-text"
+                    class="text-[11px] font-black uppercase tracking-widest">Stats</span>
                 </div>
               </button>
-              <span id="quick-toggle-stats-expanded-text" class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Show Stats</span>
+              <span id="quick-toggle-stats-expanded-text"
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Show
+                Stats</span>
             </div>
             <!-- Add Implementor (Giant) -->
             <div class="flex flex-col items-center gap-4" data-permission="users:view">
-              <a href="../implementors/#add" id="quick-add-implementor-expanded" data-tooltip-target="tooltip-add-implementor-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+              <a href="../implementors/#add" id="quick-add-implementor-expanded"
+                data-tooltip-target="tooltip-add-implementor-expanded"
+                class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Staff</span>
                 </div>
               </a>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add Implementor</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add
+                Implementor</span>
             </div>
 
             <!-- Dark Mode (Giant - Now in Middle) -->
             <div class="flex flex-col items-center gap-4">
-              <button id="quick-settings-expanded" data-tooltip-target="tooltip-settings-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+              <button id="quick-settings-expanded" data-tooltip-target="tooltip-settings-expanded"
+                class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300 dark:hidden" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
-                  <svg class="h-12 w-12 group-hover:rotate-90 transition-transform duration-500 hidden dark:block text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <svg
+                    class="h-12 w-12 group-hover:rotate-90 transition-transform duration-500 hidden dark:block text-spes-dark-primary"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <span id="quick-settings-expanded-inner-text" class="text-[11px] font-black uppercase tracking-widest">Dark</span>
+                  <span id="quick-settings-expanded-inner-text"
+                    class="text-[11px] font-black uppercase tracking-widest">Dark</span>
                 </div>
               </button>
-              <span id="quick-settings-expanded-text" class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Dark Mode</span>
+              <span id="quick-settings-expanded-text"
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Dark
+                Mode</span>
             </div>
 
             <!-- Add Beneficiary (Giant) -->
             <div class="flex flex-col items-center gap-4">
-              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded" data-tooltip-target="tooltip-add-beneficiary-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded"
+                data-tooltip-target="tooltip-add-beneficiary-expanded"
+                class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Spes</span>
                 </div>
               </a>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add Beneficiary</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Add
+                Beneficiary</span>
             </div>
 
-          
+
             <!-- Search Up (Giant) -->
             <div class="flex flex-col items-center gap-4 hidden lg:flex">
-              <button id="quick-search-expanded" data-tooltip-target="tooltip-search-expanded" class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
+              <button id="quick-search-expanded" data-tooltip-target="tooltip-search-expanded"
+                class="group cursor-pointer h-36 w-44 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                  <svg class="h-12 w-12 group-hover:scale-110 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Search</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Search Up</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Search
+                Up</span>
             </div>
           </div>
-<!-- Giant Skewed Buttons Grid (Row 3 - Export, Roles, Export Stats - Same Giant Size in the Bottom) -->
+          <!-- Giant Skewed Buttons Grid (Row 3 - Export, Roles, Export Stats - Same Giant Size in the Bottom) -->
           <div class="flex flex-wrap justify-center gap-10 lg:gap-16 max-w-7xl w-full mb-6">
             <!-- Export (Giant) -->
             <div class="flex flex-col items-center gap-4">
-              <button id="quick-audit-expanded" data-tooltip-target="tooltip-audit-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <button id="quick-audit-expanded" data-tooltip-target="tooltip-audit-expanded"
+                class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Export</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export</span>
             </div>
 
             <!-- Roles Setup (Giant) -->
             <div class="flex flex-col items-center gap-4" data-permission="roles:view">
-              <button id="quick-roles-expanded" data-tooltip-target="tooltip-roles-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <button id="quick-roles-expanded" data-tooltip-target="tooltip-roles-expanded"
+                class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  <svg class="h-12 w-12 group-hover:rotate-12 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Roles</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Roles Setup</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Roles
+                Setup</span>
             </div>
 
             <!-- Export Stats (Giant) -->
             <div class="flex flex-col items-center gap-4">
-              <button id="quick-export-expanded" data-tooltip-target="tooltip-export-expanded" class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+              <button id="quick-export-expanded" data-tooltip-target="tooltip-export-expanded"
+                class="group cursor-pointer h-36 w-44 bg-gray-200 dark:bg-white/10 text-spes-black/75 dark:text-spes-white/75 transform skew-x-[-15deg] hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center rounded-2xl border-2 border-transparent hover:border-white/10 hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
                 <div class="transform skew-x-[15deg] flex flex-col items-center justify-center gap-2">
-                  <svg class="h-12 w-12 group-hover:-translate-y-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <svg class="h-12 w-12 group-hover:-translate-y-1 transition-transform duration-300" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   <span class="text-[11px] font-black uppercase tracking-widest">Export</span>
                 </div>
               </button>
-              <span class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export Stats</span>
+              <span
+                class="text-xs font-black uppercase tracking-[0.15em] text-spes-black dark:text-spes-white text-center whitespace-nowrap">Export
+                Stats</span>
             </div>
           </div>
         </div>
@@ -730,20 +998,25 @@
           <div class="flex flex-wrap justify-center gap-6 w-full max-w-sm">
             <!-- Add Implementor -->
             <div class="flex flex-col items-center gap-2" data-permission="users:view">
-              <a href="../implementors/#add" id="quick-add-implementor-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
+              <a href="../implementors/#add" id="quick-add-implementor-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Staff</span>
                 </div>
               </a>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Add Impl</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Add
+                Impl</span>
             </div>
 
             <!-- Add Beneficiary -->
             <div class="flex flex-col items-center gap-2">
-              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
+              <a href="../beneficiaries/#add" id="quick-add-beneficiary-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -751,203 +1024,269 @@
                   <span class="text-[9px] font-black uppercase tracking-wider">Spes</span>
                 </div>
               </a>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Add Benef</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Add
+                Benef</span>
             </div>
 
             <!-- Theme Toggle / Dark Mode (Blue by default, Gray on Hover) -->
             <div class="flex flex-col items-center gap-2">
-              <button id="quick-settings-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
+              <button id="quick-settings-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
-                  <svg class="h-7 w-7 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  <svg class="h-7 w-7 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
-                  <svg class="h-7 w-7 hidden dark:block text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <svg class="h-7 w-7 hidden dark:block text-spes-dark-primary" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Dark</span>
                 </div>
               </button>
-              <span id="quick-settings-expanded-mob-text" class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Dark Mode</span>
+              <span id="quick-settings-expanded-mob-text"
+                class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Dark
+                Mode</span>
             </div>
 
             <!-- Show Stats Button (Stats in the middle center in between the rest of the buttons!) -->
             <div class="flex flex-col items-center gap-2">
-              <button id="quick-toggle-stats-expanded-mob" class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
+              <button id="quick-toggle-stats-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white flex items-center justify-center rounded-xl shadow-lg active:scale-95 transition-all duration-300">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
-                  <svg id="hide-stats-icon-expanded-mob" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  <svg id="hide-stats-icon-expanded-mob" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                   </svg>
-                  <svg id="show-stats-icon-expanded-mob" class="h-7 w-7 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <svg id="show-stats-icon-expanded-mob" class="h-7 w-7 hidden" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Stats</span>
                 </div>
               </button>
-              <span id="quick-toggle-stats-expanded-mob-text" class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Show Stats</span>
+              <span id="quick-toggle-stats-expanded-mob-text"
+                class="text-[10px] font-extrabold uppercase text-spes-black dark:text-spes-white text-center leading-tight whitespace-nowrap">Show
+                Stats</span>
             </div>
 
-                        <!-- Search Up (Mobile) -->
+            <!-- Search Up (Mobile) -->
             <div class="flex flex-col items-center gap-2 quick-search-btn-container">
-              <button id="quick-search-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+              <button id="quick-search-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Search</span>
                 </div>
               </button>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Search Up</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Search
+                Up</span>
             </div>
 
             <!-- Export -->
             <div class="flex flex-col items-center gap-2">
-              <button id="quick-audit-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+              <button id="quick-audit-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Export</span>
                 </div>
               </button>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Export</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Export</span>
             </div>
 
             <!-- Roles Setup -->
             <div class="flex flex-col items-center gap-2" data-permission="roles:view">
-              <button id="quick-roles-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+              <button id="quick-roles-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Roles</span>
                 </div>
               </button>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Roles</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Roles</span>
             </div>
 
             <!-- Export Stats (Centered alone at the bottom) -->
             <div class="flex flex-col items-center gap-2">
-              <button id="quick-export-expanded-mob" class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
+              <button id="quick-export-expanded-mob"
+                class="group cursor-pointer h-16 w-24 bg-gray-200 dark:bg-white/10 text-spes-black/60 dark:text-spes-white/60 transform skew-x-[-12deg] hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary flex items-center justify-center rounded-xl shadow-md active:scale-95 transition-transform">
                 <div class="transform skew-x-[12deg] flex flex-col items-center gap-1">
                   <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   <span class="text-[9px] font-black uppercase tracking-wider">Export</span>
                 </div>
               </button>
-              <span class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Export</span>
+              <span
+                class="text-[10px] font-extrabold uppercase text-spes-black/50 dark:text-spes-white/50 text-center leading-tight whitespace-nowrap">Export</span>
             </div>
           </div>
         </div>
 
         <!-- 3. Mobile Swipeable list (Hide/Show Stats Toggle moved to item 4 in the middle!) -->
-        <div id="quick-access-normal-mobile" class="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-5 pb-4 pt-2 -mx-2 px-2 scroll-smooth" style="scrollbar-width: none; -ms-overflow-style: none;">
+        <div id="quick-access-normal-mobile"
+          class="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-5 pb-4 pt-2 -mx-2 px-2 scroll-smooth"
+          style="scrollbar-width: none; -ms-overflow-style: none;">
           <style>
-            .flex::-webkit-scrollbar { display: none; }
+            .flex::-webkit-scrollbar {
+              display: none;
+            }
           </style>
 
           <!-- Quick Action 1: Add Implementor -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20" data-permission="users:view">
-            <a href="../implementors/#add" id="quick-add-implementor-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
+            <a href="../implementors/#add" id="quick-add-implementor-mob"
+              class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
               </div>
             </a>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add Impl</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add
+              Impl</span>
           </div>
 
           <!-- Quick Action 2: Add Beneficiary -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <a href="../beneficiaries/#add" id="quick-add-beneficiary-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
+            <a href="../beneficiaries/#add" id="quick-add-beneficiary-mob"
+              class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
             </a>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add Benef</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Add
+              Benef</span>
           </div>
 
-                    <!-- Quick Action: Search Up -->
+          <!-- Quick Action: Search Up -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20 quick-search-btn-container">
-            <button id="quick-search-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-search-mob"
+              class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                 </svg>
               </div>
             </button>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Search Up</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Search
+              Up</span>
           </div>
 
           <!-- Quick Action 3: Export -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <button id="quick-audit-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-audit-mob"
+              class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
             </button>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
           </div>
 
           <!-- Quick Action 4: Hide/Show Stats Toggle (Now exactly in the middle!) -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <button id="quick-toggle-stats-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white">
+            <button id="quick-toggle-stats-mob"
+              class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white">
               <div class="transform skew-x-[12deg]">
-                <svg id="hide-stats-icon-mob" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                <svg id="hide-stats-icon-mob" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                 </svg>
-                <svg id="show-stats-icon-mob" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <svg id="show-stats-icon-mob" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </div>
             </button>
-            <span id="quick-toggle-stats-mob-text" class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Hide Stats</span>
+            <span id="quick-toggle-stats-mob-text"
+              class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Hide
+              Stats</span>
           </div>
 
           <!-- Quick Action 5: Export Stats -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <button id="quick-export-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-export-mob"
+              class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </div>
             </button>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Export</span>
           </div>
 
           <!-- Quick Action 6: Roles Setup -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <button id="quick-roles-mob" class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
+            <button id="quick-roles-mob"
+              class="cursor-pointer h-12 w-14 bg-gray-200 dark:bg-white/10 text-spes-black/50 dark:text-spes-white/50 transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-sm active:scale-95 transition-transform hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                 </svg>
               </div>
             </button>
-            <span class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Roles</span>
+            <span
+              class="text-[9px] font-extrabold uppercase text-spes-black/40 dark:text-spes-white/40 text-center leading-tight whitespace-nowrap">Roles</span>
           </div>
 
           <!-- Quick Action 7: Theme Toggle / Dark Mode -->
           <div class="flex flex-col items-center gap-2 shrink-0 snap-center w-20">
-            <button id="quick-settings-mob" class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white">
+            <button id="quick-settings-mob"
+              class="cursor-pointer h-12 w-14 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-primary transform skew-x-[-12deg] flex items-center justify-center rounded-sm shadow-md active:scale-95 transition-transform hover:bg-gray-200 dark:hover:bg-white/10 hover:text-spes-black dark:hover:text-spes-white">
               <div class="transform skew-x-[12deg]">
                 <svg class="h-6 w-6 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-                <svg class="h-6 w-6 hidden dark:block text-spes-dark-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
+                <svg class="h-6 w-6 hidden dark:block text-spes-dark-primary" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M14 12a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
             </button>
-            <span id="quick-settings-mob-text" class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Dark Mode</span>
+            <span id="quick-settings-mob-text"
+              class="text-[9px] font-extrabold uppercase text-spes-black/75 dark:text-spes-white/75 text-center leading-tight whitespace-nowrap">Dark
+              Mode</span>
           </div>
         </div>
       </div>
@@ -956,79 +1295,97 @@
       <!-- FLOWBITE PREMIUM TOOLTIPS                          -->
       <!-- ════════════════════════════════════════════════════ -->
       <!-- Normal View Tooltips -->
-      <div id="tooltip-add-implementor" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-add-implementor" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Create a new staff or LGU admin account
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-add-beneficiary" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-add-beneficiary" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Enroll a new student beneficiary
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-audit" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-audit" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Open Exports & Reports
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-export" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-export" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Export rendered dashboard charts and statistics as a print report
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-roles" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-roles" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Configure system roles and RBAC settings
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-settings" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-settings" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Switch portal user interface dark mode
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-search" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-search" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Search globally for beneficiaries or staff
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-toggle-stats" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-toggle-stats" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Hide or show statistics cards
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
 
       <!-- Expanded View Tooltips -->
-      <div id="tooltip-add-implementor-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-add-implementor-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Create a new staff or LGU admin account
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-add-beneficiary-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-add-beneficiary-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Enroll a new student beneficiary
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-audit-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-audit-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Open Exports & Reports
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-export-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-export-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Export rendered dashboard charts and statistics as a print report
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-roles-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-roles-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Configure system roles and RBAC settings
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-settings-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-settings-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Switch portal user interface dark mode
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-search-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-search-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Search globally for beneficiaries or staff
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-toggle-stats-expanded" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-toggle-stats-expanded" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Hide or show statistics cards
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      
+
       <!-- Chart Switcher Tooltips -->
-      <div id="tooltip-toggle-timeline" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-toggle-timeline" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Show student enrollment timeline chart
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
-      <div id="tooltip-toggle-education" role="tooltip" class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
+      <div id="tooltip-toggle-education" role="tooltip"
+        class="absolute z-[250] invisible inline-block px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white bg-spes-blue dark:bg-spes-yellow dark:text-spes-dark-primary rounded-lg shadow-xl opacity-0 tooltip transition-opacity duration-300">
         Show student education level distribution chart
         <div class="tooltip-arrow" data-popper-arrow></div>
       </div>
@@ -1042,7 +1399,3 @@
 </body>
 
 </html>
-
-
-
-

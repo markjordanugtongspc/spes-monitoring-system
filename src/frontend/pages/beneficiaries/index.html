@@ -136,18 +136,31 @@
                 </button>
               </div>
 
-              <!-- Controls: Sort + Filter + Search + Sort Batch toggle (beneficiary/implementors) -->
-              <div id="table-controls-container" class="relative z-30 ml-auto flex w-full flex-wrap items-center justify-end gap-2.5 overflow-visible sm:w-auto sm:flex-nowrap">
-                <!-- Sort Batch — restored for cards/beneficiary sorting -->
-                <div id="sort-batch-panel" class="order-1 hidden w-full basis-full flex-wrap items-center justify-end gap-2 shrink-0 sm:w-auto sm:flex-nowrap">
+              <!-- Controls: Search (Left) + Sort Batch + Bulk Tools + Filter -->
+              <div id="table-controls-container" class="relative z-30 ml-auto flex flex-wrap items-center justify-end gap-2.5 overflow-visible sm:flex-nowrap">
+                <!-- Search (Left of Sort Batch, properly sized solid aesthetic) -->
+                <div id="staff-search-wrap" class="relative min-w-0 w-full sm:w-64 md:w-72 lg:w-80 transition-all duration-200">
+                  <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
+                    <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-width="2"
+                        d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                    </svg>
+                  </div>
+                  <input type="text" id="staff-search-input"
+                    class="block w-full rounded-lg border border-white/25 bg-white/10 py-2 pe-4 ps-9 text-xs font-semibold text-white placeholder:text-white/60 focus:bg-white/20 focus:border-spes-yellow focus:ring-2 focus:ring-spes-yellow/30 focus:outline-none transition-all"
+                    placeholder="Search beneficiary, contact, batch..." />
+                </div>
+
+                <!-- Sort Batch — tightly grouped with its sliding badges -->
+                <div id="sort-batch-panel" class="hidden items-center gap-2 shrink-0">
                   <div id="batch-badges-container"
-                    class="order-3 basis-full flex w-full items-center justify-end overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out sm:order-none sm:basis-auto sm:w-auto">
+                    class="flex items-center gap-1.5 overflow-hidden max-w-0 opacity-0 transition-all duration-500 ease-out">
                     <div id="batch-badges-list"
-                      class="flex w-full max-w-[min(340px,calc(100vw-3rem))] flex-nowrap snap-x snap-mandatory items-center gap-1.5 overflow-x-auto touch-pan-x cursor-grab active:cursor-grabbing select-none sm:w-auto sm:max-w-[340px]"
+                      class="flex max-w-[min(340px,calc(100vw-3rem))] flex-nowrap snap-x snap-mandatory items-center gap-1.5 overflow-x-auto touch-pan-x cursor-grab active:cursor-grabbing select-none sm:max-w-[340px]"
                       style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                   </div>
                   <button id="btn-sort-batch" data-dropdown-placement="bottom-start"
-                    class="order-1 ml-auto inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
+                    class="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 shrink-0">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -341,24 +354,11 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- Search (wider default and medium sizing) -->
-                <div id="staff-search-wrap" class="order-2 relative min-w-0 flex-1 sm:w-80 md:w-[420px] sm:shrink-0">
-                  <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5">
-                    <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-width="2"
-                        d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-                    </svg>
-                  </div>
-                  <input type="text" id="staff-search-input"
-                    class="block w-full rounded-lg border border-white/20 bg-white/10 py-2.5 pe-4 ps-10 text-sm text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
-                    placeholder="Search assured name..." />
-                </div>
-                </div>
               </div>
+            </div>
 
             <!-- Kanban Board Wrapper (Hidden by default, shown when viewing an implementor) -->
-            <div id="batches-kanban-wrapper" class="hidden flex gap-6 overflow-x-auto p-4 select-none min-h-[500px]">
+            <div id="batches-kanban-wrapper" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 select-none min-h-[500px]">
               <!-- Columns generated by JS -->
             </div>
 

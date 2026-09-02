@@ -2336,57 +2336,146 @@ function initGlobalSearch(user) {
     return row[s2.length];
   };
 
+  // ── Accurate Knowledge Dictionary: Database Verified Zip Codes & Office Mapping ──
+  const KNOWN_ZIPCODES = {
+    "9200": { name: "ILIGAN", offices: ["ILIGAN", "MSU-IIT", "TESDA RTC Iligan", "DepEd Public Schools", "Iligan Capitol", "Lyceum Of Iligan Foundation"] },
+    "9201": { name: "LINAMON", offices: ["LINAMON"] },
+    "9202": { name: "KAUSWAGAN", offices: ["KAUSWAGAN"] },
+    "9203": { name: "MATUNGAO", offices: ["MATUNGAO"] },
+    "9204": { name: "POONA PIAGAPO", offices: ["POONA PIAGAPO"] },
+    "9206": { name: "MAIGO", offices: ["MAIGO"] },
+    "9207": { name: "KOLAMBUGAN", offices: ["KOLAMBUGAN"] },
+    "9208": { name: "PANTAO RAGAT", offices: ["PANTAO RAGAT"] },
+    "9209": { name: "TUBOD", offices: ["TUBOD"] },
+    "9210": { name: "BAROY", offices: ["BAROY"] },
+    "9211": { name: "PGLDN", offices: ["PGLDN", "NCMC", "LALA"] },
+    "9212": { name: "SALVADOR", offices: ["SALVADOR"] },
+    "9213": { name: "SAPAD", offices: ["SAPAD"] },
+    "9214": { name: "KAPATAGAN", offices: ["KAPATAGAN"] },
+    "9215": { name: "SULTAN NAGA DIMAPORO", offices: ["SULTAN NAGA DIMAPORO", "MSU-SND"] },
+    "9216": { name: "NUNUNGAN", offices: ["NUNUNGAN"] },
+    "9217": { name: "BALO-I", offices: ["BALO-I"] },
+    "9218": { name: "PANTAR", offices: ["PANTAR"] },
+    "9219": { name: "MUNAI", offices: ["MUNAI"] },
+    "9220": { name: "TANGCAL", offices: ["TANGCAL"] },
+    "9222": { name: "TAGOLOAN", offices: ["TAGOLOAN"] },
+    "9015": { name: "MAGSAYSAY", offices: ["MAGSAYSAY"] }
+  };
+
   const SMART_PRESETS = [
     "Total",
-    "Total Spes",
-    "Total Male",
-    "Total Female",
-    "Total Implementors",
-    "Total New",
-    "Total SPES Baby",
-    "Spes Iligan",
-    "Total Spes Iligan",
-    "Total Spes Batch 1",
-    "Total Spes Batch 2",
-    "Total Spes of Iligan Batch 1",
-    "Total Male Iligan Batch 1",
-    "Total Female Iligan Batch 1",
+    "Total, Spes",
+    "Total, Male",
+    "Total, Female",
+    "Total, Implementors",
+    "Total, New",
+    "Total, SPES Baby",
+    "Total, Spes, PGLDN",
+    "Total, Spes, NCMC",
+    "Total, Spes, Tubod",
+    "Total, Spes, SND",
+    "Total, Spes, Pantar",
+    "Total, Spes, Sapad",
+    "Total, Spes, Balo-i",
+    "Total, Spes, Lyceum",
+    "Total, Spes, Iligan",
+    "Total, Spes, Batch 1",
+    "Total, Spes, Batch 2",
+    "Total, Spes, Batch 3",
+    "Total, Spes, Matungao, 9203",
+    "Total, Male, PGLDN, Batch 1",
+    "Total, Female, NCMC, Batch 1",
     "Grade 7",
     "Grade 11",
     "Grade 12",
     "1st Year",
-    "College",
-    "Vocational"
+    "College Level",
+    "Senior Highschool"
   ];
 
   const KEYWORD_TYPO_MAP = {
+    // English typos & shortcuts
     tot: "Total",
     totla: "Total",
     totall: "Total",
-    spe: "Total Spes",
-    spse: "Total Spes",
-    spes: "Total Spes",
-    bneficiary: "Total Spes",
-    beneficiary: "Total Spes",
+    spe: "Total, Spes",
+    spse: "Total, Spes",
+    spes: "Total, Spes",
+    bneficiary: "Total, Spes",
+    beneficiary: "Total, Spes",
     btch: "Batch 1",
     batc: "Batch 1",
-    impl: "Total Implementors",
-    implmentor: "Total Implementors",
-    implmentors: "Total Implementors",
-    staff: "Total Implementors",
-    mal: "Total Male",
-    mle: "Total Male",
-    femal: "Total Female",
-    femle: "Total Female",
-    babae: "Total Female",
-    lalaki: "Total Male",
-    iligin: "Total Spes Iligan",
-    ilign: "Total Spes Iligan",
-    iligan: "Total Spes Iligan",
-    lg: "Total Spes LGU",
-    lgu: "Total Spes LGU",
-    colg: "College",
-    colleg: "College",
+    impl: "Total, Implementors",
+    implmentor: "Total, Implementors",
+    implmentors: "Total, Implementors",
+    staff: "Total, Implementors",
+    mal: "Total, Male",
+    mle: "Total, Male",
+    femal: "Total, Female",
+    femle: "Total, Female",
+
+    // Filipino & Cebuano translations
+    lalaki: "Total, Male",
+    lalake: "Total, Male",
+    laki: "Total, Male",
+    lake: "Total, Male",
+    babae: "Total, Female",
+    babaye: "Total, Female",
+    baye: "Total, Female",
+    bae: "Total, Female",
+    tanan: "Total",
+    lahat: "Total",
+    kabuoan: "Total",
+    kabuukan: "Total",
+    katinguban: "Total",
+    kadaghanan: "Total",
+    estudyante: "Total, Spes",
+    estudyantehan: "Total, Spes",
+    "mag-aaral": "Total, Spes",
+    magaaral: "Total, Spes",
+    eskwela: "Total, Spes",
+    "bag-o": "Total, New",
+    bago: "Total, New",
+    bagohay: "Total, New",
+    "bag-ohay": "Total, New",
+    karaan: "Total, SPES Baby",
+    balik: "Total, SPES Baby",
+    nagbalik: "Total, SPES Baby",
+    kawani: "Total, Implementors",
+    empleado: "Total, Implementors",
+    opisina: "Total, Implementors",
+    trabahante: "Total, Implementors",
+    gidawat: "Approved",
+    aprobado: "Approved",
+    naghulat: "Pending",
+    "wala pa": "Pending",
+
+    // Database Offices & Locations
+    pgldn: "Total, Spes, PGLDN",
+    ncmc: "Total, Spes, NCMC",
+    snd: "Total, Spes, SND",
+    pantar: "Total, Spes, Pantar",
+    sapad: "Total, Spes, Sapad",
+    baloi: "Total, Spes, Balo-i",
+    "balo-i": "Total, Spes, Balo-i",
+    tubod: "Total, Spes, Tubod",
+    lyceum: "Total, Spes, Lyceum",
+    iligin: "Total, Spes, Iligan",
+    ilign: "Total, Spes, Iligan",
+    iligan: "Total, Spes, Iligan",
+    matungao: "Total, Spes, Matungao, 9203",
+    "9203": "Total, Spes, Matungao, 9203",
+    "9200": "Total, Spes, Iligan, 9200",
+    "9211": "Total, Spes, PGLDN, 9211",
+    "9209": "Total, Spes, Tubod, 9209",
+    "9215": "Total, Spes, SND, 9215",
+    "9218": "Total, Spes, Pantar, 9218",
+    "9213": "Total, Spes, Sapad, 9213",
+    "9217": "Total, Spes, Balo-i, 9217",
+    lg: "Total, Spes, LGU",
+    lgu: "Total, Spes, LGU",
+    colg: "College Level",
+    colleg: "College Level",
     grde: "Grade 11"
   };
 
@@ -2465,7 +2554,7 @@ function initGlobalSearch(user) {
       suggestionsContainer.innerHTML = `
         <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-lg bg-white/90 dark:bg-spes-dark-secondary/90 backdrop-blur-md border border-gray-200 dark:border-white/10 shadow-lg">
           <span class="text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow mr-1">Quick:</span>
-          ${["Total", "Total Spes", "Total Male", "Total Female", "Total Implementors", "Total Spes Iligan"].map((preset) => `
+          ${["Total", "Total, Spes", "Total, Male", "Total, Female", "Total, Implementors", "Total, Spes, Iligan", "Total, Spes, Matungao, 9203"].map((preset) => `
             <button type="button" data-search-preset="${preset}" class="cursor-pointer text-[9px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-spes-black dark:text-spes-white hover:bg-spes-blue hover:text-white dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary transition-all duration-150 shadow-xs">
               ${preset}
             </button>
@@ -2480,26 +2569,37 @@ function initGlobalSearch(user) {
     let isFuzzyCorrection = false;
     let correctionLabel = "";
 
-    // 1. Direct typo check in dictionary
-    const firstWord = q.split(/\s+/)[0];
+    // 1. Direct zipcode lookup in dictionary
+    const zipMatch = q.match(/\b\d{4}\b/)?.[0];
+    if (zipMatch && KNOWN_ZIPCODES[zipMatch]) {
+      const locInfo = KNOWN_ZIPCODES[zipMatch];
+      matchedSuggestions.push(`Total, Spes, ${locInfo.name}, ${zipMatch}`);
+      matchedSuggestions.push(`Total, Spes, ${zipMatch}`);
+      matchedSuggestions.push(`Total, Male, ${locInfo.name}`);
+      matchedSuggestions.push(`Total, Female, ${locInfo.name}`);
+    }
+
+    // 2. Direct typo check in dictionary
+    const firstWord = q.split(/[\s,]+/)[0];
     if (KEYWORD_TYPO_MAP[firstWord] && !SMART_PRESETS.map((p) => p.toLowerCase()).includes(q)) {
       matchedSuggestions.push(KEYWORD_TYPO_MAP[firstWord]);
       isFuzzyCorrection = true;
       correctionLabel = KEYWORD_TYPO_MAP[firstWord];
     }
 
-    // 2. Prefix & Substring matches from presets
+    // 3. Prefix & Substring matches from presets
+    const cleanSearchToken = q.replace(/[,()"]/g, " ").replace(/\s+/g, " ").trim();
     SMART_PRESETS.forEach((preset) => {
-      const pLow = preset.toLowerCase();
-      if (pLow.startsWith(q) || pLow.includes(q)) {
+      const pClean = preset.toLowerCase().replace(/[,()"]/g, " ").replace(/\s+/g, " ").trim();
+      if (pClean.startsWith(cleanSearchToken) || pClean.includes(cleanSearchToken)) {
         if (!matchedSuggestions.includes(preset)) matchedSuggestions.push(preset);
       }
     });
 
-    // 3. Fuzzy Levenshtein match across tokens if few matches
+    // 4. Fuzzy Levenshtein match across tokens if few matches
     if (matchedSuggestions.length < 3) {
       SMART_PRESETS.forEach((preset) => {
-        const dist = calcLevenshtein(q, preset);
+        const dist = calcLevenshtein(cleanSearchToken, preset.toLowerCase());
         if (dist <= 3 && !matchedSuggestions.includes(preset)) {
           matchedSuggestions.push(preset);
           if (!isFuzzyCorrection) {
@@ -2510,20 +2610,26 @@ function initGlobalSearch(user) {
       });
     }
 
-    // Dynamic compound query builder (e.g. user typed "spes iligan batch 1" or "male batch 2")
-    if (q.includes("batch") && q.includes("ilig") && !matchedSuggestions.includes("Total Spes of Iligan Batch 1")) {
-      matchedSuggestions.unshift("Total Spes of Iligan Batch 1");
-    } else if (q.includes("batch") && !matchedSuggestions.includes("Total Spes Batch 1")) {
-      matchedSuggestions.unshift("Total Spes Batch 1");
+    // Dynamic compound query builder (e.g. user typed "spes iligan batch 1" or "male batch 2" or "9203")
+    if (q.includes("9203") && !matchedSuggestions.includes("Total, Spes, Matungao, 9203")) {
+      matchedSuggestions.unshift("Total, Spes, Matungao, 9203");
     }
-    if (q.includes("male") && q.includes("ilig") && !matchedSuggestions.includes("Total Male Iligan Batch 1")) {
-      matchedSuggestions.unshift("Total Male Iligan Batch 1");
+    if (q.includes("matungao") && !matchedSuggestions.includes("Total, Spes, Matungao")) {
+      matchedSuggestions.unshift("Total, Spes, Matungao");
     }
-    if (q.includes("female") && q.includes("ilig") && !matchedSuggestions.includes("Total Female Iligan Batch 1")) {
-      matchedSuggestions.unshift("Total Female Iligan Batch 1");
+    if (q.includes("batch") && q.includes("ilig") && !matchedSuggestions.includes("Total, Spes, Iligan, Batch 1")) {
+      matchedSuggestions.unshift("Total, Spes, Iligan, Batch 1");
+    } else if (q.includes("batch") && !matchedSuggestions.includes("Total, Spes, Batch 1")) {
+      matchedSuggestions.unshift("Total, Spes, Batch 1");
     }
-    if (q.includes("spes") && q.includes("ilig") && !matchedSuggestions.includes("Total Spes of Iligan")) {
-      matchedSuggestions.unshift("Total Spes of Iligan");
+    if (q.includes("male") && q.includes("ilig") && !matchedSuggestions.includes("Total, Male, Iligan, Batch 1")) {
+      matchedSuggestions.unshift("Total, Male, Iligan, Batch 1");
+    }
+    if (q.includes("female") && q.includes("ilig") && !matchedSuggestions.includes("Total, Female, Iligan, Batch 1")) {
+      matchedSuggestions.unshift("Total, Female, Iligan, Batch 1");
+    }
+    if (q.includes("spes") && q.includes("ilig") && !matchedSuggestions.includes("Total, Spes, Iligan")) {
+      matchedSuggestions.unshift("Total, Spes, Iligan");
     }
 
     const finalSuggestions = matchedSuggestions.slice(0, 5);
@@ -2591,6 +2697,7 @@ function initGlobalSearch(user) {
   });
 
   // ── Multi-Tier Smart Query Execution ──
+  // --- START: FUNCTION performSmartSearch (Executes Multi-Tier Token Search with Name/Location/Batch/Gender Faceting) ---
   async function performSmartSearch(rawQuery, currentUser) {
     const roleId = currentUser.role_id;
     const officeId = currentUser.office_id;
@@ -2609,11 +2716,45 @@ function initGlobalSearch(user) {
       searchContainer.classList.remove("max-w-lg");
       searchContainer.classList.add("max-w-5xl");
 
-      // ── Normalize & Strip Punctuation ──
-      const cleanQuery = rawQuery.replace(/[,()"]/g, " ").trim();
+      // ── 1. Batch Pre-parser & Query Normalization ──
+      let requestedBatchId = null;
+      let requestedBatchLabel = null;
+      let normalizedQuery = String(rawQuery || "").trim();
+
+      // Normalize all batch formats (e.g. "batch 1", "batch1", "b1", "Batch-2", "BATCH 2")
+      const batchRegex = /\b(?:BATCH|B)\s*[-#]?\s*(\d+)\b/i;
+      const batchMatch = normalizedQuery.match(batchRegex);
+      if (batchMatch) {
+        requestedBatchId = Number(batchMatch[1]);
+        requestedBatchLabel = `Batch ${requestedBatchId}`;
+        // Remove the matched batch string from the query text for downstream facet parsing
+        normalizedQuery = normalizedQuery.replace(batchRegex, " ");
+      } else {
+        // Check DB batches table if named batches exist
+        const { data: dbBatches } = await supabase.from("batch").select("id, batch_name");
+        if (dbBatches?.length) {
+          for (const b of dbBatches) {
+            const bName = String(b.batch_name || "").toUpperCase();
+            if (bName && new RegExp(`\\b${bName}\\b`, "i").test(normalizedQuery)) {
+              requestedBatchId = b.id;
+              requestedBatchLabel = b.batch_name;
+              normalizedQuery = normalizedQuery.replace(new RegExp(`\\b${bName}\\b`, "i"), " ");
+              break;
+            }
+          }
+        }
+      }
+
+      // ── 2. Clean & Tokenize Query (Dual-Mode: CSV Comma Delimiter & Space Tokenizer) ──
+      const hasCommaDelimiter = rawQuery.includes(",");
+      const commaChunks = hasCommaDelimiter
+        ? rawQuery.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+        : [];
+
+      const cleanQuery = normalizedQuery.replace(/[,()"]/g, " ").replace(/\s+/g, " ").trim();
       const rawTokens = cleanQuery.toUpperCase().split(/\s+/).filter(Boolean);
 
-      // ── Stop Words Discarder (e.g. "of", "in", "at", "on", "ng", "sa", etc.) ──
+      // Stop words to ignore
       const STOP_WORDS = new Set([
         "OF", "IN", "AT", "ON", "FOR", "FROM", "AND", "WITH", "THE", "A", "AN",
         "NG", "SA", "MGA", "NANG", "PARA", "KAY", "NILANG", "ALL", "OF THE"
@@ -2621,16 +2762,16 @@ function initGlobalSearch(user) {
 
       const qTokens = rawTokens.filter((t) => !STOP_WORDS.has(t) || t === "ALL");
 
-      // ── Token Facet Classifiers ──
-      const TOTAL_TOKENS = ["TOTAL", "ALL", "*", "OVERALL", "COUNT", "SUMMARY", "LAHAT"];
-      const SPES_TOKENS = ["SPES", "BENEFICIARY", "BENEFICIARIES", "STUDENT", "STUDENTS"];
-      const IMPL_TOKENS = ["IMPLEMENTOR", "IMPLEMENTORS", "STAFF", "STAFFS", "OFFICER", "OFFICERS", "ADMIN", "ADMINS"];
-      const MALE_TOKENS = ["MALE", "MEN", "MAN", "BOY", "BOYS", "LALAKI"];
-      const FEMALE_TOKENS = ["FEMALE", "WOMEN", "WOMAN", "GIRL", "GIRLS", "BABAE"];
-      const NEW_TOKENS = ["NEW", "NEWCOMER", "FIRST-TIME", "FIRST TIME"];
-      const BABY_TOKENS = ["BABY", "SPES BABY", "RETURNING", "RETURNEE", "RETURNER"];
-      const APPROVED_TOKENS = ["APPROVED"];
-      const PENDING_TOKENS = ["PENDING", "UNAPPROVED"];
+      // ── 3. Token Classifiers (English, Filipino & Cebuano) ──
+      const TOTAL_TOKENS = ["TOTAL", "ALL", "*", "OVERALL", "COUNT", "SUMMARY", "LAHAT", "TANAN", "KABUOAN", "KABUUKAN", "KATINGUBAN", "KADAGHANAN"];
+      const SPES_TOKENS = ["SPES", "BENEFICIARY", "BENEFICIARIES", "STUDENT", "STUDENTS", "ESTUDYANTE", "ESTUDYANTEHAN", "MAG-AARAL", "MAGAARAL", "ESKWELA", "ESKWELAHAN"];
+      const IMPL_TOKENS = ["IMPLEMENTOR", "IMPLEMENTORS", "STAFF", "STAFFS", "OFFICER", "OFFICERS", "ADMIN", "ADMINS", "KAWANI", "EMPLEADO", "TRABAHANTE", "OPISINA"];
+      const MALE_TOKENS = ["MALE", "MEN", "MAN", "BOY", "BOYS", "LALAKI", "LALAKE", "LAKI", "LAKE"];
+      const FEMALE_TOKENS = ["FEMALE", "WOMEN", "WOMAN", "GIRL", "GIRLS", "BABAE", "BABAYE", "BAYE", "BAE"];
+      const NEW_TOKENS = ["NEW", "NEWCOMER", "FIRST-TIME", "FIRST TIME", "BAG-O", "BAGO", "BAG-OHAY", "BAGOHAY"];
+      const BABY_TOKENS = ["BABY", "SPES BABY", "RETURNING", "RETURNEE", "RETURNER", "BALIK", "NAGBALIK", "KARAAN", "DAAN"];
+      const APPROVED_TOKENS = ["APPROVED", "APROBADO", "GIDAWAT", "PASADO", "PUMASA"];
+      const PENDING_TOKENS = ["PENDING", "UNAPPROVED", "NAGHULAT", "HULAT", "WALA PA", "HINDI PA"];
 
       const searchMonths = {
         JAN: "JANUARY", JANUARY: "JANUARY", FEB: "FEBRUARY", FEBRUARY: "FEBRUARY",
@@ -2640,42 +2781,19 @@ function initGlobalSearch(user) {
         NOV: "NOVEMBER", NOVEMBER: "NOVEMBER", DEC: "DECEMBER", DECEMBER: "DECEMBER",
       };
 
-      const hasTotalToken = qTokens.some((t) => TOTAL_TOKENS.includes(t));
-      const hasSpesToken = qTokens.some((t) => SPES_TOKENS.includes(t));
-      const hasImplToken = qTokens.some((t) => IMPL_TOKENS.includes(t));
-      const hasMaleToken = qTokens.some((t) => MALE_TOKENS.includes(t));
-      const hasFemaleToken = qTokens.some((t) => FEMALE_TOKENS.includes(t));
-      const hasNewToken = qTokens.some((t) => NEW_TOKENS.includes(t));
-      const hasBabyToken = qTokens.some((t) => BABY_TOKENS.includes(t));
+      const hasTotalToken = qTokens.some((t) => TOTAL_TOKENS.includes(t)) || commaChunks.some((c) => TOTAL_TOKENS.includes(c));
+      const hasSpesToken = qTokens.some((t) => SPES_TOKENS.includes(t)) || commaChunks.some((c) => SPES_TOKENS.includes(c));
+      const hasImplToken = qTokens.some((t) => IMPL_TOKENS.includes(t)) || commaChunks.some((c) => IMPL_TOKENS.includes(c));
+      const hasMaleToken = qTokens.some((t) => MALE_TOKENS.includes(t)) || commaChunks.some((c) => MALE_TOKENS.includes(c));
+      const hasFemaleToken = qTokens.some((t) => FEMALE_TOKENS.includes(t)) || commaChunks.some((c) => FEMALE_TOKENS.includes(c));
+      const hasNewToken = qTokens.some((t) => NEW_TOKENS.includes(t)) || commaChunks.some((c) => NEW_TOKENS.includes(c));
+      const hasBabyToken = qTokens.some((t) => BABY_TOKENS.includes(t)) || commaChunks.some((c) => BABY_TOKENS.includes(c));
       const hasApprovedToken = qTokens.some((t) => APPROVED_TOKENS.includes(t));
       const hasPendingToken = qTokens.some((t) => PENDING_TOKENS.includes(t));
       const requestedYear = cleanQuery.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
       const requestedMonth = Object.entries(searchMonths).find(([term]) => new RegExp(`\\b${term}\\b`, "i").test(cleanQuery))?.[1] || null;
 
-      // ── Smart Batch Parser (supports "Batch 1", "Batch 2", "B1", "Batch-1", etc.) ──
-      let requestedBatchId = null;
-      let requestedBatchLabel = null;
-
-      const batchNumMatch = cleanQuery.match(/\b(?:BATCH|B)\s*[-#]?\s*(\d+)\b/i);
-      if (batchNumMatch) {
-        requestedBatchId = Number(batchNumMatch[1]);
-        requestedBatchLabel = `Batch ${requestedBatchId}`;
-      } else {
-        // Also check against DB batch table names
-        const { data: dbBatches } = await supabase.from("batch").select("id, batch_name");
-        if (dbBatches?.length) {
-          for (const b of dbBatches) {
-            const bName = String(b.batch_name || "").toUpperCase();
-            if (bName && qTokens.includes(bName)) {
-              requestedBatchId = b.id;
-              requestedBatchLabel = b.batch_name;
-              break;
-            }
-          }
-        }
-      }
-
-      // ── Detect Education Levels / Grades ──
+      // ── 4. Detect Education Levels / Grades ──
       const eduLevelPatternMap = [
         { test: /GRADE\s*7|\bG7\b|\bGR7\b/i, pattern: "Grade 7" },
         { test: /GRADE\s*8|\bG8\b|\bGR8\b/i, pattern: "Grade 8" },
@@ -2688,48 +2806,108 @@ function initGlobalSearch(user) {
         { test: /3RD\s*YEAR|THIRD\s*YEAR|\b3RD\s*YR\b/i, pattern: "3rd Year" },
         { test: /4TH\s*YEAR|FOURTH\s*YEAR|\b4TH\s*YR\b|GRADUATING/i, pattern: "4th Year" },
         { test: /\bGRADE\b|\bGRADES\b/i, pattern: "Grade", grouped: true },
-        { test: /\bCOLLEGE\b|\bCOLLEGIATE\b|\bTERTIARY\b|\bUNIVERSITY\b/i, pattern: "College", isCat: true },
+        { test: /\bCOLLEGE\b|\bCOLLEGIATE\b|\bTERTIARY\b|\bUNIVERSITY\b/i, pattern: "College Level", isCat: true },
+        { test: /\bSENIOR\s*HIGHSCHOOL\b|\bSHS\b/i, pattern: "Senior Highschool", isCat: true },
         { test: /\bVOCATIONAL\b|\bTVET\b|\bTECH.?VOC\b|\bTESDA\b/i, pattern: "Vocational", isCat: true }
       ];
 
       const detectedEdu = eduLevelPatternMap.find((item) => item.test.test(cleanQuery));
 
-      // ── Reserved Words for Facet Stripping ──
-      const reservedWords = new Set([
-        ...TOTAL_TOKENS, ...SPES_TOKENS, ...IMPL_TOKENS, ...MALE_TOKENS,
-        ...FEMALE_TOKENS, ...NEW_TOKENS, ...BABY_TOKENS, ...APPROVED_TOKENS, ...PENDING_TOKENS,
-        ...STOP_WORDS, "GRADE", "YEAR", "1ST", "2ND", "3RD", "4TH", "COLLEGE", "VOCATIONAL",
-        "BATCH", "B1", "B2", "B3", "B4", "B5"
-      ]);
-      if (requestedYear) reservedWords.add(requestedYear);
-      if (requestedMonth) reservedWords.add(requestedMonth);
-      if (requestedBatchId) {
-        reservedWords.add(`BATCH`);
-        reservedWords.add(String(requestedBatchId));
-      }
-
-      // Filter out tokens that were consumed by facets or stop words
-      const residualTokens = qTokens.filter((tok) => !reservedWords.has(tok) && !/^(?:BATCH\d*|B\d+)$/i.test(tok));
-      const residualSearch = residualTokens.join(" ").trim();
-
-      // ── Check Matched Offices from Residual Tokens or Query ──
+      // ── 5. Separate Office Token Resolution: Tiered Precedence (Exact Name > Partial Name > Location/Zip) ──
       let matchedOfficeIds = [];
-      let matchedOfficeName = null;
+      let detectedLocationLabel = null;
+      let detectedOfficeNameLabel = null;
+      const consumedOfficeTokens = new Set();
 
-      const { data: allDbOffices } = await supabase.from("offices").select("id, name, location");
+      const { data: allDbOffices } = await supabase.from("offices").select("id, name, location, type");
       if (allDbOffices?.length) {
-        for (const off of allDbOffices) {
-          const offName = String(off.name || "").toUpperCase();
-          const offLoc = String(off.location || "").toUpperCase();
-          const isLguMatch = (offName.includes("ILIGAN") || offLoc.includes("ILIGAN")) && (cleanQuery.toUpperCase().includes("ILIGAN") || qTokens.includes("ILIGAN") || qTokens.includes("LGU"));
-          const isDirectMatch = residualTokens.some((tok) => tok.length >= 3 && (offName.includes(tok) || offLoc.includes(tok)));
+        let isExactNameResolved = false;
 
-          if (isLguMatch || isDirectMatch) {
-            matchedOfficeIds.push(off.id);
-            if (!matchedOfficeName) matchedOfficeName = off.name;
+        // ── TIER 1: Exact Office Name Match (Highest Priority) ──
+        // e.g. chunk "ILIGAN CITY" or "ILIGAN" or "PGLDN" or "ILIGAN CAPITOL"
+        const candidatePhrases = hasCommaDelimiter && commaChunks.length > 0 ? commaChunks : [cleanQuery];
+        
+        for (const phrase of candidatePhrases) {
+          const exactOff = allDbOffices.find((o) => {
+            const oName = String(o.name || "").trim().toUpperCase();
+            return oName === phrase || (phrase === "ILIGAN" && oName === "ILIGAN CITY") || (phrase === "ILIGAN CITY" && oName === "ILIGAN");
+          });
+
+          if (exactOff) {
+            matchedOfficeIds = [exactOff.id];
+            detectedOfficeNameLabel = exactOff.name;
+            isExactNameResolved = true;
+            consumedOfficeTokens.add(phrase);
+            phrase.split(/\s+/).forEach((t) => consumedOfficeTokens.add(t));
+            break;
+          }
+        }
+
+        // ── TIER 2: Specific Office Name Substring / Keyword Match ──
+        if (!isExactNameResolved) {
+          for (const off of allDbOffices) {
+            const offName = String(off.name || "").toUpperCase();
+            if (!offName) continue;
+
+            // Check if full phrase or multi-word chunk matches office name
+            const phraseMatch = candidatePhrases.some((p) => p.length >= 3 && (offName === p || offName.includes(p) || p.includes(offName)));
+            const tokenMatch = qTokens.some((tok) => tok.length >= 4 && offName.includes(tok) && !["TOTAL", "SPES", "CITY"].includes(tok));
+
+            if (phraseMatch || tokenMatch) {
+              if (!matchedOfficeIds.includes(off.id)) matchedOfficeIds.push(off.id);
+              if (!detectedOfficeNameLabel) detectedOfficeNameLabel = off.name;
+              candidatePhrases.forEach((p) => {
+                if (offName.includes(p) || p.includes(offName)) {
+                  consumedOfficeTokens.add(p);
+                  p.split(/\s+/).forEach((t) => consumedOfficeTokens.add(t));
+                }
+              });
+              qTokens.forEach((tok) => {
+                if (tok.length >= 3 && offName.includes(tok)) consumedOfficeTokens.add(tok);
+              });
+              isExactNameResolved = true;
+            }
+          }
+        }
+
+        // ── TIER 3: Generic Location & Zipcode Match (Only if not already resolved by specific office name) ──
+        if (!isExactNameResolved || matchedOfficeIds.length === 0) {
+          for (const off of allDbOffices) {
+            const offLoc = String(off.location || "").toUpperCase();
+            const offName = String(off.name || "").toUpperCase();
+            if (!offLoc) continue;
+
+            for (const tok of qTokens) {
+              if (tok.length >= 3 || /^\d{4}$/.test(tok)) {
+                if (offLoc.includes(tok)) {
+                  if (!matchedOfficeIds.includes(off.id)) matchedOfficeIds.push(off.id);
+                  if (!detectedLocationLabel) {
+                    detectedLocationLabel = /^\d{4}$/.test(tok)
+                      ? (off.name ? `${off.name} (${tok})` : `Zip ${tok}`)
+                      : (off.location.length > 25 ? (off.name || tok) : off.location);
+                  }
+                  consumedOfficeTokens.add(tok);
+                }
+              }
+            }
           }
         }
       }
+
+      // ── 6. Reserved Words for Facet Stripping ──
+      const reservedWords = new Set([
+        ...TOTAL_TOKENS, ...SPES_TOKENS, ...IMPL_TOKENS, ...MALE_TOKENS,
+        ...FEMALE_TOKENS, ...NEW_TOKENS, ...BABY_TOKENS, ...APPROVED_TOKENS, ...PENDING_TOKENS,
+        ...STOP_WORDS, ...consumedOfficeTokens,
+        "GRADE", "YEAR", "1ST", "2ND", "3RD", "4TH", "COLLEGE", "VOCATIONAL",
+        "BATCH", "B1", "B2", "B3", "B4", "B5", "ILIGAN"
+      ]);
+      if (requestedYear) reservedWords.add(requestedYear);
+      if (requestedMonth) reservedWords.add(requestedMonth);
+
+      // Residual search string for wildcard name/address filtering
+      const residualTokens = qTokens.filter((tok) => !reservedWords.has(tok) && !/^(?:BATCH\d*|B\d+)$/i.test(tok));
+      const residualSearch = residualTokens.join(" ").trim();
 
       // Base query declarations
       let benQuery = supabase
@@ -2739,19 +2917,19 @@ function initGlobalSearch(user) {
           education_level_id, educ_id,
           education_level:education_level_id(id, name, education_id),
           education:educ_id(id, name),
-          staffs!staff_id${!canSearchGlobal ? '!inner' : ''}(office_id, full_name, offices(name))
+          staffs!staff_id${!canSearchGlobal ? '!inner' : ''}(office_id, full_name, offices(name, location))
         `);
 
-      let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name)") : null;
+      let staffSearchQuery = roleId === 1 ? supabase.from("staffs").select("id, full_name, approved, offices(name, location)") : null;
 
-      // ── Query Routing & Filtering ──
+      // ── 7. Query Routing & Filtering ──
       const isGrandGlobalTotal = (qTokens.length === 1 && hasTotalToken && !requestedBatchId && !matchedOfficeIds.length) || (qTokens.length === 2 && hasTotalToken && qTokens.includes("*"));
 
       if (isGrandGlobalTotal) {
         // Grand Total of entire system
         if (!canSearchGlobal) benQuery = benQuery.eq("staffs.office_id", officeId);
       } else {
-        // Target Routing
+        // Target Routing: Staff vs SPES Beneficiary
         if (hasImplToken || hasApprovedToken || hasPendingToken) {
           if (!hasSpesToken && !hasMaleToken && !hasFemaleToken && !requestedBatchId) {
             benQuery = null; // Staff only search
@@ -2762,7 +2940,7 @@ function initGlobalSearch(user) {
           staffSearchQuery = null; // SPES only search
         }
 
-        // Apply SPES Filters (Batch, Gender, Status, Education, Office, Period)
+        // Apply SPES Filters (Batch, Gender, Status, Education, Office/Location, Period)
         if (benQuery) {
           if (requestedBatchId) benQuery = benQuery.eq("batch_id", requestedBatchId);
           if (hasMaleToken && !hasFemaleToken) benQuery = benQuery.eq("gender_id", 1);
@@ -2785,12 +2963,20 @@ function initGlobalSearch(user) {
             }
           }
 
-          // Office filter
+          // Office / Location filter (Staff linkage + Direct Address/Designation fallback)
           if (matchedOfficeIds.length > 0) {
             const { data: officeStaffs } = await supabase.from("staffs").select("id").in("office_id", matchedOfficeIds);
             const staffIds = (officeStaffs || []).map((s) => s.id);
             if (staffIds.length > 0) {
               benQuery = benQuery.in("staff_id", staffIds);
+            } else {
+              // Fallback: If no staff is registered under this office yet, search beneficiary address/designated directly
+              const fallbackLoc = (detectedOfficeNameLabel || detectedLocationLabel || "").replace(/[^a-zA-Z0-9\s]/g, " ").trim();
+              if (fallbackLoc.length >= 3) {
+                benQuery = benQuery.or(`address.ilike.%${fallbackLoc}%,designated.ilike.%${fallbackLoc}%`);
+              } else {
+                benQuery = benQuery.in("staff_id", [-1]);
+              }
             }
           } else if (residualSearch.length > 0 && !hasTotalToken) {
             benQuery = benQuery.or(`full_name.ilike.%${residualSearch}%,address.ilike.%${residualSearch}%,designated.ilike.%${residualSearch}%`);
@@ -2809,14 +2995,29 @@ function initGlobalSearch(user) {
         }
       }
 
-      // Execute Queries
+      // ── 8. Execute Queries (Paginated to retrieve all 1,800+ records beyond 1,000 PostgREST cap) ──
       let beneficiaries = [];
       let staffResults = [];
 
       if (benQuery) {
-        const { data: bData, error: bErr } = await benQuery.limit(2000);
-        if (bErr && import.meta.env.DEV) console.error("[Smart Search] Beneficiary query error:", bErr);
-        beneficiaries = bData || [];
+        const PAGE_SIZE = 1000;
+        for (let from = 0; from < 20000; from += PAGE_SIZE) {
+          const { data: bData, error: bErr } = await benQuery
+            .order("id", { ascending: true })
+            .range(from, from + PAGE_SIZE - 1);
+
+          if (bErr) {
+            if (import.meta.env.DEV) console.error("[Smart Search] Beneficiary query error:", bErr);
+            break;
+          }
+
+          if (bData?.length) {
+            beneficiaries.push(...bData);
+          }
+
+          // If fewer rows than PAGE_SIZE returned, all records have been loaded
+          if (!bData || bData.length < PAGE_SIZE) break;
+        }
       }
 
       if (staffSearchQuery) {
@@ -2825,46 +3026,82 @@ function initGlobalSearch(user) {
         staffResults = sData || [];
       }
 
-      // Active Facet Badges for Visual Card
+      // ── 9. Active Facet Badges for Visual Card ──
       const activeFacets = [];
       if (hasTotalToken) activeFacets.push("Total");
       if (hasSpesToken) activeFacets.push("SPES");
       if (hasImplToken) activeFacets.push("Implementors");
       if (requestedBatchLabel) activeFacets.push(requestedBatchLabel);
-      if (matchedOfficeIds.length > 0) activeFacets.push(matchedOfficeName ? (matchedOfficeName.includes("ILIGAN") ? "Iligan Office" : matchedOfficeName.slice(0, 16)) : "Office Match");
-      if (hasMaleToken) activeFacets.push("Male");
-      if (hasFemaleToken) activeFacets.push("Female");
+      if (detectedLocationLabel) activeFacets.push(`Location: ${detectedLocationLabel}`);
+      if (detectedOfficeNameLabel) activeFacets.push(`Office: ${detectedOfficeNameLabel.slice(0, 18)}`);
+      if (hasMaleToken && !hasFemaleToken) activeFacets.push("Male");
+      if (hasFemaleToken && !hasMaleToken) activeFacets.push("Female");
       if (hasNewToken) activeFacets.push("New");
       if (hasBabyToken) activeFacets.push("SPES Baby");
       if (requestedYear) activeFacets.push(`Year: ${requestedYear}`);
       if (requestedMonth) activeFacets.push(`Month: ${requestedMonth}`);
       if (detectedEdu) activeFacets.push(`Level: ${detectedEdu.pattern}`);
 
-      renderSmartSearchDashboard(cleanQuery, beneficiaries, staffResults, activeFacets);
+      renderSmartSearchDashboard(rawQuery, beneficiaries, staffResults, activeFacets);
     } catch (err) {
       if (import.meta.env.DEV) console.error("[Smart Search] Exception:", err);
       resultsContainer.innerHTML = `<div class="p-6 text-center text-sm text-red-500 font-black uppercase tracking-wider">Failed to complete search query. Please try again.</div>`;
     }
   }
+  // --- END: FUNCTION performSmartSearch ---
 
   // ── Render Search Results & Visual Analytics Dashboard ──
+  // --- START: FUNCTION renderSmartSearchDashboard (Renders Interactive Search Analytics, Donut Chart, and Categorized Beneficiary/Staff Lists) ---
   function renderSmartSearchDashboard(queryText, beneficiaries, staffs, activeFacets = []) {
     const totalCount = beneficiaries.length + staffs.length;
 
     if (totalCount === 0) {
       resultsContainer.innerHTML = `
-        <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 w-full text-center">
-          <svg class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-          </svg>
-          <div class="text-sm text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">No matching records found for &ldquo;${queryText}&rdquo;</div>
-          <p class="text-[0.625rem] text-gray-400 dark:text-white/40 mt-1 mb-4 font-semibold uppercase tracking-wider">Try one of the smart search queries below:</p>
-          <div class="flex flex-wrap items-center justify-center gap-1.5 max-w-xl mx-auto">
-            ${["Total", "Total Spes", "Total Male", "Total Female", "Total Implementors", "Total Spes Iligan", "Grade 11", "College"].map((kw) => `
-              <button type="button" data-fallback-kw="${kw}" class="cursor-pointer text-[9px] font-black px-2.5 py-1 rounded-md bg-spes-blue/10 text-spes-blue hover:bg-spes-blue hover:text-white dark:bg-spes-yellow/15 dark:text-spes-yellow dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary uppercase tracking-wider transition-all duration-150">
-                ${kw}
-              </button>
-            `).join("")}
+        <div class="bg-white dark:bg-spes-dark-secondary p-8 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-3xl mx-auto text-center space-y-6">
+          <div class="inline-flex items-center justify-center p-3.5 bg-spes-blue/10 dark:bg-spes-yellow/15 rounded-full text-spes-blue dark:text-spes-yellow mb-1">
+            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+            </svg>
+          </div>
+
+          <div>
+            <div class="text-base text-spes-black dark:text-white font-black uppercase tracking-wider">No matching records found for &ldquo;${queryText}&rdquo;</div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-semibold max-w-lg mx-auto">
+              ${activeFacets.length > 0 
+                ? `Processed filters: <span class="font-bold text-spes-blue dark:text-spes-yellow">${activeFacets.join(", ")}</span>, but no enrolled beneficiaries or staff currently match in the database.`
+                : `No active records matched this keyword query.`}
+            </p>
+          </div>
+
+          <!-- Token Blueprint Guide Card -->
+          <div class="p-4 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 text-left space-y-2">
+            <div class="text-[10px] font-black uppercase tracking-widest text-spes-blue dark:text-spes-yellow flex items-center gap-1.5">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Smart Query Token Blueprint
+            </div>
+            <div class="flex flex-wrap items-center gap-1 text-[9px] font-extrabold uppercase">
+              <span class="px-2 py-1 rounded bg-spes-blue/10 dark:bg-spes-yellow/15 text-spes-blue dark:text-spes-yellow">TOTAL / COUNT</span>
+              <span class="text-gray-400">+</span>
+              <span class="px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-spes-black dark:text-white">SPES | STAFF</span>
+              <span class="text-gray-400">+</span>
+              <span class="px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-spes-black dark:text-white">LOCATION | ZIP (e.g. ILIGAN, 9200, MATUNGAO, 9203)</span>
+              <span class="text-gray-400">+</span>
+              <span class="px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-spes-black dark:text-white">MALE | FEMALE</span>
+              <span class="text-gray-400">+</span>
+              <span class="px-2 py-1 rounded bg-gray-200 dark:bg-white/10 text-spes-black dark:text-white">BATCH 1 / BATCH 2</span>
+            </div>
+          </div>
+
+          <!-- Smart Query Recommendations -->
+          <div>
+            <p class="text-[10px] text-gray-400 dark:text-white/40 mb-2 font-black uppercase tracking-widest">Recommended Queries:</p>
+            <div class="flex flex-wrap items-center justify-center gap-2 max-w-xl mx-auto">
+              ${["Total Spes", "Total Spes Iligan", "Total Spes Batch 1", "Total Male Iligan", "Total Female Iligan", "Grade 11", "College", "Total Implementors"].map((kw) => `
+                <button type="button" data-fallback-kw="${kw}" class="cursor-pointer text-[10px] font-black px-3 py-1.5 rounded-lg bg-spes-blue/10 text-spes-blue hover:bg-spes-blue hover:text-white dark:bg-spes-yellow/15 dark:text-spes-yellow dark:hover:bg-spes-yellow dark:hover:text-spes-dark-primary uppercase tracking-wider transition-all duration-150 shadow-xs active:scale-95">
+                  ${kw}
+                </button>
+              `).join("")}
+            </div>
           </div>
         </div>`;
 
@@ -3194,5 +3431,7 @@ function initGlobalSearch(user) {
       renderChartInstance(chartMode);
     });
   }
+  // --- END: FUNCTION renderSmartSearchDashboard ---
 }
+// --- END: FUNCTION initGlobalSearch ---
 // --- END: GLOBAL SMART SEARCH WITH REAL-TIME PREDICTIONS & MULTI-TIER PARSER ---

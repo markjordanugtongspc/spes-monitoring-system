@@ -559,8 +559,8 @@ function initBatchSortPanel(onFilter) {
     getPalette:    (_b, i) => BATCH_PALETTES[i % BATCH_PALETTES.length],
     onFilter,
     resetFilterOnClose: false,
-    onOpen:        () => {},
-    onClose:       () => {},
+    onOpen: () => {},
+    onClose: () => {},
   });
 
   addDragScroll(document.getElementById("batch-badges-list"));
@@ -2183,8 +2183,8 @@ export function initBeneficiaries() {
           sortBatchPanel.classList.remove("hidden");
           sortBatchPanel.classList.add("flex");
         }
-        // In batch cards overview, hide the search bar and filter tool to prevent layout overlaps
-        document.getElementById("staff-search-wrap")?.classList.add("hidden");
+        // In batch cards overview, keep the search bar visible so users can search across batches
+        document.getElementById("staff-search-wrap")?.classList.remove("hidden");
         document.getElementById("sortfilter-wrap")?.classList.add("hidden");
         document.getElementById("beneficiary-bulk-tools")?.classList.add("hidden");
 
@@ -2385,6 +2385,8 @@ export function initBeneficiaries() {
 
     const getBatchCapacity = (batchId) => [1, 2, 3].includes(Number(batchId)) ? 2000 : 350;
 
+    const searchQ = (document.getElementById("staff-search-input")?.value || "").trim().toLowerCase();
+
     const createCard = (title, items, colId, pal, isUnassigned = false, batchId = "", batchName = "") => {
       const capacityTarget = getBatchCapacity(batchId);
       const totalCount = items.length;
@@ -2399,6 +2401,30 @@ export function initBeneficiaries() {
       if (percentage > 33 && percentage <= 66) progColor = "bg-orange-500";
       if (percentage > 66) progColor = "bg-red-500";
 
+      // Live search matches in this batch
+      let matchCount = 0;
+      if (searchQ) {
+        matchCount = items.filter(item => {
+          const name = String(item.full_name || "").toLowerCase();
+          const phone = String(item.contact_number || "").toLowerCase();
+          const addr = String(item.address || "").toLowerCase();
+          const desig = String(item.designated || "").toLowerCase();
+          return name.includes(searchQ) || phone.includes(searchQ) || addr.includes(searchQ) || desig.includes(searchQ);
+        }).length;
+      }
+
+      const matchBadge = searchQ && matchCount > 0
+        ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-500 text-slate-950 px-2 py-0.5 text-[0.625rem] font-black uppercase tracking-wider shadow-sm animate-pulse">
+             🔥 ${matchCount} match${matchCount > 1 ? "es" : ""}
+           </span>`
+        : "";
+
+      const cardHighlightClass = searchQ 
+        ? (matchCount > 0 
+            ? "ring-2 ring-amber-500 shadow-xl scale-[1.01]" 
+            : "opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-opacity") 
+        : "";
+
       const newStatClass = activeStatusMode === "NEW"
         ? "border-2 border-emerald-600/70 bg-emerald-500/25 ring-2 ring-emerald-500/25 shadow-md"
         : "border border-emerald-500/15 bg-emerald-500/10 shadow-sm";
@@ -2407,37 +2433,40 @@ export function initBeneficiaries() {
         : "border border-blue-500/15 bg-blue-500/10 shadow-sm";
 
       return `
-        <div class="batch-card cursor-pointer group flex flex-col justify-between p-5 rounded-none border ${pal.border} ${pal.bg} bg-opacity-40 dark:bg-opacity-10 backdrop-blur-md shadow-md hover:shadow-xl hover:scale-[1.02] hover:skew-x-[-6deg] active:scale-95 transition-all duration-300 min-h-[160px]" data-batch-id="${colId}">
-          <div class="flex flex-col justify-between h-full w-full group-hover:skew-x-[6deg] transition-all duration-300">
+        <div class="batch-card cursor-pointer group flex flex-col justify-between p-5 rounded-xl border border-spes-blue/15 dark:border-white/10 bg-white dark:bg-spes-dark-primary shadow-sm hover:shadow-md hover:border-spes-blue/30 dark:hover:border-spes-yellow/30 active:scale-[0.99] transition-all duration-200 min-h-[170px] ${cardHighlightClass}" data-batch-id="${colId}">
+          <div class="flex flex-col justify-between h-full w-full">
             <div class="flex items-start justify-between">
-              <div class="space-y-1">
-                <h3 class="font-montserrat font-black text-base uppercase tracking-wider ${pal.text}">${title}</h3>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider ${pal.bg} ${pal.text} border ${pal.border}">${title}</span>
+                  ${matchBadge}
+                </div>
                 <p class="text-xs font-bold text-spes-black/50 dark:text-white/40 uppercase tracking-widest">${totalCount.toLocaleString()} of ${capacityTarget.toLocaleString()} beneficiaries</p>
               </div>
-            ${canManageCurrentOffice() ? `<button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-none bg-white/60 shadow-inner transition-all hover:scale-110 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spes-blue active:scale-95 dark:bg-black/20 dark:hover:bg-black/40 dark:focus-visible:outline-spes-yellow pointer-events-auto"
+            ${canManageCurrentOffice() ? `<button type="button" class="btn-edit-batch relative z-20 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-spes-blue/10 bg-spes-blue/5 shadow-none transition-all hover:scale-105 hover:bg-spes-blue/10 active:scale-95 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 pointer-events-auto"
               data-batch-id="${escHtml(String(colId))}" data-batch-name="${escHtml(String(batchName || ""))}"
               aria-label="Edit ${escHtml(title)}" title="Edit Batch">
-              <svg class="pointer-events-none h-4 w-4 ${pal.text}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="pointer-events-none h-4 w-4 text-spes-blue dark:text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
             </button>` : `<span class="text-[0.5625rem] font-black uppercase tracking-wider text-spes-black/30 dark:text-white/30">Read only</span>`}
           </div>
           <div class="mt-4 grid grid-cols-3 gap-2" aria-label="${totalCount} total beneficiaries: ${newCount} new and ${spesBabyCount} SPES Baby">
-            <div class="rounded-none border border-black/5 bg-white/55 px-2 py-2 text-center shadow-sm dark:border-white/10 dark:bg-black/15">
+            <div class="rounded-lg border border-spes-blue/10 bg-spes-blue/5 dark:border-white/10 dark:bg-white/5 px-2 py-2 text-center shadow-none">
               <div class="text-sm font-black text-spes-black dark:text-white">${totalCount}</div>
               <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-spes-black/45 dark:text-white/45">Total</div>
             </div>
-            <div class="rounded-none px-2 py-2 text-center transition-all ${newStatClass}" aria-current="${activeStatusMode === "NEW" ? "true" : "false"}">
+            <div class="rounded-lg px-2 py-2 text-center transition-all ${newStatClass}" aria-current="${activeStatusMode === "NEW" ? "true" : "false"}">
               <div class="text-sm font-black text-emerald-700 dark:text-emerald-400">${newCount}</div>
               <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-emerald-700/70 dark:text-emerald-400/70">New</div>
             </div>
-            <div class="rounded-none px-2 py-2 text-center transition-all ${spesBabyStatClass}" aria-current="${activeStatusMode === "SPES BABY" ? "true" : "false"}">
+            <div class="rounded-lg px-2 py-2 text-center transition-all ${spesBabyStatClass}" aria-current="${activeStatusMode === "SPES BABY" ? "true" : "false"}">
               <div class="text-sm font-black text-blue-700 dark:text-blue-300">${spesBabyCount}</div>
               <div class="mt-0.5 text-[0.5rem] font-black uppercase tracking-wider text-blue-700/70 dark:text-blue-300/70">SPES Baby</div>
             </div>
           </div>
-          <div class="space-y-2 mt-3">
-            <div class="w-full bg-black/5 dark:bg-white/5 rounded-full h-2 overflow-hidden">
+          <div class="space-y-1.5 mt-3.5">
+            <div class="w-full bg-spes-blue/10 dark:bg-white/10 rounded-full h-2 overflow-hidden">
               <div class="${progColor} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
             </div>
             <div class="flex justify-between items-center text-[0.625rem] font-black uppercase tracking-wider text-spes-black/60 dark:text-white/50">
