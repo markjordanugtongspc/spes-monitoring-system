@@ -723,15 +723,18 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
     })
     .join("");
 
-  if (select.dataset.listenerBound !== "true") {
-    select.dataset.listenerBound = "true";
-    select.addEventListener("change", (e) => {
-      const val = Number(e.target.value);
-      rowsPerPage = val > 0 ? val : (count || 10);
-      currentPage = 1;
-      if (typeof onChangeCallback === "function") onChangeCallback();
-    });
-  }
+  const targetVal = String(rowsPerPage >= count && options.includes(count) ? count : (options.includes(rowsPerPage) ? rowsPerPage : (options[0] || 10)));
+  select.value = targetVal;
+
+  const handlePageSizeChange = (e) => {
+    const val = Number(e.target.value);
+    rowsPerPage = val > 0 ? val : (count || 10);
+    currentPage = 1;
+    if (typeof onChangeCallback === "function") onChangeCallback();
+  };
+
+  select.onchange = handlePageSizeChange;
+  select.oninput = handlePageSizeChange;
 }
 // --- END: DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
 
@@ -2471,12 +2474,35 @@ function initGlobalSearch(user) {
     "9215": "Total, Spes, SND, 9215",
     "9218": "Total, Spes, Pantar, 9218",
     "9213": "Total, Spes, Sapad, 9213",
-    "9217": "Total, Spes, Balo-i, 9217",
     lg: "Total, Spes, LGU",
     lgu: "Total, Spes, LGU",
-    colg: "College Level",
-    colleg: "College Level",
-    grde: "Grade 11"
+    colg: "Total, Spes, College",
+    colleg: "Total, Spes, College",
+    kolehiyo: "Total, Spes, College",
+    "1st yr": "Total, Spes, 1st Year",
+    "first yr": "Total, Spes, 1st Year",
+    "1st year": "Total, Spes, 1st Year",
+    "2nd yr": "Total, Spes, 2nd Year",
+    "second yr": "Total, Spes, 2nd Year",
+    "2nd year": "Total, Spes, 2nd Year",
+    "3rd yr": "Total, Spes, 3rd Year",
+    "third yr": "Total, Spes, 3rd Year",
+    "3rd year": "Total, Spes, 3rd Year",
+    "4th yr": "Total, Spes, 4th Year",
+    "fourth yr": "Total, Spes, 4th Year",
+    "4th year": "Total, Spes, 4th Year",
+    "senior high": "Total, Spes, Senior Highschool",
+    "high school": "Total, Spes, Highschool",
+    "junior high": "Total, Spes, Highschool",
+    "grade 7": "Total, Spes, Grade 7",
+    "grade 8": "Total, Spes, Grade 8",
+    "grade 9": "Total, Spes, Grade 9",
+    "grade 10": "Total, Spes, Grade 10",
+    "grade 11": "Total, Spes, Grade 11",
+    "grade 12": "Total, Spes, Grade 12",
+    grde: "Grade 11",
+    gradweyt: "Total, Spes, College Graduate",
+    graduate: "Total, Spes, College Graduate"
   };
 
   const syncGlobalClearVisibility = () => {
@@ -2793,22 +2819,32 @@ function initGlobalSearch(user) {
       const requestedYear = cleanQuery.match(/\b(?:19|20)\d{2}\b/)?.[0] || null;
       const requestedMonth = Object.entries(searchMonths).find(([term]) => new RegExp(`\\b${term}\\b`, "i").test(cleanQuery))?.[1] || null;
 
-      // ── 4. Detect Education Levels / Grades ──
+      // ── 4. Detect Education Levels & Categories ──
+      // Categories:
+      // Highschool (educ_id: 4) -> Grade 7 (8), Grade 8 (9), Grade 9 (10), Grade 10 (11)
+      // Senior Highschool (educ_id: 1) -> Grade 11 (1), Grade 12 (2)
+      // College Level (educ_id: 3) -> 1st Year (3), 2nd Year (4), 3rd Year (5), 4th Year (6)
+      // College Graduate (educ_id: 2) -> 4th Year / Graduate
+      // OSY (educ_id: 5) -> Out of school youth
       const eduLevelPatternMap = [
-        { test: /GRADE\s*7|\bG7\b|\bGR7\b/i, pattern: "Grade 7" },
-        { test: /GRADE\s*8|\bG8\b|\bGR8\b/i, pattern: "Grade 8" },
-        { test: /GRADE\s*9|\bG9\b|\bGR9\b/i, pattern: "Grade 9" },
-        { test: /GRADE\s*10|\bG10\b|\bGR10\b/i, pattern: "Grade 10" },
-        { test: /GRADE\s*11|\bG11\b|\bGR11\b|\bSHS\b/i, pattern: "Grade 11" },
-        { test: /GRADE\s*12|\bG12\b|\bGR12\b/i, pattern: "Grade 12" },
-        { test: /1ST\s*YEAR|FIRST\s*YEAR|\b1ST\s*YR\b|FRESHMAN/i, pattern: "1st Year" },
-        { test: /2ND\s*YEAR|SECOND\s*YEAR|\b2ND\s*YR\b|SOPHOMORE/i, pattern: "2nd Year" },
-        { test: /3RD\s*YEAR|THIRD\s*YEAR|\b3RD\s*YR\b/i, pattern: "3rd Year" },
-        { test: /4TH\s*YEAR|FOURTH\s*YEAR|\b4TH\s*YR\b|GRADUATING/i, pattern: "4th Year" },
-        { test: /\bGRADE\b|\bGRADES\b/i, pattern: "Grade", grouped: true },
-        { test: /\bCOLLEGE\b|\bCOLLEGIATE\b|\bTERTIARY\b|\bUNIVERSITY\b/i, pattern: "College Level", isCat: true },
-        { test: /\bSENIOR\s*HIGHSCHOOL\b|\bSHS\b/i, pattern: "Senior Highschool", isCat: true },
-        { test: /\bVOCATIONAL\b|\bTVET\b|\bTECH.?VOC\b|\bTESDA\b/i, pattern: "Vocational", isCat: true }
+        { test: /\bGRADE\s*7\b|\bG7\b|\bGR7\b/i, levelId: 8, educId: 4, name: "Grade 7", type: "level" },
+        { test: /\bGRADE\s*8\b|\bG8\b|\bGR8\b/i, levelId: 9, educId: 4, name: "Grade 8", type: "level" },
+        { test: /\bGRADE\s*9\b|\bG9\b|\bGR9\b/i, levelId: 10, educId: 4, name: "Grade 9", type: "level" },
+        { test: /\bGRADE\s*10\b|\bG10\b|\bGR10\b/i, levelId: 11, educId: 4, name: "Grade 10", type: "level" },
+        { test: /\bGRADE\s*11\b|\bG11\b|\bGR11\b/i, levelId: 1, educId: 1, name: "Grade 11", type: "level" },
+        { test: /\bGRADE\s*12\b|\bG12\b|\bGR12\b/i, levelId: 2, educId: 1, name: "Grade 12", type: "level" },
+        
+        { test: /\b1ST\s*YEAR\b|\bFIRST\s*YEAR\b|\b1ST\s*YR\b|\bFRESHMAN\b/i, levelId: 3, educId: 3, name: "1st Year", type: "level" },
+        { test: /\b2ND\s*YEAR\b|\bSECOND\s*YEAR\b|\b2ND\s*YR\b|\bSOPHOMORE\b/i, levelId: 4, educId: 3, name: "2nd Year", type: "level" },
+        { test: /\b3RD\s*YEAR\b|\bTHIRD\s*YEAR\b|\b3RD\s*YR\b|\bJUNIOR\b/i, levelId: 5, educId: 3, name: "3rd Year", type: "level" },
+        { test: /\b4TH\s*YEAR\b|\bFOURTH\s*YEAR\b|\b4TH\s*YR\b|\bSENIOR\b/i, levelIds: [6], educIds: [2, 3], name: "4th Year / Graduate", type: "level_or_grad" },
+
+        { test: /\bSENIOR\s*HIGHSCHOOL\b|\bSENIOR\s*HIGH\b|\bSHS\b/i, educIds: [1], levelIds: [1, 2], name: "Senior Highschool", type: "group" },
+        { test: /\bJUNIOR\s*HIGHSCHOOL\b|\bJUNIOR\s*HIGH\b|\bJHS\b|\bHIGHSCHOOL\b|\bHIGH\s*SCHOOL\b/i, educIds: [4], levelIds: [8, 9, 10, 11], name: "Highschool", type: "group" },
+        { test: /\bCOLLEGE\s*GRADUATE\b|\bGRADUATE\b|\bALUMNI\b/i, educIds: [2], levelIds: [6], name: "College Graduate", type: "group" },
+        { test: /\bCOLLEGE\s*LEVEL\b|\bCOLLEGE\b|\bCOLLEGIATE\b|\bTERTIARY\b|\bUNIVERSITY\b/i, educIds: [2, 3], levelIds: [3, 4, 5, 6], name: "College", type: "group" },
+        { test: /\bOSY\b|\bOUT\s*OF\s*SCHOOL\s*YOUTH\b/i, educIds: [5], levelIds: [], name: "OSY", type: "group" },
+        { test: /\bVOCATIONAL\b|\bTVET\b|\bTECH.?VOC\b|\bTESDA\b/i, educIds: [], levelIds: [], name: "Vocational", type: "vocation" }
       ];
 
       const detectedEdu = eduLevelPatternMap.find((item) => item.test.test(cleanQuery));
@@ -2952,14 +2988,15 @@ function initGlobalSearch(user) {
 
           // Education level filter
           if (detectedEdu) {
-            if (detectedEdu.isCat) {
-              const { data: educRows } = await supabase.from("education").select("id").ilike("name", `%${detectedEdu.pattern}%`);
-              const ids = (educRows || []).map((r) => r.id);
-              if (ids.length) benQuery = benQuery.in("educ_id", ids);
-            } else {
-              const { data: lvlRows } = await supabase.from("education_levels").select("id").ilike("name", `%${detectedEdu.pattern}%`);
-              const ids = (lvlRows || []).map((r) => r.id);
-              if (ids.length) benQuery = benQuery.in("education_level_id", ids);
+            if (detectedEdu.type === "level") {
+              benQuery = benQuery.eq("education_level_id", detectedEdu.levelId);
+            } else if (detectedEdu.type === "level_or_grad") {
+              benQuery = benQuery.or(`education_level_id.eq.6,educ_id.eq.2`);
+            } else if (detectedEdu.type === "group") {
+              const parts = [];
+              if (detectedEdu.educIds?.length) parts.push(`educ_id.in.(${detectedEdu.educIds.join(",")})`);
+              if (detectedEdu.levelIds?.length) parts.push(`education_level_id.in.(${detectedEdu.levelIds.join(",")})`);
+              if (parts.length) benQuery = benQuery.or(parts.join(","));
             }
           }
 
@@ -3040,7 +3077,7 @@ function initGlobalSearch(user) {
       if (hasBabyToken) activeFacets.push("SPES Baby");
       if (requestedYear) activeFacets.push(`Year: ${requestedYear}`);
       if (requestedMonth) activeFacets.push(`Month: ${requestedMonth}`);
-      if (detectedEdu) activeFacets.push(`Level: ${detectedEdu.pattern}`);
+      if (detectedEdu) activeFacets.push(detectedEdu.type === "level" ? `Level: ${detectedEdu.name}` : `Education: ${detectedEdu.name}`);
 
       renderSmartSearchDashboard(rawQuery, beneficiaries, staffResults, activeFacets);
     } catch (err) {

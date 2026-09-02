@@ -1415,9 +1415,19 @@ export function initBeneficiaries() {
       .trim();
   }
 
-  function isIliganLguOffice(name) {
+  function isIliganLguOffice(item) {
+    if (!item) return false;
+    const name = typeof item === "string" ? item : (item.office || item.offices?.name || "");
+    const officeId = Number(item.office_id || item.offices?.id);
+    if (officeId === 1) return true;
     const normalized = normalizeOfficeName(name);
-    return normalized === "lgu iligan" || normalized.includes("city government of iligan");
+    return (
+      normalized === "iligan city" ||
+      normalized === "iligan" ||
+      normalized === "lgu iligan" ||
+      normalized.includes("iligan city") ||
+      normalized.includes("city government of iligan")
+    );
   }
 
   function pinSystemAdministratorFirst(items) {
@@ -1432,11 +1442,14 @@ export function initBeneficiaries() {
       }
     };
 
+    // 1. Administrator first
     takeFirst((item) =>
       String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
-      String(item.username || "").trim().toLowerCase() === "admin"
+      String(item.username || "").trim().toLowerCase() === "admin" ||
+      String(item.role || "").toLowerCase().includes("admin")
     );
-    takeFirst((item) => isIliganLguOffice(item.office));
+    // 2. ILIGAN CITY second (below Administrator)
+    takeFirst((item) => isIliganLguOffice(item));
 
     return [
       ...pinned,
@@ -2569,15 +2582,18 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
     })
     .join("");
 
-  if (select.dataset.listenerBound !== "true") {
-    select.dataset.listenerBound = "true";
-    select.addEventListener("change", (e) => {
-      const val = Number(e.target.value);
-      rowsPerPage = val > 0 ? val : (count || 10);
-      currentPage = 1;
-      if (typeof onChangeCallback === "function") onChangeCallback();
-    });
-  }
+  const targetVal = String(rowsPerPage >= count && options.includes(count) ? count : (options.includes(rowsPerPage) ? rowsPerPage : (options[0] || 10)));
+  select.value = targetVal;
+
+  const handlePageSizeChange = (e) => {
+    const val = Number(e.target.value);
+    rowsPerPage = val > 0 ? val : (count || 10);
+    currentPage = 1;
+    if (typeof onChangeCallback === "function") onChangeCallback();
+  };
+
+  select.onchange = handlePageSizeChange;
+  select.oninput = handlePageSizeChange;
 }
 // --- END: BENEFICIARIES DYNAMIC PAGE SIZE FORMULA ---
 

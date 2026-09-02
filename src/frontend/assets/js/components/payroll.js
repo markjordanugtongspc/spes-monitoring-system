@@ -1428,15 +1428,18 @@ function renderPayrollPageSizeSelector(totalCount, onChangeCallback) {
     })
     .join("");
 
-  if (select.dataset.listenerBound !== "true") {
-    select.dataset.listenerBound = "true";
-    select.addEventListener("change", (e) => {
-      const val = Number(e.target.value);
-      rowsPerPage = val > 0 ? val : (count || 10);
-      currentPage = 1;
-      if (typeof onChangeCallback === "function") onChangeCallback();
-    });
-  }
+  const targetVal = String(rowsPerPage >= count && options.includes(count) ? count : (options.includes(rowsPerPage) ? rowsPerPage : (options[0] || 10)));
+  select.value = targetVal;
+
+  const handlePageSizeChange = (e) => {
+    const val = Number(e.target.value);
+    rowsPerPage = val > 0 ? val : (count || 10);
+    currentPage = 1;
+    if (typeof onChangeCallback === "function") onChangeCallback();
+  };
+
+  select.onchange = handlePageSizeChange;
+  select.oninput = handlePageSizeChange;
 }
 // --- END: PAYROLL DYNAMIC PAGE SIZE FORMULA (MIN, MED, MAX) ---
 

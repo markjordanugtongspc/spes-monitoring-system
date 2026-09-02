@@ -375,7 +375,7 @@ function resolveEducation(rawLevel, participantCategory, categories, levels) {
       : { error: `Education category "${name}" was not found.` };
   };
 
-  if (rawKey.includes("COLLEGE GRADUATE")) return categoryOnly("College Graduate");
+  if (rawKey.includes("COLLEGE GRADUATE") || rawKey === "GRADUATE") return categoryOnly("College Graduate");
   if (rawKey === "OSY") return categoryOnly("OSY");
 
   const canonicalName = canonicalLevelName(rawLevel);
