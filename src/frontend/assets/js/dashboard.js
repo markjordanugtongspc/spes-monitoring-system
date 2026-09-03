@@ -4,6 +4,7 @@
  * All data comes from Supabase. No mock fallbacks.
  */
 import "../styles/tailwind.css";
+import "./components/analytics.js";
 import "flowbite";
 import ApexCharts from "apexcharts";
 import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut } from "./rbac/guard.js";

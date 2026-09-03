@@ -6,6 +6,7 @@
  */
 import "../styles/tailwind.css";
 import "./components/flow-debugger.js";
+import "./components/analytics.js";
 import "flowbite";
 import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut, getSession } from "./rbac/guard.js";
 import { initThemeToggle } from "./components/theme-toggle.js";

@@ -1,5 +1,6 @@
 import "../styles/tailwind.css";
 import "./components/flow-debugger.js";
+import "./components/analytics.js";
 import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut } from "./rbac/guard.js";
 import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";

@@ -1,5 +1,6 @@
 // --- START: BENEFICIARY CSV TOOL IMPORTS ---
 import "../assets/styles/tailwind.css";
+import "../assets/js/components/analytics.js";
 import "flowbite";
 import { initFlowbite } from "flowbite";
 import { requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";

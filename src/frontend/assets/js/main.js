@@ -1,5 +1,12 @@
 import "../styles/tailwind.css";
 import "flowbite";
+import { inject } from "@vercel/analytics";
+import "./components/analytics.js";
+
+// --- FUNCTION: INITIALIZE VERCEL ANALYTICS (START) ---
+inject();
+// --- FUNCTION: INITIALIZE VERCEL ANALYTICS (END) ---
+
 import { initThemeToggle } from "./components/theme-toggle";
 import { initMobileSplashDrawer } from "./components/drawer";
 import { initAutoYear } from "./components/year";
