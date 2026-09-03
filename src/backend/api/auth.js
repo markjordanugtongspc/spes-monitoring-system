@@ -242,7 +242,9 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     }
 
     const list = (data ?? []).map((s) => {
-      const sp = s.staff_permissions ?? {};
+      const sp = Array.isArray(s.staff_permissions)
+        ? (s.staff_permissions[0] ?? {})
+        : (s.staff_permissions ?? {});
       return {
         id:              s.id,
         created_at:      s.created_at,

@@ -448,6 +448,20 @@ export function setupSortFiltration({
       
       applySortAndFilter();
     },
+    // --- START: Active Sort Getter & Setter ---
+    getActiveSort() {
+      return activeSort;
+    },
+    setSort(sortVal) {
+      activeSort = sortVal || "none";
+      onSortChange?.(activeSort);
+      if (dropdownSort) {
+        dropdownSort.querySelectorAll("[data-sort-val]").forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+        dropdownSort.querySelector(`[data-sort-val="${activeSort}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+      }
+      applySortAndFilter();
+    },
+    // --- END: Active Sort Getter & Setter ---
     setFilter(key, val) {
       if (val === "all" || val === null || val === undefined) {
         delete activeFilters[key];

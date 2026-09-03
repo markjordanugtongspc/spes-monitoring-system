@@ -89,7 +89,9 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
     return null;
   }
 
-  const sp = staff.staff_permissions ?? {};
+  const sp = Array.isArray(staff.staff_permissions)
+    ? (staff.staff_permissions[0] ?? {})
+    : (staff.staff_permissions ?? {});
   const isAdmin = Number(staff.role_id) === 1;
   const hasPerm = Boolean(sp[requiredPerm]) || Boolean(sp["edit_users"]);
   const isAuthorized = !staff.archive_at && staff.approved && (isAdmin || hasPerm);

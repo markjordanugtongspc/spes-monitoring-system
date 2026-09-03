@@ -4,6 +4,7 @@
  * Migrated from flat `perm_*` columns on `staffs`.
  */
 import { supabase } from "./supabase.js";
+import { invalidateImplementorCache } from "./auth.js";
 
 const CACHE_KEY = "spes_staff_permissions_v4";
 const CACHE_TTL = 10 * 60 * 1000;
@@ -59,6 +60,9 @@ function _writeCache(data) {
 export function invalidatePermissionsCache() {
   try {
     sessionStorage.removeItem(CACHE_KEY);
+  } catch {}
+  try {
+    invalidateImplementorCache();
   } catch {}
 }
 // --- END: INVALIDATE PERMISSIONS CACHE ---

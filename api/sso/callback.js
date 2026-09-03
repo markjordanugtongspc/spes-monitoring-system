@@ -62,7 +62,9 @@ export default async function handler(req, res) {
       return renderError(res, 'The assigned SPES account is no longer active.');
     }
 
-    const sp = staff.staff_permissions ?? {};
+    const sp = Array.isArray(staff.staff_permissions)
+      ? (staff.staff_permissions[0] ?? {})
+      : (staff.staff_permissions ?? {});
     const displaySession = {
       id: Number(staff.id),
       username: staff.username,

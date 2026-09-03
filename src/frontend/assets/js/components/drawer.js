@@ -1,4 +1,4 @@
-import { Drawer } from "flowbite";
+import { Drawer, Datepicker, initDatepickers } from "flowbite";
 import {
   animateMobileSplashVisibility,
   applyDrawerAnimationClasses
@@ -247,7 +247,6 @@ export function initImplementorsDrawer() {
     // --- START: POPULATE USERNAME, STARTED (replaces address/blood_type) ---
     const usernameEl = document.getElementById("drawer-impl-username");
     if (usernameEl) usernameEl.textContent = implementorData.username || "---";
-
     // Format started_at as readable date-time or "N/A"
     const startedEl = document.getElementById("drawer-impl-started");
     if (startedEl) {
@@ -262,28 +261,75 @@ export function initImplementorsDrawer() {
       }
     }
 
+    // Format ended_at as readable date-time or "N/A"
+    const endedEl = document.getElementById("drawer-impl-ended");
+    if (endedEl) {
+      if (implementorData.ended_at) {
+        const d = new Date(implementorData.ended_at);
+        endedEl.textContent = d.toLocaleString("en-PH", {
+          month: "short", day: "numeric", year: "numeric",
+          hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila"
+        });
+      } else {
+        endedEl.textContent = "N/A";
+      }
+    }
     // Wire copy buttons
     const btnCopyUsername = document.getElementById("btn-copy-username");
     const btnCopyEmail = document.getElementById("btn-copy-email");
+    const btnCopyPhone = document.getElementById("btn-copy-phone");
+
+    // START: _flashCopied - Temporarily swap button icon to checkmark then restore
     const _flashCopied = (btn) => {
-      const svg = btn.querySelector("svg");
-      if (!svg) return;
-      const orig = svg.outerHTML;
-      svg.outerHTML; // no-op, just reference
-      btn.innerHTML = `<svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
-      btn.title = "Copied!";
-      setTimeout(() => { btn.innerHTML = orig; btn.title = btn.dataset.originalTitle || btn.title; }, 1500);
+      const origHTML = btn.innerHTML;
+      const origTitle = btn.getAttribute("title") || "";
+      btn.innerHTML = `<svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`;
+      btn.setAttribute("title", "Copied!");
+      setTimeout(() => { 
+        btn.innerHTML = origHTML; 
+        btn.setAttribute("title", origTitle);
+      }, 1500);
     };
+    // END: _flashCopied
+
+    // START: copy-username-handler - Copy username to clipboard
     if (btnCopyUsername) {
       btnCopyUsername.onclick = () => {
-        navigator.clipboard.writeText(implementorData.username || "").then(() => _flashCopied(btnCopyUsername)).catch(() => {});
+        navigator.clipboard.writeText(implementorData.username || "")
+          .then(() => {
+            _flashCopied(btnCopyUsername);
+            flowDebug("DRAWER", "Copied username to clipboard");
+          })
+          .catch(() => {});
       };
     }
+    // END: copy-username-handler
+
+    // START: copy-email-handler - Copy email address to clipboard
     if (btnCopyEmail) {
       btnCopyEmail.onclick = () => {
-        navigator.clipboard.writeText(implementorData.email || "").then(() => _flashCopied(btnCopyEmail)).catch(() => {});
+        navigator.clipboard.writeText(implementorData.email || "")
+          .then(() => {
+            _flashCopied(btnCopyEmail);
+            flowDebug("DRAWER", "Copied email to clipboard");
+          })
+          .catch(() => {});
       };
     }
+    // END: copy-email-handler
+
+    // START: copy-phone-handler - Copy phone number to clipboard
+    if (btnCopyPhone) {
+      btnCopyPhone.onclick = () => {
+        navigator.clipboard.writeText(implementorData.phone || "")
+          .then(() => {
+            _flashCopied(btnCopyPhone);
+            flowDebug("DRAWER", "Copied phone to clipboard");
+          })
+          .catch(() => {});
+      };
+    }
+    // END: copy-phone-handler
     // --- END: POPULATE USERNAME, EMAIL-DETAIL, STARTED ---
 
     document.getElementById("drawer-impl-religion").textContent = implementorData.religion || "—";
@@ -407,6 +453,35 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
   const tabPublic = document.getElementById("aif-tab-public");
   const tabAcademic = document.getElementById("aif-tab-academic");
+
+  // --- START: Approval Status Radio Helper ---
+  const approvedToggle = document.getElementById("aif-approved");
+  const radioApproved = document.getElementById("aif-radio-approved");
+  const radioPending = document.getElementById("aif-radio-pending");
+  const labelApproved = document.getElementById("aif-label-approved");
+  const labelPending = document.getElementById("aif-label-pending");
+
+  const setApprovalStatusUI = (isApproved) => {
+    if (approvedToggle) approvedToggle.checked = Boolean(isApproved);
+    if (radioApproved) radioApproved.checked = Boolean(isApproved);
+    if (radioPending) radioPending.checked = !isApproved;
+
+    if (labelApproved && labelPending) {
+      if (isApproved) {
+        labelApproved.className = "cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-emerald-500 bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 dark:bg-emerald-500/25 px-4 py-2.5 text-sm font-black shadow-md ring-2 ring-emerald-500/30 transition-all opacity-100 scale-[1.01]";
+        labelPending.className = "cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-gray-200 dark:border-white/10 bg-transparent text-gray-500 dark:text-gray-400 px-4 py-2.5 text-sm font-bold opacity-60 transition-all hover:opacity-100 hover:border-amber-400/50";
+      } else {
+        labelPending.className = "cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200 dark:bg-amber-500/25 px-4 py-2.5 text-sm font-black shadow-md ring-2 ring-amber-500/30 transition-all opacity-100 scale-[1.01]";
+        labelApproved.className = "cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-gray-200 dark:border-white/10 bg-transparent text-gray-500 dark:text-gray-400 px-4 py-2.5 text-sm font-bold opacity-60 transition-all hover:opacity-100 hover:border-emerald-400/50";
+      }
+    }
+  };
+
+  radioApproved?.addEventListener("change", () => setApprovalStatusUI(true));
+  radioPending?.addEventListener("change", () => setApprovalStatusUI(false));
+  labelApproved?.addEventListener("click", () => setApprovalStatusUI(true));
+  labelPending?.addEventListener("click", () => setApprovalStatusUI(false));
+  // --- END: Approval Status Radio Helper ---
 
   let allOffices = [];
   let activeOfficeTab = "public"; // "public" or "academic"
@@ -681,9 +756,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       if (endedInput) endedInput.value = _fmtDateInput(staffData.ended_at);
       // --- END: POPULATE DEPLOYMENT DATES ---
       
-      const approvedToggle = document.getElementById("aif-approved");
-      approvedToggle.checked = Boolean(staffData.approved);
-      approvedToggle.disabled = false;
+      setApprovalStatusUI(Boolean(staffData.approved));
     } else {
       currentEditId = null;
       titleEl.textContent = "Add Implementor";
@@ -694,9 +767,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       pwdInput.required = true;
       confirmPwdInput.required = true;
       
-      const approvedToggle = document.getElementById("aif-approved");
-      approvedToggle.checked = false;
-      approvedToggle.disabled = false;
+      setApprovalStatusUI(false);
       
       const officeSearch = document.getElementById("aif-office-search");
       if (officeSearch) officeSearch.value = "";
@@ -720,6 +791,94 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
         drawerEl.classList.remove("sm:translate-x-full");
         drawerEl.classList.add("sm:translate-x-0");
       }
+      try {
+        const startInput = document.getElementById("aif-started-at");
+        const endInput = document.getElementById("aif-ended-at");
+
+        // START: _hideAllDatepickers - Force close all datepicker dropdowns
+        const _hideAllDatepickers = () => {
+          document.querySelectorAll(".datepicker").forEach(dp => {
+            dp.classList.add("hidden");
+            dp.classList.remove("active");
+            dp.style.display = "none";
+          });
+        };
+        // END: _hideAllDatepickers
+
+        // START: _initSingleDatepicker - Initialize Flowbite Datepicker with mutual exclusion
+        const _initSingleDatepicker = (inp, otherInp, label) => {
+          if (!inp || inp._flowbiteDatepicker) return;
+          try {
+            inp._flowbiteDatepicker = new Datepicker(inp, {
+              autohide: true,
+              todayBtn: true,
+              clearBtn: true,
+              format: "mm/dd/yyyy",
+            });
+
+            // Mutual exclusion: when this input is focused/clicked, hide the other datepicker
+            const _onFocus = () => {
+              if (otherInp?._flowbiteDatepicker) {
+                try { otherInp._flowbiteDatepicker.hide(); } catch {}
+              }
+              document.querySelectorAll(".datepicker").forEach(dp => {
+                if (otherInp && dp.parentElement === otherInp.parentElement) {
+                  dp.classList.add("hidden");
+                  dp.classList.remove("active");
+                  dp.style.display = "none";
+                }
+              });
+            };
+            inp.addEventListener("focus", _onFocus);
+            inp.addEventListener("click", _onFocus);
+            inp._dpMutualHandler = _onFocus;
+          } catch (initErr) {
+            flowDebugError(`Failed to init ${label} datepicker`, initErr);
+          }
+        };
+        // END: _initSingleDatepicker
+
+        _initSingleDatepicker(startInput, endInput, "start");
+        _initSingleDatepicker(endInput, startInput, "end");
+
+        // START: datepicker-scroll-autohide - Automatically hide datepicker dropdowns when user scrolls the drawer
+        const drawerScrollEl = drawerEl.querySelector(".overflow-y-auto") || drawerEl;
+        const _onDrawerScroll = () => {
+          _hideAllDatepickers();
+        };
+        drawerScrollEl.addEventListener("scroll", _onDrawerScroll, { passive: true });
+        drawerEl._dpScrollEl = drawerScrollEl;
+        drawerEl._dpScrollHandler = _onDrawerScroll;
+        // END: datepicker-scroll-autohide
+
+        drawerEl._destroyDatepickers = () => {
+          if (drawerEl._dpScrollEl && drawerEl._dpScrollHandler) {
+            drawerEl._dpScrollEl.removeEventListener("scroll", drawerEl._dpScrollHandler);
+            drawerEl._dpScrollEl = null;
+            drawerEl._dpScrollHandler = null;
+          }
+          [startInput, endInput].forEach(inp => {
+            if (inp?._dpMutualHandler) {
+              inp.removeEventListener("focus", inp._dpMutualHandler);
+              inp.removeEventListener("click", inp._dpMutualHandler);
+              inp._dpMutualHandler = null;
+            }
+            if (inp?._flowbiteDatepicker) {
+              try {
+                inp._flowbiteDatepicker.hide();
+                inp._flowbiteDatepicker.destroy?.();
+              } catch {}
+              inp._flowbiteDatepicker = null;
+            }
+          });
+          _hideAllDatepickers();
+        };
+
+        flowDebugSuccess("Datepickers initialized with mutual exclusion and solid theme");
+
+      } catch (err) {
+        flowDebugError("Failed to init datepickers", err);
+      }
     });
     document.body.classList.add("overflow-hidden");
     flowDebugSuccess("Add/Edit Implementor drawer opened", {
@@ -732,6 +891,27 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     flowDebug("DRAWER", "Closing Add/Edit Implementor drawer", {
       implementorId: currentEditId,
     });
+
+    // START: closeDrawer-datepicker-cleanup - Hide open datepickers, destroy instances, and remove document listeners
+    if (drawerEl._hideAllDatepickers) {
+      try { drawerEl._hideAllDatepickers(); } catch {}
+    }
+    if (drawerEl._destroyDatepickers) {
+      try { drawerEl._destroyDatepickers(); } catch {}
+      drawerEl._destroyDatepickers = null;
+    }
+    if (drawerEl._dpOutsideClick) {
+      document.removeEventListener("mousedown", drawerEl._dpOutsideClick);
+      drawerEl._dpOutsideClick = null;
+    }
+    if (drawerEl._dpEscKey) {
+      document.removeEventListener("keydown", drawerEl._dpEscKey);
+      drawerEl._dpEscKey = null;
+    }
+    drawerEl._hideAllDatepickers = null;
+    flowDebug("DATEPICKER", "Datepicker cleanup complete on drawer close");
+    // END: closeDrawer-datepicker-cleanup
+
     drawerEl.setAttribute("aria-hidden", "true");
     if (_isMobile()) {
       drawerEl.classList.remove("translate-y-0");

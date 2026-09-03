@@ -436,20 +436,219 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
 
   if (!values.length) return _showNoData(el, "No deployment history available");
 
+  // Expose toggle helper on window so tooltip/card HTML can interactively expand/collapse implementors list
+  if (!window._spesToggleChartOfficeImpl) {
+    window._spesToggleChartOfficeImpl = function(btn) {
+      if (!btn) return;
+      const parent = btn.closest(".spes-chart-office-card");
+      if (!parent) return;
+      const target = parent.querySelector(".spes-chart-impl-collapse");
+      const icon = parent.querySelector(".spes-chart-impl-icon");
+      if (!target) return;
+      const isHidden = target.classList.contains("hidden");
+      target.classList.toggle("hidden", !isHidden);
+      if (icon) {
+        icon.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+      }
+    };
+  }
+
+  // Ensure interactive floating card container exists in chart wrapper
+  const chartWrapper = el.closest("#deployment-chart-wrapper") || el.parentElement;
+  let detailsCard = chartWrapper ? chartWrapper.querySelector("#deployment-details-card") : null;
+  if (!detailsCard && chartWrapper) {
+    detailsCard = document.createElement("div");
+    detailsCard.id = "deployment-details-card";
+    detailsCard.className = "hidden absolute z-30 pointer-events-auto";
+    detailsCard.style.cssText = "top:4px;right:4px;";
+    chartWrapper.appendChild(detailsCard);
+  }
+
+  let _activeCardIndex = null;
+  let _isCardPinned = false;
+  let _hideTimeout = null;
+
+  window._spesCloseDeploymentCard = function() {
+    _isCardPinned = false;
+    _activeCardIndex = null;
+    if (detailsCard) {
+      detailsCard.classList.add("hidden");
+    }
+  };
+
+  const _renderDetailsCardHTML = (dataIndex, isPinned) => {
+    const month = categories[dataIndex];
+    const val = values[dataIndex];
+    const officesObj = monthOffices[month] || {};
+    const officeList = Object.values(officesObj);
+    const isDark = document.documentElement.classList.contains("dark");
+    const aggregateRange = officeList.length > 0 ? officeList[0].dateRange : month;
+
+    const renderedOffices = officeList.map(item => {
+      const implCount = item.implementors.length;
+      const implBadges = item.implementors.map(name => `
+        <span class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold ${isDark ? 'bg-white/10 text-white/90 border border-white/10' : 'bg-white text-slate-700 border border-slate-200'} shadow-xs">
+          <svg class="h-2.5 w-2.5 text-spes-blue dark:text-spes-yellow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+          <span>${esc(name)}</span>
+        </span>
+      `).join("");
+
+      return `
+        <div class="spes-chart-office-card rounded-lg p-2 border space-y-1.5 transition-all ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50/95 border-slate-200'}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-extrabold text-[11px] truncate max-w-[130px] ${isDark ? 'text-white' : 'text-slate-900'}" title="${esc(item.officeName)}">${esc(item.officeName)}</span>
+            <span class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow' : 'bg-amber-100 text-amber-900 border border-amber-300/60'}">${esc(item.dateRange)}</span>
+          </div>
+          <button type="button" onclick="window._spesToggleChartOfficeImpl(this)" class="cursor-pointer w-full flex items-center justify-between gap-1 text-[10px] font-bold rounded px-1.5 py-1 transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-spes-yellow' : 'bg-blue-50/80 hover:bg-blue-100 text-spes-blue'}">
+            <span class="flex items-center gap-1">
+              <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span>Implementors (${implCount})</span>
+            </span>
+            <svg class="spes-chart-impl-icon h-3 w-3 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          <div class="spes-chart-impl-collapse hidden flex flex-wrap gap-1 pt-1 border-t ${isDark ? 'border-white/10' : 'border-slate-200/80'}">
+            ${implBadges}
+          </div>
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="${_tooltipClass()} w-[280px] max-w-[calc(100vw-2rem)] pointer-events-auto select-none ring-1 ring-black/10 transition-all">
+        <div class="flex items-center justify-between mb-1.5">
+          <div>
+            <div class="font-extrabold text-[11px] leading-tight ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">${esc(aggregateRange)}</div>
+            <div class="flex items-center gap-1.5 text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/60' : 'text-slate-500'}">
+              <span>${officeList.length} office${officeList.length !== 1 ? 's' : ''}</span>
+              <span class="opacity-40">·</span>
+              <span>${val} implementor${val !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0 ms-2">
+            ${isPinned ? `<span class="inline-flex items-center rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[8px] font-bold">📌 Pinned</span>` : `<span class="text-[8px] ${isDark ? 'text-white/30' : 'text-slate-400'}">click bar to pin</span>`}
+            <button type="button" onclick="window._spesCloseDeploymentCard()" class="cursor-pointer ms-1 ${isDark ? 'text-white/40 hover:text-rose-400' : 'text-slate-400 hover:text-rose-500'} text-sm font-bold leading-none transition-colors" title="Close">✕</button>
+          </div>
+        </div>
+        <div class="border-t ${isDark ? 'border-white/8' : 'border-slate-200'} pt-1.5 space-y-1.5 pe-0.5">
+          ${renderedOffices}
+        </div>
+      </div>`;
+  };
+
+  // START: _showCard - Show/pin the deployment details card with expandable height and 3-zone bar positioning
+  const _showCard = (index, pin = false, barEvent = null) => {
+    if (index === undefined || index < 0 || index >= categories.length) return;
+    if (_hideTimeout) {
+      clearTimeout(_hideTimeout);
+      _hideTimeout = null;
+    }
+    _activeCardIndex = index;
+    if (pin) _isCardPinned = true;
+    if (!detailsCard) return;
+
+    detailsCard.innerHTML = _renderDetailsCardHTML(index, _isCardPinned);
+    detailsCard.classList.remove("hidden");
+
+    // START: smart-bar-aware-positioning
+    // Determine positioning zone:
+    // - Left side (first ~35% of bars)  -> show on LEFT SIDE (left: 4px)
+    // - Right side (last ~35% of bars)  -> show on RIGHT SIDE (right: 4px)
+    // - Middle bars (center area)       -> show centered at TOP (left: 50%, translateX(-50%))
+    requestAnimationFrame(() => {
+      const totalBars = categories.length;
+      let posMode = "center"; // "left" | "right" | "center"
+
+      if (totalBars <= 1) {
+        posMode = "center";
+      } else if (totalBars === 2) {
+        posMode = index === 0 ? "left" : "right";
+      } else {
+        const ratio = index / (totalBars - 1);
+        if (ratio < 0.38) {
+          posMode = "left";
+        } else if (ratio > 0.62) {
+          posMode = "right";
+        } else {
+          posMode = "center";
+        }
+      }
+
+      if (posMode === "left") {
+        detailsCard.style.left = "4px";
+        detailsCard.style.right = "auto";
+        detailsCard.style.transform = "none";
+        detailsCard.style.top = "4px";
+      } else if (posMode === "right") {
+        detailsCard.style.left = "auto";
+        detailsCard.style.right = "4px";
+        detailsCard.style.transform = "none";
+        detailsCard.style.top = "4px";
+      } else {
+        // Center / Top
+        detailsCard.style.left = "50%";
+        detailsCard.style.right = "auto";
+        detailsCard.style.transform = "translateX(-50%)";
+        detailsCard.style.top = "4px";
+      }
+    });
+    // END: smart-bar-aware-positioning
+  };
+  // END: _showCard
+
+  const _scheduleHide = () => {
+    if (_isCardPinned) return;
+    _hideTimeout = setTimeout(() => {
+      if (!_isCardPinned && detailsCard) {
+        detailsCard.classList.add("hidden");
+      }
+    }, 250);
+  };
+
+  if (detailsCard) {
+    detailsCard.addEventListener("mouseenter", () => {
+      if (_hideTimeout) {
+        clearTimeout(_hideTimeout);
+        _hideTimeout = null;
+      }
+    });
+    detailsCard.addEventListener("mouseleave", () => {
+      _scheduleHide();
+    });
+  }
+
   const _c1b = new ApexCharts(el, {
     series: [{ name: "Deployed Implementors", data: values }],
     chart: {
       type: "bar",
-      height: 220,
+      height: 230,
       toolbar: { show: false },
       fontFamily: "Inter, sans-serif",
-      parentHeightOffset: 0
+      parentHeightOffset: 0,
+      events: {
+        dataPointMouseEnter: function(event, chartContext, config) {
+          if (config?.dataPointIndex !== undefined) {
+            _showCard(config.dataPointIndex, false);
+          }
+        },
+        dataPointMouseLeave: function(event, chartContext, config) {
+          _scheduleHide();
+        },
+        dataPointSelection: function(event, chartContext, config) {
+          if (config?.dataPointIndex !== undefined && config.dataPointIndex >= 0) {
+            _showCard(config.dataPointIndex, true);
+          }
+        },
+        click: function(event, chartContext, config) {
+          if (config?.dataPointIndex !== undefined && config.dataPointIndex >= 0) {
+            _showCard(config.dataPointIndex, true);
+          }
+        }
+      }
     },
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "40%",
-        borderRadius: 2,
+        columnWidth: "38%",
+        borderRadius: 3,
         dataLabels: { position: "top" }
       }
     },
@@ -470,64 +669,28 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
       axisTicks: { show: true, color: "rgba(100, 116, 139, 0.15)" }
     },
     yaxis: {
-      labels: { style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" } }
+      min: 0,
+      max: (max) => Math.max(max + 1, 3),
+      forceNiceScale: true,
+      labels: {
+        style: { fontSize: "9px", fontWeight: 800, colors: "#64748b" },
+        formatter: (val) => Math.floor(val) === val ? val : ""
+      }
     },
     grid: {
       show: true,
       borderColor: "rgba(100, 116, 139, 0.1)",
       strokeDashArray: 4,
+      padding: { top: 15, bottom: 5 },
       xaxis: { lines: { show: false } },
       yaxis: { lines: { show: true } }
     },
     tooltip: {
-      theme: "dark",
-      followCursor: false,
-      intersect: false,
-      shared: false,
-      offsetY: -6,
-      marker: { show: false },
-      x: { show: false },
-      fixed: { enabled: false },
-      custom: function({ series, seriesIndex, dataPointIndex, w }) {
-        const month = categories[dataPointIndex];
-        const val = series[seriesIndex][dataPointIndex];
-        const officesObj = monthOffices[month] || {};
-        const officeList = Object.values(officesObj);
-
-        const isDark = document.documentElement.classList.contains("dark");
-
-        const renderedOffices = officeList.slice(0, 4).map(item => {
-          const implListStr = item.implementors.join(", ");
-          return `
-            <div class="rounded-md p-2 border space-y-1.5 ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50/95 border-slate-200'}">
-              <div class="flex items-center justify-between gap-2">
-                <span class="font-extrabold text-[11px] truncate max-w-[140px] ${isDark ? 'text-white' : 'text-slate-900'}" title="${esc(item.officeName)}">${esc(item.officeName)}</span>
-                <span class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow' : 'bg-amber-100 text-amber-900 border border-amber-300/60'}">${esc(item.dateRange)}</span>
-              </div>
-              <div class="flex items-center gap-1.5 text-[10px] ${isDark ? 'text-white/80' : 'text-slate-700 font-semibold'}">
-                <svg class="h-3.5 w-3.5 text-spes-blue shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                <span class="truncate max-w-[210px] ${isDark ? 'text-white/90' : 'text-slate-800 font-medium'}" title="${esc(implListStr)}">${esc(implListStr)}</span>
-              </div>
-            </div>`;
-        }).join("");
-
-        const moreOffices = officeList.length > 4 ? `<div class="text-[9px] font-bold text-center pt-0.5 ${isDark ? 'text-white/50' : 'text-slate-500'}">+${officeList.length - 4} more offices</div>` : "";
-
-        return `
-          <div class="${_tooltipClass()} min-w-[230px] max-w-[320px]">
-            <div class="flex items-center justify-between border-b pb-1.5 mb-2 ${isDark ? 'border-white/10' : 'border-slate-200'}">
-              <span class="font-black text-[11px] uppercase tracking-wider ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">${month} Deployments</span>
-              <span class="rounded-full px-2 py-0.5 text-[9px] font-black ${isDark ? 'bg-spes-blue/30 text-white' : 'bg-spes-blue/10 text-spes-blue'}">${val} Total</span>
-            </div>
-            <div class="space-y-1.5">
-              ${renderedOffices}
-              ${moreOffices}
-            </div>
-          </div>`;
-      }
+      enabled: false
     }
   });
   _c1b.render();
+  _xChart.deployments = _c1b;
   _xChart.deployments = _c1b;
 
   // Timeline summary below the column chart

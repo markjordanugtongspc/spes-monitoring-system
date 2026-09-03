@@ -12,7 +12,7 @@ import { getOfficeAccessScope } from "./rbac/scope.js";
 import { supabase } from "../../../backend/api/supabase.js";
 import { fetchImplementorList, invalidateImplementorCache } from "../../../backend/api/auth.js";
 import { updateStaff, archiveStaff, unarchiveStaff, fetchOffices, fetchRoles, updateStaffApprovalBulk } from "../../../backend/api/staff.js";
-import { fetchStaffPermissions, upsertStaffPermissions } from "../../../backend/api/permissions.js";
+import { fetchStaffPermissions, upsertStaffPermissions, fetchAllStaffPermissions, invalidatePermissionsCache } from "../../../backend/api/permissions.js";
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initFlowbite } from "flowbite";
@@ -525,14 +525,17 @@ async function loadImplementorTable(userRole) {
       office: staff.office,
     })),
   });
-  // The implementor query includes each staff account's individual permissions.
+  // The implementor query and direct staff_permissions query ensure exact state
   if (isRolesPage) {
-    allStaffPermissions = Object.fromEntries(
-      data.map((staff) => [staff.id, staff.permissions || {}])
-    );
+    const { data: directPermissions = {} } = await fetchAllStaffPermissions({ forceRefresh: true });
+    allStaffPermissions = {
+      ...Object.fromEntries(data.map((staff) => [staff.id, staff.permissions || {}])),
+      ...(directPermissions || {}),
+    };
   }
 
-  setupSortFiltration({
+  // --- START: Table Header Sorting & Sort Comparator ---
+  const filterController = setupSortFiltration({
     tableId:         "staff-table-body",
     btnSortId:       "btn-sort-staff",
     dropdownSortId:  "dropdown-sort-staff",
@@ -542,11 +545,55 @@ async function loadImplementorTable(userRole) {
     defaultFilters:  { archiveStatus: "active" },
     initialSort: isRolesPage ? "name-asc" : "none",
     sortComparator: (a, b, sort) => {
-      if (sort !== "name-asc" && sort !== "name-desc") return 0;
-      const aValue = isRolesPage ? String(a.full_name || "") : String(a.office || "");
-      const bValue = isRolesPage ? String(b.full_name || "") : String(b.office || "");
-      const result = aValue.localeCompare(bValue, undefined, { sensitivity: "base" });
-      return sort === "name-desc" ? -result : result;
+      if (!sort || sort === "none") return 0;
+      const [field, direction] = sort.split("-");
+      let result = 0;
+
+      if (field === "id") {
+        result = (Number(a.id) || 0) - (Number(b.id) || 0);
+      } else if (field === "name") {
+        const aName = isRolesPage ? String(a.full_name || "") : String(a.full_name || a.name || "");
+        const bName = isRolesPage ? String(b.full_name || "") : String(b.full_name || b.name || "");
+        result = aName.localeCompare(bName, undefined, { sensitivity: "base" });
+      } else if (field === "office") {
+        const aOffice = String(a.office || "");
+        const bOffice = String(b.office || "");
+        result = aOffice.localeCompare(bOffice, undefined, { sensitivity: "base" });
+      } else if (field === "role") {
+        const aRole = String(a.role || "");
+        const bRole = String(b.role || "");
+        result = aRole.localeCompare(bRole, undefined, { sensitivity: "base" });
+      } else if (field === "status") {
+        const aStatus = String(a.status || (a.approved ? "approved" : "pending") || "");
+        const bStatus = String(b.status || (b.approved ? "approved" : "pending") || "");
+        result = aStatus.localeCompare(bStatus, undefined, { sensitivity: "base" });
+      }
+
+      return direction === "desc" ? -result : result;
+    },
+    onSortChange: (newSort) => {
+      // Update caret styling across all column header sort buttons
+      document.querySelectorAll("thead button[data-sort-col]").forEach((btn) => {
+        const col = btn.getAttribute("data-sort-col");
+        const caret = btn.querySelector(".sort-caret");
+        if (!caret) return;
+
+        if (newSort.startsWith(`${col}-`)) {
+          btn.classList.add("text-spes-blue", "dark:text-spes-yellow");
+          caret.classList.remove("text-gray-400");
+          caret.classList.add("text-spes-blue", "dark:text-spes-yellow");
+          if (newSort === `${col}-asc`) {
+            caret.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />';
+          } else {
+            caret.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />';
+          }
+        } else {
+          btn.classList.remove("text-spes-blue", "dark:text-spes-yellow");
+          caret.classList.add("text-gray-400");
+          caret.classList.remove("text-spes-blue", "dark:text-spes-yellow");
+          caret.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />';
+        }
+      });
     },
     onRender: (filtered) => {
       allImplementors = pinSystemAdministratorFirst(
@@ -581,6 +628,24 @@ async function loadImplementorTable(userRole) {
       }
     }
   });
+
+  // Attach click listeners to table column sort buttons
+  document.querySelectorAll("thead button[data-sort-col]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const col = btn.getAttribute("data-sort-col");
+      const currentSort = filterController?.getActiveSort ? filterController.getActiveSort() : "none";
+      let nextSort = `${col}-asc`;
+
+      if (currentSort === `${col}-asc`) {
+        nextSort = `${col}-desc`;
+      } else if (currentSort === `${col}-desc`) {
+        nextSort = "none";
+      }
+
+      filterController?.setSort(nextSort);
+    });
+  });
+  // --- END: Table Header Sorting & Sort Comparator ---
 
   renderPaginatedTable(userRole);
 
@@ -823,20 +888,87 @@ function updateStaffPageIndicators(totalCount) {
 }
 // --- END: UPDATE STAFF PAGE INDICATORS WITH LEFT-1, 2, INPUT, AND RIGHT-LAST ---
 
+// --- START: SYNC STAFF ACTION CONTROLS (BULK ACTIONS BAR & DROPDOWN) ---
 function syncStaffActionDropdown() {
+  const bulkActions = document.getElementById("staff-bulk-actions");
   const actionButton = document.getElementById("staff-action-dropdown-btn");
-  if (!actionButton) return;
-  const hasSelection = selectedPermissionStaffIds.size > 0 || document.querySelector(".staff-row-checkbox:checked") !== null;
-  const isMobile = window.matchMedia("(max-width: 639px)").matches;
-  actionButton.classList.toggle("hidden", isMobile && !hasSelection);
-  actionButton.setAttribute("aria-hidden", String(isMobile && !hasSelection));
-  if (isMobile && !hasSelection) document.getElementById("staff-action-dropdown")?.classList.add("hidden");
+  const checkedBoxes = [...document.querySelectorAll(".staff-row-checkbox:checked")];
+  const hasSelection = selectedPermissionStaffIds.size > 0 || checkedBoxes.length > 0;
+
+  // Implementors page: standalone action buttons bar
+  if (bulkActions) {
+    if (hasSelection) {
+      bulkActions.classList.remove("hidden");
+      bulkActions.classList.add("flex");
+
+      const btnApprove = document.getElementById("btn-approve-selected-impl");
+      const btnDisapprove = document.getElementById("btn-disapprove-selected-impl");
+      const btnArchive = document.getElementById("btn-archive-selected-impl");
+
+      const isSingleSelection = checkedBoxes.length === 1;
+
+      if (isSingleSelection) {
+        const row = checkedBoxes[0].closest("tr");
+        let itemData = {};
+        try {
+          itemData = JSON.parse(decodeURIComponent(row?.getAttribute("data-impl-info") || "{}"));
+        } catch {}
+
+        const isApproved = itemData.approved === true || String(itemData.status || "").toUpperCase() === "APPROVED";
+        const isPending = !isApproved;
+        const isArchived = Boolean(itemData.archive_at || itemData.archived_at);
+
+        // Helper to set button active or disabled
+        const setBtnState = (btn, isDisabled) => {
+          if (!btn) return;
+          btn.disabled = isDisabled;
+          if (isDisabled) {
+            btn.classList.add("opacity-40", "cursor-not-allowed", "pointer-events-none");
+            btn.classList.remove("hover:shadow-lg", "active:scale-95", "cursor-pointer");
+          } else {
+            btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
+            btn.classList.add("cursor-pointer", "hover:shadow-lg", "active:scale-95");
+          }
+        };
+
+        // If single selection:
+        // - Already approved: Approve button is disabled/low-opacity, Disapprove is active
+        // - Already pending/disapproved: Disapprove is disabled/low-opacity, Approve is active
+        // - Already archived: Archive is disabled/low-opacity
+        setBtnState(btnApprove, isApproved);
+        setBtnState(btnDisapprove, isPending);
+        setBtnState(btnArchive, isArchived);
+      } else {
+        // Multiple selections: enable all buttons and let the user prioritize action
+        [btnApprove, btnDisapprove, btnArchive].forEach((btn) => {
+          if (!btn) return;
+          btn.disabled = false;
+          btn.classList.remove("opacity-40", "cursor-not-allowed", "pointer-events-none");
+          btn.classList.add("cursor-pointer", "hover:shadow-lg", "active:scale-95");
+        });
+      }
+    } else {
+      bulkActions.classList.add("hidden");
+      bulkActions.classList.remove("flex");
+    }
+  }
+
+  // Roles page / dropdown-based actions
+  if (actionButton) {
+    const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    actionButton.classList.toggle("hidden", isMobile && !hasSelection);
+    actionButton.setAttribute("aria-hidden", String(isMobile && !hasSelection));
+    if (isMobile && !hasSelection) document.getElementById("staff-action-dropdown")?.classList.add("hidden");
+  }
 }
 
 function initStaffActionDropdown() {
   const actionButton = document.getElementById("staff-action-dropdown-btn");
   const actionMenu = document.getElementById("staff-action-dropdown");
-  if (!actionButton || !actionMenu || actionButton.dataset.outsideCloseBound === "true") return;
+  if (!actionButton || !actionMenu || actionButton.dataset.outsideCloseBound === "true") {
+    syncStaffActionDropdown();
+    return;
+  }
   actionButton.dataset.outsideCloseBound = "true";
   actionButton.addEventListener("click", (event) => {
     event.preventDefault();
@@ -851,6 +983,7 @@ function initStaffActionDropdown() {
   window.addEventListener("resize", syncStaffActionDropdown);
   syncStaffActionDropdown();
 }
+// --- END: SYNC STAFF ACTION CONTROLS (BULK ACTIONS BAR & DROPDOWN) ---
 
 function positionStaffActionMenu(menu, trigger) {
   const viewportPadding = 8;
@@ -1029,24 +1162,16 @@ function renderTableRows(implementors, userRole) {
 
   if (isRolesPage) {
     tbody.innerHTML = implementors.map(s => {
-      const staffPerms = allStaffPermissions[s.id] || {};
-      const isAdmin   = s.role === "ADMIN";
+      const staffId = Number(s.id);
+      const staffPerms = allStaffPermissions[staffId] || allStaffPermissions[s.id] || allStaffPermissions[String(s.id)] || s.permissions || {};
+      const isAdmin   = s.role === "ADMIN" || s.role === "admin" || Number(s.role_id) === 1;
       const canSelectPermissions = !isAdmin && s.approved === true;
 
       const hasPerm = (perm) => {
         if (isAdmin) return true;
         if (!s.approved) return false;
-        const colMap = {
-          "users:view": "view_users",
-          "offices:view-other": "view_other_offices",
-          "analytics:view-global": "view_global_stats",
-          "users:create": "create_users",
-          "users:edit": "edit_users",
-          "users:delete": "delete_users",
-          "reports:export": "export_reports",
-          "payroll:view": "view_payroll",
-        };
-        return Boolean(staffPerms[colMap[perm]]);
+        const col = PERM_COL_MAP[perm];
+        return Boolean(staffPerms[col] ?? s.permissions?.[col]);
       };
 
       const displayRole = s.role.charAt(0).toUpperCase() + s.role.slice(1).toLowerCase();
@@ -1628,6 +1753,17 @@ function updatePermissionSelectionControls() {
     selectAll.disabled = eligibleIds.size === 0;
     selectAll.checked = eligibleIds.size > 0 && count === eligibleIds.size;
     selectAll.indeterminate = count > 0 && count < eligibleIds.size;
+  }
+
+  const bulkActions = document.getElementById("staff-bulk-actions");
+  if (bulkActions) {
+    if (count > 0) {
+      bulkActions.classList.remove("hidden");
+      bulkActions.classList.add("flex");
+    } else {
+      bulkActions.classList.add("hidden");
+      bulkActions.classList.remove("flex");
+    }
   }
 
   for (const id of ["btn-bulk-grant", "btn-bulk-revoke"]) {

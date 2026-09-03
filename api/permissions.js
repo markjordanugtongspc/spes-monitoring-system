@@ -70,13 +70,34 @@ export default async function handler(req, res) {
       });
     }
 
+    // Fetch existing staff_permissions to merge and avoid wiping other columns on partial upsert
+    const { data: existingRows } = await supabase
+      .from("staff_permissions")
+      .select("*")
+      .in("staff_id", staffIds);
+
+    const existingMap = new Map((existingRows || []).map((r) => [Number(r.staff_id), r]));
+
     // UPSERT into staff_permissions (one row per staff_id, UNIQUE constraint)
     const now = new Date().toISOString();
-    const rows = staffIds.map((id) => ({
-      staff_id: id,
-      ...permPayload,
-      updated_at: now,
-    }));
+    const rows = staffIds.map((id) => {
+      const existing = existingMap.get(Number(id)) || {};
+      const merged = {};
+      for (const field of ALLOWED_FIELDS) {
+        if (field in permPayload) {
+          merged[field] = Boolean(permPayload[field]);
+        } else if (field in existing) {
+          merged[field] = Boolean(existing[field]);
+        } else {
+          merged[field] = false;
+        }
+      }
+      return {
+        staff_id: id,
+        ...merged,
+        updated_at: now,
+      };
+    });
 
     const { data, error } = await supabase
       .from("staff_permissions")

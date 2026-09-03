@@ -64,62 +64,60 @@
             <!-- Table Header Bar (Premium Gradient) -->
             <div
               class="relative flex flex-col gap-3 bg-gradient-to-r from-spes-blue to-[#002878] p-4 border-b border-white/10 rounded-t-xl overflow-visible sm:flex-row sm:items-center sm:justify-between">
-              <!-- Action Dropdown (admin only) -->
-              <div data-permission="users:delete" class="relative order-2 hidden w-full sm:order-none sm:w-auto">
-                <button id="staff-action-dropdown-btn" data-dropdown-placement="bottom"
-                  class="hidden flex w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-lg sm:w-auto sm:flex-row sm:gap-0 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
-                  type="button">
-                  Action
-                  <svg class="ms-0 h-4 w-4 text-white sm:ms-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
+              <!-- Left Side: Bulk Action Buttons (admin only, hidden by default, displayed when checkboxes selected) -->
+              <div id="staff-bulk-actions" data-permission="users:delete" class="hidden order-2 sm:order-1 flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button id="btn-approve-selected-impl" type="button"
+                  class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white px-3.5 py-1.5 text-xs font-bold shadow-md shadow-emerald-950/20 backdrop-blur-md hover:shadow-lg hover:shadow-emerald-500/20 active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all border border-emerald-400/30"
+                  title="Approve Selected">
+                  <svg class="h-3.5 w-3.5 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                   </svg>
+                  <span>Approve</span>
                 </button>
-                <div id="staff-action-dropdown"
-                  class="fixed z-[110] hidden w-[min(14rem,calc(100vw-1rem))] rounded-lg border border-spes-blue/15 bg-spes-white shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
-                  <ul class="p-1.5 text-sm font-medium text-spes-black/80 dark:text-spes-white/80">
-                    <li><button id="btn-approve-selected-impl"
-                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Approve Selected</button></li>
-                    <li><button id="btn-disapprove-selected-impl"
-                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Disapprove Selected</button></li>
-                    <li><button id="btn-archive-selected-impl"
-                        class="cursor-pointer inline-flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow">Archive
-                        Selected</button></li>
-                  </ul>
-                </div>
+                <button id="btn-disapprove-selected-impl" type="button"
+                  class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-amber-600/90 hover:bg-amber-500 text-white px-3.5 py-1.5 text-xs font-bold shadow-md shadow-amber-950/20 backdrop-blur-md hover:shadow-lg hover:shadow-amber-500/20 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-400/50 transition-all border border-amber-400/30"
+                  title="Disapprove Selected">
+                  <svg class="h-3.5 w-3.5 text-amber-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  <span>Disapprove</span>
+                </button>
+                <button id="btn-archive-selected-impl" type="button"
+                  class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white px-3.5 py-1.5 text-xs font-bold shadow-md shadow-rose-950/20 backdrop-blur-md hover:shadow-lg hover:shadow-rose-500/20 active:scale-95 focus:outline-none focus:ring-2 focus:ring-rose-400/50 transition-all border border-rose-400/30"
+                  title="Archive Selected">
+                  <svg class="h-3.5 w-3.5 text-rose-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Archive</span>
+                </button>
               </div>
 
-              <!-- Controls: Sort + Filter (left) | Search (right, grows) -->
-              <div class="order-1 flex w-full min-w-0 items-center gap-2 overflow-visible relative z-30 sm:order-none sm:w-auto">
-                <!-- Sort Dropdown Trigger -->
-                <div class="relative shrink-0">
-                  <button id="btn-sort-staff" data-dropdown-placement="bottom-end"
-                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
-                    title="Sort">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              <!-- Right Side: Search + Filter (always anchored to the right) -->
+              <div class="order-1 sm:order-2 sm:ms-auto flex w-full min-w-0 items-center justify-end gap-2 overflow-visible relative z-30 sm:w-auto">
+                <!-- Search Input Container (Medium width sizing) -->
+                <div class="relative w-full min-w-0 sm:w-64 md:w-80">
+                  <div class="pointer-events-none absolute inset-y-0 start-0 z-10 flex items-center ps-3">
+                    <svg class="h-4 w-4 text-white/70" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"/>
+                      <path fill-rule="evenodd" d="M21.707 21.707a1 1 0 0 1-1.414 0l-3.5-3.5a1 1 0 0 1 1.414-1.414l3.5 3.5a1 1 0 0 1 0 1.414Z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <input type="text" id="staff-search-input"
+                    class="block h-9 w-full rounded-lg border border-white/20 bg-white/10 py-1.5 pe-7 ps-9 text-xs text-white placeholder-white/60 outline-none transition-all placeholder:text-xs hover:bg-white/15 focus:border-white focus:bg-white/20 focus:ring-1 focus:ring-white backdrop-blur-sm"
+                    placeholder="Search Implementor..." />
+                  <button type="button" id="staff-search-clear"
+                    class="cursor-pointer absolute inset-y-0 end-0 hidden items-center pe-2.5 text-white/60 hover:text-white"
+                    title="Clear search">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                  <div id="dropdown-sort-staff"
-                    class="fixed z-[110] hidden w-48 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-1rem)] overflow-y-auto rounded-lg border border-spes-blue/15 bg-spes-white p-1.5 text-xs font-semibold text-spes-black/80 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary">
-                    <button data-sort-val="none"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 dark:text-spes-white text-left text-spes-blue font-bold">Default</button>
-                    <button data-sort-val="name-asc"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 dark:text-spes-white/80 text-left">Name
-                      (A-Z)</button>
-                    <button data-sort-val="name-desc"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 dark:text-spes-white/80 text-left">Name
-                      (Z-A)</button>
-                    <button data-sort-val="id-asc"
-                      class="cursor-pointer flex w-full items-center rounded-md p-2 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/8 dark:text-spes-white/80 text-left">ID
-                      Number</button>
-                  </div>
                 </div>
 
-                <!-- Filter Dropdown Trigger -->
-                <div class="order-3 relative shrink-0 sm:order-2">
-                  <button id="btn-filter-staff" data-dropdown-placement="bottom-start"
-                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-all"
+                <!-- Filter Dropdown Trigger (Swapped to right of search, bottom-end placement) -->
+                <div class="relative shrink-0">
+                  <button id="btn-filter-staff" data-dropdown-placement="bottom-end"
+                    class="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm transition-all shadow-sm"
                     title="Filter">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -127,7 +125,7 @@
                     </svg>
                   </button>
                   <div id="dropdown-filter-staff"
-                    class="absolute left-1/2 top-full z-[100] mt-2 w-[min(14rem,calc(100vw-1rem))] -translate-x-1/2 sm:left-0 sm:w-48 sm:translate-x-0 hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary max-h-[calc(100vh-1rem)] overflow-y-auto text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
+                    class="absolute right-0 top-full z-[100] mt-2 w-[min(14rem,calc(100vw-1rem))] hidden rounded-lg border border-spes-blue/15 bg-spes-white p-2 shadow-xl dark:border-spes-white/10 dark:bg-spes-dark-primary max-h-[calc(100vh-1rem)] overflow-y-auto text-xs font-semibold text-spes-black/80 dark:text-spes-white/80">
                     <span
                       class="block px-2 py-1 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Role</span>
                     <button data-filter-key="role" data-filter-val="all"
@@ -143,16 +141,13 @@
                     <button data-filter-key="status" data-filter-val="all"
                       class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white text-left text-spes-blue font-bold">All
                       Statuses</button>
-                    <button data-filter-key="status" data-filter-val="ONLINE"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Online</button>
-                    <button data-filter-key="status" data-filter-val="OFFLINE"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Offline</button>
-                    <button data-filter-key="status" data-filter-val="BUSY"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Busy</button>
+                    <button data-filter-key="status" data-filter-val="APPROVED"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Approved</button>
+                    <button data-filter-key="status" data-filter-val="PENDING"
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Pending</button>
 
                     <span
-                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive
-                      Status</span>
+                      class="block px-2 py-1 mt-2 text-[9px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow">Archive</span>
                     <button data-filter-key="archiveStatus" data-filter-val="active"
                       class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white text-left text-spes-blue font-bold">Active
                       Only</button>
@@ -160,32 +155,18 @@
                       class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Archived
                       Only</button>
                     <button data-filter-key="archiveStatus" data-filter-val="all"
-                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">Show
-                      All</button>
+                      class="cursor-pointer flex w-full items-center rounded-md p-1.5 hover:bg-spes-blue/8 hover:text-spes-blue dark:hover:bg-white/10 dark:text-spes-white/80 text-left">All
+                      Implementors</button>
                   </div>
-                </div>
-
-                <!-- Search (wider default and medium sizing) -->
-                <div class="relative flex-1 sm:w-80 md:w-[420px] sm:shrink-0">
-                  <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3.5">
-                    <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-width="2"
-                        d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-                    </svg>
-                  </div>
-                  <input type="text" id="staff-search-input"
-                    class="block w-full rounded-lg border border-white/20 bg-white/10 py-2.5 pe-4 ps-10 text-sm text-white placeholder:text-white/60 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/25 transition-all"
-                    placeholder="Search implementor..." />
                 </div>
               </div>
             </div>
 
-            <!-- Scrollable Table Wrapper -->
-            <div id="staff-table-wrapper" class="overflow-x-auto w-full select-none sm:select-auto transition-all">
-              <!-- Table -->
-              <table class="w-full min-w-[750px] lg:min-w-full text-sm text-spes-black/70 dark:text-spes-white/70">
+            <!-- Table Container -->
+            <div class="overflow-x-auto min-h-[300px] border-b border-gray-100 dark:border-white/5">
+              <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
                 <thead
-                  class="border-b border-t border-spes-blue/10 bg-spes-blue/4 text-xs font-semibold uppercase tracking-wider text-spes-black/60 dark:border-spes-white/10 dark:bg-spes-white/4 dark:text-spes-white/50">
+                  class="bg-gray-50/75 dark:bg-spes-dark-secondary/50 text-xs uppercase text-gray-700 dark:text-gray-300 font-bold border-b border-gray-100 dark:border-white/5 select-none">
                   <tr>
                     <th scope="col" class="p-4 text-center w-4">
                       <div class="flex items-center justify-center">
@@ -193,11 +174,46 @@
                           class="h-4 w-4 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow">
                       </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left">ID No.</th>
-                    <th scope="col" class="px-6 py-3 text-left">Name</th>
-                    <th scope="col" class="px-6 py-3 text-center">Office</th>
-                    <th scope="col" class="px-6 py-3 text-center">Role</th>
-                    <th scope="col" class="px-6 py-3 text-center">Status</th>
+                    <th scope="col" class="px-6 py-3 text-left">
+                      <button type="button" data-sort-col="id" class="cursor-pointer inline-flex items-center gap-1.5 group text-inherit uppercase font-bold hover:text-spes-blue dark:hover:text-spes-yellow transition-colors">
+                        <span>ID No.</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-transform sort-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                      </button>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left">
+                      <button type="button" data-sort-col="name" class="cursor-pointer inline-flex items-center gap-1.5 group text-inherit uppercase font-bold hover:text-spes-blue dark:hover:text-spes-yellow transition-colors">
+                        <span>Name</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-transform sort-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                      </button>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center">
+                      <button type="button" data-sort-col="office" class="cursor-pointer inline-flex items-center justify-center gap-1.5 group text-inherit uppercase font-bold hover:text-spes-blue dark:hover:text-spes-yellow transition-colors mx-auto">
+                        <span>Office</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-transform sort-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                      </button>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center">
+                      <button type="button" data-sort-col="role" class="cursor-pointer inline-flex items-center justify-center gap-1.5 group text-inherit uppercase font-bold hover:text-spes-blue dark:hover:text-spes-yellow transition-colors mx-auto">
+                        <span>Role</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-transform sort-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                      </button>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-center">
+                      <button type="button" data-sort-col="status" class="cursor-pointer inline-flex items-center justify-center gap-1.5 group text-inherit uppercase font-bold hover:text-spes-blue dark:hover:text-spes-yellow transition-colors mx-auto">
+                        <span>Status</span>
+                        <svg class="w-3.5 h-3.5 text-gray-400 group-hover:text-spes-blue dark:group-hover:text-spes-yellow transition-transform sort-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        </svg>
+                      </button>
+                    </th>
                     <th scope="col" class="px-6 py-3 text-center">Action</th>
                   </tr>
                 </thead>
@@ -432,13 +448,20 @@
                   class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Username</span>
                 <div class="flex items-center gap-1.5 min-w-0">
                   <span class="text-sm text-spes-black dark:text-spes-white truncate max-w-[180px]" id="drawer-impl-username">---</span>
+                  <!-- Copy Username Button + Flowbite Tooltip (placement: left) -->
                   <button type="button" id="btn-copy-username"
-                    class="cursor-pointer shrink-0 flex items-center justify-center rounded-md p-1 text-spes-black/40 hover:text-spes-blue hover:bg-spes-blue/8 dark:text-spes-white/40 dark:hover:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors"
-                    title="Copy username">
+                    data-tooltip-target="tooltip-copy-username"
+                    data-tooltip-placement="left"
+                    class="cursor-pointer shrink-0 flex items-center justify-center rounded-md p-1 text-spes-black/40 hover:text-spes-blue hover:bg-spes-blue/8 dark:text-spes-white/40 dark:hover:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </button>
+                  <div id="tooltip-copy-username" role="tooltip"
+                    class="absolute z-[200] invisible inline-block px-2.5 py-1.5 text-[10px] font-bold text-white bg-spes-blue rounded-md shadow-lg opacity-0 tooltip dark:bg-spes-yellow dark:text-spes-dark-primary">
+                    Copy username
+                    <div class="tooltip-arrow" data-popper-arrow></div>
+                  </div>
                 </div>
               </div>
               <!-- Started field (replaces Address) -->
@@ -447,6 +470,13 @@
                   class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Started</span>
                 <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
                   id="drawer-impl-started">N/A</span>
+              </div>
+              <!-- Ended field -->
+              <div class="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 dark:border-white/5">
+                <span
+                  class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Ended</span>
+                <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
+                  id="drawer-impl-ended">N/A</span>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
@@ -495,19 +525,42 @@
                   Address</span>
                 <div class="flex items-center gap-1.5 min-w-0 max-w-[280px]">
                   <span class="text-sm font-normal text-spes-blue dark:text-spes-yellow break-all text-wrap" id="drawer-impl-email">---</span>
+                  <!-- Copy Email Button + Flowbite Tooltip (placement: left) -->
                   <button type="button" id="btn-copy-email"
-                    class="cursor-pointer shrink-0 flex items-center justify-center rounded-md p-1 text-spes-black/40 hover:text-spes-blue hover:bg-spes-blue/8 dark:text-spes-white/40 dark:hover:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors"
-                    title="Copy email">
+                    data-tooltip-target="tooltip-copy-email"
+                    data-tooltip-placement="left"
+                    class="cursor-pointer shrink-0 flex items-center justify-center rounded-md p-1 text-spes-black/40 hover:text-spes-blue hover:bg-spes-blue/8 dark:text-spes-white/40 dark:hover:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors">
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </button>
+                  <div id="tooltip-copy-email" role="tooltip"
+                    class="absolute z-[200] invisible inline-block px-2.5 py-1.5 text-[10px] font-bold text-white bg-spes-blue rounded-md shadow-lg opacity-0 tooltip dark:bg-spes-yellow dark:text-spes-dark-primary">
+                    Copy email
+                    <div class="tooltip-arrow" data-popper-arrow></div>
+                  </div>
                 </div>
               </div>
+              <!-- Phone row with copy button + Flowbite Tooltip (placement: left) -->
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
                   class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60">Phone</span>
-                <span class="text-sm font-normal text-spes-black dark:text-spes-white" id="drawer-impl-phone">---</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-sm font-normal text-spes-black dark:text-spes-white" id="drawer-impl-phone">---</span>
+                  <button type="button" id="btn-copy-phone"
+                    data-tooltip-target="tooltip-copy-phone"
+                    data-tooltip-placement="left"
+                    class="cursor-pointer shrink-0 flex items-center justify-center rounded-md p-1 text-spes-black/40 hover:text-spes-blue hover:bg-spes-blue/8 dark:text-spes-white/40 dark:hover:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  <div id="tooltip-copy-phone" role="tooltip"
+                    class="absolute z-[200] invisible inline-block px-2.5 py-1.5 text-[10px] font-bold text-white bg-spes-blue rounded-md shadow-lg opacity-0 tooltip dark:bg-spes-yellow dark:text-spes-dark-primary">
+                    Copy phone
+                    <div class="tooltip-arrow" data-popper-arrow></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -711,41 +764,44 @@
         </div>
 
         <!-- Row: Deployment Dates (Started At / Ended At) -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label for="aif-started-at"
-              class="mb-1.5 block text-sm font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
-              Started At
-            </label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <div>
+          <label class="mb-1.5 block text-sm font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            Deployment Period
+          </label>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div class="relative flex-1">
+              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-started-at')?.focus()">
+                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z" />
                 </svg>
               </div>
-              <input type="text" id="aif-started-at" name="started_at" autocomplete="off"
-                datepicker datepicker-autohide datepicker-buttons datepicker-autoselect-today
-                class="block w-full rounded-none border border-spes-blue/20 bg-transparent pl-10 pr-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              <input id="aif-started-at" name="started_at" type="text" autocomplete="off"
+                datepicker
+                datepicker-autohide
+                datepicker-buttons
+                datepicker-orientation="bottom left"
+                datepicker-format="mm/dd/yyyy"
+                class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent ps-9 pe-3 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
                 placeholder="Select start date" />
             </div>
-          </div>
-          <div>
-            <label for="aif-ended-at"
-              class="mb-1.5 block text-sm font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
-              Ended At <span class="text-[10px] font-semibold text-spes-black/40 dark:text-spes-white/40 normal-case tracking-normal">(auto +20 days)</span>
-            </label>
-            <div class="relative">
-              <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <span class="self-center text-xs font-bold uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 sm:mx-1">to</span>
+            <div class="relative flex-1">
+              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-ended-at')?.focus()">
+                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z" />
                 </svg>
               </div>
-              <input type="text" id="aif-ended-at" name="ended_at" autocomplete="off"
-                datepicker datepicker-autohide datepicker-buttons
-                class="block w-full rounded-none border border-spes-blue/20 bg-transparent pl-10 pr-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
-                placeholder="Auto-filled (+20 days)" />
+              <input id="aif-ended-at" name="ended_at" type="text" autocomplete="off"
+                datepicker
+                datepicker-autohide
+                datepicker-buttons
+                datepicker-orientation="bottom right"
+                datepicker-format="mm/dd/yyyy"
+                class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent ps-9 pe-3 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                placeholder="Select end date" />
             </div>
           </div>
+
         </div>
 
         <!-- Row: Phone -->
@@ -759,18 +815,33 @@
             placeholder="e.g. 09171234567" />
         </div>
 
-
-        <!-- Row: Approved Status (Toggle switch) -->
+        <!-- Row: Approval Status (Medium Sized Color-Coded Buttons) -->
         <div class="pt-2">
-          <div class="flex items-center justify-between rounded-none border border-spes-blue/15 bg-spes-blue/5 p-4 dark:border-spes-white/10 dark:bg-spes-white/5">
-            <div class="flex flex-col">
-              <span class="text-sm font-bold uppercase tracking-wider text-spes-black dark:text-spes-white">Approved Officer</span>
-              <span class="text-xs text-spes-black/50 dark:text-spes-white/50 mt-0.5">Toggle to allow this officer to view and access full student directory data.</span>
+          <div class="rounded-none border border-spes-blue/15 bg-spes-blue/5 p-4 dark:border-spes-white/10 dark:bg-spes-white/5">
+            <div class="flex flex-col mb-3">
+              <span class="text-sm font-bold uppercase tracking-wider text-spes-black dark:text-spes-white">Officer Approval Status</span>
+              <span class="text-xs text-spes-black/50 dark:text-spes-white/50 mt-0.5">Select whether this officer is approved to access full student directory data.</span>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="aif-approved" name="approved" class="sr-only peer cursor-pointer" />
-              <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 cursor-pointer"></div>
-            </label>
+            <!-- Hidden checkbox for backwards compatibility and form submission -->
+            <input type="checkbox" id="aif-approved" name="approved" class="sr-only" />
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Approved Button -->
+              <label id="aif-label-approved" class="cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-emerald-500 bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 dark:bg-emerald-500/25 px-4 py-2.5 text-sm font-black shadow-md ring-2 ring-emerald-500/30 transition-all">
+                <input type="radio" name="approval_status_radio" id="aif-radio-approved" value="approved" class="sr-only peer" />
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>APPROVED</span>
+              </label>
+              <!-- Pending Button -->
+              <label id="aif-label-pending" class="cursor-pointer relative flex items-center justify-center gap-2 rounded-none border-2 border-gray-200 dark:border-white/10 bg-transparent text-gray-500 dark:text-gray-400 px-4 py-2.5 text-sm font-bold opacity-60 transition-all hover:opacity-100 hover:border-amber-400/50">
+                <input type="radio" name="approval_status_radio" id="aif-radio-pending" value="pending" class="sr-only peer" />
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3" />
+                </svg>
+                <span>PENDING</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -779,18 +850,22 @@
 
     <!-- Sticky Footer -->
     <div
-      class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 sm:flex sm:items-center sm:justify-end dark:border-spes-white/10 dark:bg-spes-dark-secondary">
-      <button type="button" id="btn-cancel-add-impl"
-        class="cursor-pointer w-full rounded-lg border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 hover:text-red-700 dark:border-red-400/30 dark:text-red-300 dark:hover:bg-red-400/10 dark:hover:text-red-200 sm:w-auto">
-        Cancel
-      </button>
-      <button type="submit" form="form-add-implementor" id="btn-submit-add-impl"
-        class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-lg bg-spes-blue px-6 py-2.5 text-sm font-bold text-white shadow transition hover:bg-spes-blue/90 active:scale-95 disabled:pointer-events-none disabled:opacity-60 dark:bg-spes-yellow dark:text-spes-dark-secondary dark:hover:bg-spes-yellow/90 sm:w-auto">
-        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-        </svg>
-        Save Implementor
-      </button>
+      class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white px-6 py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+      <div>
+        <button type="button" id="btn-cancel-add-impl"
+          class="cursor-pointer w-full inline-flex items-center justify-center rounded-none border border-rose-300 text-rose-600 hover:bg-rose-600 hover:text-white active:bg-rose-700 active:text-white px-6 py-2.5 text-sm font-bold transition shadow-xs dark:border-rose-500/40 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white dark:active:bg-rose-700">
+          Cancel
+        </button>
+      </div>
+      <div>
+        <button type="submit" form="form-add-implementor" id="btn-submit-add-impl"
+          class="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-none bg-spes-blue px-6 py-2.5 text-sm font-bold text-white shadow transition hover:bg-spes-blue/90 active:scale-95 disabled:pointer-events-none disabled:opacity-60 dark:bg-spes-yellow dark:text-spes-dark-secondary dark:hover:bg-spes-yellow/90">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+          Save Implementor
+        </button>
+      </div>
     </div>
   </div>
 

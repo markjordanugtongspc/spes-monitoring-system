@@ -22,7 +22,9 @@ function readStoredOverride() {
 }
 
 export function isFlowDebugEnabled() {
-  return false;
+  const stored = readStoredOverride();
+  if (stored !== null) return stored;
+  return import.meta.env?.DEV ?? true;
 }
 
 export function setFlowDebugEnabled(enabled) {
@@ -51,14 +53,45 @@ function describeElement(element) {
   };
 }
 
+// START: write - Core log writer with color-coded console output per level
 function write(level, stage, message, details) {
   if (!isFlowDebugEnabled()) return;
   sequence += 1;
-  const prefix = `[SPES Flow #${sequence}] ${stage} — ${message}`;
+  const ts = new Date().toLocaleTimeString("en-PH", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  // Color palette per stage/level
+  const styles = {
+    log:   "color:#2563eb;font-weight:700;",
+    info:  "color:#059669;font-weight:800;",
+    warn:  "color:#d97706;font-weight:700;",
+    error: "color:#dc2626;font-weight:800;",
+  };
+  const stageColors = {
+    "DATEPICKER": "background:#eff6ff;color:#1d4ed8;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "DRAWER":     "background:#f0fdf4;color:#166534;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "CLICK":      "background:#fefce8;color:#92400e;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "SUCCESS":    "background:#dcfce7;color:#15803d;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "ERROR":      "background:#fee2e2;color:#991b1b;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "OUTPUT":     "background:#f3e8ff;color:#6b21a8;padding:1px 4px;border-radius:3px;font-weight:900;",
+    "INIT":       "background:#f0f9ff;color:#075985;padding:1px 4px;border-radius:3px;font-weight:900;",
+  };
+
+  const stageStyle = stageColors[stage] || "background:#f1f5f9;color:#334155;padding:1px 4px;border-radius:3px;font-weight:700;";
+  const baseStyle  = styles[level] || styles.log;
   const method = console[level] || console.log;
-  if (details === undefined) method(prefix);
-  else method(prefix, details);
+
+  const prefix = `%c[SPES #${sequence}]%c ${ts} %c${stage}%c — ${message}`;
+  const prefixStyles = [
+    "color:#6b7280;font-size:10px;",
+    "color:#9ca3af;font-size:10px;",
+    stageStyle,
+    baseStyle,
+  ];
+
+  if (details === undefined) method(prefix, ...prefixStyles);
+  else method(prefix, ...prefixStyles, details);
 }
+// END: write
 
 export function flowDebug(stage, message, details) {
   write("log", stage, message, details);
@@ -78,7 +111,7 @@ export function flowDebugError(message, error, details = {}) {
 function findInteractiveTarget(event) {
   const origin = event.target instanceof Element ? event.target : null;
   return origin?.closest(
-    "button, a, input[type='button'], input[type='submit'], [role='button'], [data-flow], [data-action]"
+    "button, a, input, [role='button'], [data-flow], [data-action], [datepicker], [date-rangepicker]"
   ) || null;
 }
 
