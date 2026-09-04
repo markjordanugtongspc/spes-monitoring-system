@@ -75,7 +75,28 @@ export async function fetchAllStaffPermissions({ forceRefresh = false } = {}) {
     if (cached) return { data: cached };
   }
 
-  const result = await supabase
+  // 1. Try secure API endpoint first (uses Supabase service-role admin client to bypass client RLS)
+  try {
+    const res = await fetch("/api/permissions", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      if (json.success && json.data) {
+        _writeCache(json.data);
+        return { data: json.data };
+      }
+    }
+  } catch (apiErr) {
+    if (import.meta.env.DEV) {
+      console.warn("[SPES Permissions] API GET fetch error, falling back to direct client:", apiErr?.message);
+    }
+  }
+
+  // 2. Direct client fallback
+  let result = await supabase
     .from("staff_permissions")
     .select(`
       staff_id,
@@ -118,6 +139,17 @@ export async function fetchStaffPermissions(staffId, options = {}) {
     if (cached?.[numericId]) return { data: cached[numericId] };
   }
 
+  // 1. Try secure API endpoint first
+  try {
+    const allRes = await fetchAllStaffPermissions({ forceRefresh: Boolean(options.forceRefresh) });
+    if (allRes.data && allRes.data[numericId]) {
+      return { data: allRes.data[numericId] };
+    }
+  } catch (apiErr) {
+    if (import.meta.env.DEV) console.warn("[SPES Permissions] fetchStaff API error, trying direct:", apiErr?.message);
+  }
+
+  // 2. Direct client fallback
   const { data: row, error } = await supabase
     .from("staff_permissions")
     .select(`
@@ -191,6 +223,28 @@ export async function upsertStaffPermissions(staffIds, updates) {
     }
 
     invalidatePermissionsCache();
+
+    // Broadcast live permission change over Supabase Realtime channel
+    try {
+      const existing = supabase.getChannels().find(ch => ch.topic === "realtime:spes-permissions-sync");
+      const channel = existing || supabase.channel("spes-permissions-sync");
+      const sendPayload = {
+        type: "broadcast",
+        event: "permissions_updated",
+        payload: { staffIds: ids, updates: payload, data: result.data },
+      };
+
+      if (channel.state === "joined" || channel.state === "joined_and_ready") {
+        channel.send(sendPayload);
+      } else {
+        channel.subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            channel.send(sendPayload);
+          }
+        });
+      }
+    } catch {}
+
     return { success: true, data: result.data };
   } catch (error) {
     if (import.meta.env.DEV) {

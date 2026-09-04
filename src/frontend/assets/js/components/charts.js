@@ -698,10 +698,50 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
   if (summaryEl) {
     const minStr = earliestDate ? earliestDate.toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "N/A";
     const maxStr = latestDate ? latestDate.toLocaleDateString("en-PH", { month: "short", year: "numeric" }) : "Present";
+
+    // Compute mini-stats from existing staffs array
+    const activeCount = staffs.filter(s => s.started_at && !s.ended_at).length;
+    const completedCount = staffs.filter(s => s.started_at && s.ended_at).length;
+    const pendingCount = staffs.filter(s => !s.started_at).length;
+
+    // Average deployment duration in months (only for staffs with both dates)
+    let avgDurationLabel = "N/A";
+    const durationsMonths = staffs
+      .filter(s => s.started_at && s.ended_at)
+      .map(s => {
+        const start = new Date(s.started_at);
+        const end = new Date(s.ended_at);
+        return Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24 * 30)));
+      });
+    if (durationsMonths.length > 0) {
+      const avg = (durationsMonths.reduce((a, b) => a + b, 0) / durationsMonths.length).toFixed(1);
+      avgDurationLabel = `${avg} mo`;
+    } else if (activeCount > 0) {
+      avgDurationLabel = "Ongoing";
+    }
+
     summaryEl.innerHTML = `
       <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[10px] font-semibold text-spes-black/75 dark:text-spes-white/75">
         <span>Deployment Span: <strong class="text-spes-blue dark:text-spes-yellow uppercase">${minStr} – ${maxStr}</strong></span>
         <span class="text-spes-black/50 dark:text-spes-white/50">${staffs.length} total assigned</span>
+      </div>
+      <div class="mt-2.5 flex flex-wrap items-center gap-2">
+        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">
+          <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+          Active ${activeCount}
+        </span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[9px] font-black text-sky-600 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-400/10 dark:text-sky-400 dark:ring-sky-400/20">
+          <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+          Completed ${completedCount}
+        </span>
+        ${pendingCount > 0 ? `<span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[9px] font-black text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400 dark:ring-amber-400/20">
+          <svg class="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+          Pending ${pendingCount}
+        </span>` : ""}
+        <span class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[9px] font-black text-violet-600 ring-1 ring-inset ring-violet-500/20 dark:bg-violet-400/10 dark:text-violet-400 dark:ring-violet-400/20">
+          <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3"/></svg>
+          Avg. ${avgDurationLabel}
+        </span>
       </div>`;
   }
 }
@@ -864,15 +904,32 @@ function _renderImplementorStatus(beneficiaries, topOfficeBeneficiaries = [], gl
 
   _xChart.gender = chart;
   chart.render().then(() => {
-    setTimeout(() => _drawGenderConnectorLines(el, series, total), 60);
-    setTimeout(() => _drawGenderConnectorLines(el, series, total), 300);
+    // Use IntersectionObserver to wait until chart is visible, then draw lines.
+    // Falls back to setTimeout for browsers that don't support IntersectionObserver.
+    const _drawOnceVisible = () => {
+      const io = new IntersectionObserver((entries, obs) => {
+        const entry = entries[0];
+        if (entry && entry.isIntersecting && entry.boundingClientRect.width > 0) {
+          _drawGenderConnectorLines(el, series, total);
+          obs.disconnect();
+        }
+      }, { threshold: 0.1 });
+      io.observe(el);
+      // Safety fallback in case IntersectionObserver doesn't fire
+      setTimeout(() => { io.disconnect(); _drawGenderConnectorLines(el, series, total); }, 500);
+    };
+    _drawOnceVisible();
   });
 
+  // Use ResizeObserver for precise re-draws instead of global window resize
   if (!el.dataset.resizeListenerAttached) {
     el.dataset.resizeListenerAttached = "true";
-    window.addEventListener("resize", () => {
-      setTimeout(() => _drawGenderConnectorLines(el, series, total), 150);
+    let _roDebounce = null;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(_roDebounce);
+      _roDebounce = setTimeout(() => _drawGenderConnectorLines(el, series, total), 100);
     });
+    ro.observe(el);
   }
 }
 
@@ -948,6 +1005,9 @@ function _drawGenderConnectorLines(el, series, total) {
   const centerX = (rect.left - containerRect.left) + rect.width / 2;
   const centerY = (rect.top - containerRect.top) + rect.height / 2;
   const radius = Math.min(rect.width, rect.height) / 2;
+
+  // Guard: bail if chart dimensions are too small (not yet rendered properly)
+  if (radius < 10) return;
 
   el.querySelector(".custom-chart-overlay")?.remove();
 

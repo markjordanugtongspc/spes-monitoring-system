@@ -38,6 +38,24 @@ const ROLE_PERMISSION_DESCRIPTIONS = {
   "payroll:view": "View and access the SPES Payroll system for the user’s assigned office.",
 };
 
+// ── Permissions mapping & bulk presets (hoisted to module level) ──
+const PERM_COL_MAP = {
+  "users:view": "view_users",
+  "offices:view-other": "view_other_offices",
+  "analytics:view-global": "view_global_stats",
+  "users:create": "create_users",
+  "users:edit": "edit_users",
+  "users:delete": "delete_users",
+  "reports:export": "export_reports",
+  "payroll:view": "view_payroll",
+};
+const ALL_PERMISSIONS_GRANTED = Object.fromEntries(
+  Object.values(PERM_COL_MAP).map((column) => [column, true])
+);
+const ALL_PERMISSIONS_REVOKED = Object.fromEntries(
+  Object.values(PERM_COL_MAP).map((column) => [column, false])
+);
+
 function setDashboardDocumentTitle(user) {
   if (!window.location.pathname.includes("/dashboard/")) return;
 
@@ -150,10 +168,12 @@ async function loadComponent(id, url) {
 }
 
 async function init(user) {
-  // Session healer: if role_id is missing, heal it dynamically from role string
-  if (user && !user.role_id && user.role) {
-    if (user.role === "admin")   user.role_id = 1;
-    if (user.role === "officer") user.role_id = 2;
+  // Session healer: if role_id is missing or inaccurate, sync it dynamically from role string
+  if (user && user.role) {
+    const r = String(user.role).trim().toLowerCase();
+    if (r === "admin") user.role_id = 1;
+    else if (r === "hr") user.role_id = 2;
+    else if (r === "officer") user.role_id = 3;
   }
 
   // Fetch this staff account's current individual permissions without requiring relog.
@@ -185,10 +205,11 @@ async function init(user) {
   initClock();
 
   const path = window.location.pathname;
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.role === "admin" || Number(user.role_id) === 1;
+  const isHr = user.role === "hr" || Number(user.role_id) === 2;
 
   // Page-level Authorization Guards
-  const isApproved = isAdmin || user.approved === true;
+  const isApproved = isAdmin || isHr || user.approved === true;
 
   if (path.includes("/beneficiaries/")) {
     if (!isApproved) {
@@ -200,7 +221,7 @@ async function init(user) {
   }
 
   if (path.includes("/implementors/")) {
-    const canViewUsers = isApproved && (isAdmin || (user.permissions && user.permissions.view_users));
+    const canViewUsers = isApproved && (isAdmin || isHr || (user.permissions && user.permissions.view_users));
     if (!canViewUsers) {
       modals.error("Access Denied", "You do not have permission to view the Implementor Directory.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
@@ -210,9 +231,9 @@ async function init(user) {
   }
 
   if (path.includes("/roles/")) {
-    const canManageRoles = isApproved && (isAdmin || (user.permissions && (user.permissions.edit_users || user.permissions.view_users || user.permissions.create_users)));
-    if (!canManageRoles) {
-      modals.error("Access Denied", "You do not have permission to view or manage roles and permissions.").then(() => {
+    // Roles & Permissions is strictly reserved for Administrators
+    if (!isAdmin) {
+      modals.error("Access Denied", "Only Administrators have permission to view or manage roles and permissions.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
       });
       return;
@@ -1165,13 +1186,21 @@ function renderTableRows(implementors, userRole) {
       const staffId = Number(s.id);
       const staffPerms = allStaffPermissions[staffId] || allStaffPermissions[s.id] || allStaffPermissions[String(s.id)] || s.permissions || {};
       const isAdmin   = s.role === "ADMIN" || s.role === "admin" || Number(s.role_id) === 1;
-      const canSelectPermissions = !isAdmin && s.approved === true;
+      const isHr      = s.role === "HR" || s.role === "hr" || Number(s.role_id) === 2;
+      const isCallerAdmin = session.role === "admin" || Number(session.role_id) === 1;
+      const isCallerHr    = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
+
+      // Admin account cannot be modified. Approved HR accounts have all permissions automatically active.
+      // HR callers cannot modify Admin accounts or permissions.
+      const canSelectPermissions = !isAdmin && !(isCallerHr && isAdmin) && !(isHr && s.approved === true) && s.approved === true;
 
       const hasPerm = (perm) => {
         if (isAdmin) return true;
+        if (isHr && s.approved) return true;
         if (!s.approved) return false;
         const col = PERM_COL_MAP[perm];
-        return Boolean(staffPerms[col] ?? s.permissions?.[col]);
+        const val = staffPerms?.[col] ?? s.permissions?.[col];
+        return val === true || val === 1 || String(val).toLowerCase() === "true";
       };
 
       const displayRole = s.role.charAt(0).toUpperCase() + s.role.slice(1).toLowerCase();
@@ -1219,12 +1248,19 @@ function renderTableRows(implementors, userRole) {
           </td>
           ${["users:view","offices:view-other","analytics:view-global","users:create","users:edit","users:delete","reports:export","payroll:view"].map(perm => {
             const description = ROLE_PERMISSION_DESCRIPTIONS[perm];
+            const tooltipText = isAdmin
+              ? `${description} Administrators always have all permissions.`
+              : isHr && s.approved
+                ? `${description} HR accounts automatically have all permissions upon approval.`
+                : !s.approved
+                  ? `${description} Approve this account before assigning optional permissions.`
+                  : description;
             return `
               <td class="px-6 py-4 text-center">
                 <div class="relative group inline-flex items-center justify-center">
                   <input type="checkbox" data-user-id="${s.id}" data-perm="${perm}" aria-label="${escHtml(description)}" ${hasPerm(perm) ? "checked" : ""} ${canSelectPermissions ? "" : "disabled"} class="perm-checkbox h-4 w-4 cursor-pointer rounded-md border-gray-300 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-white/20 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canSelectPermissions ? "" : "opacity-50 cursor-not-allowed"}">
                   <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 z-[70] mb-2 w-64 -translate-x-1/2 whitespace-normal break-words rounded-lg border border-white/10 bg-spes-blue px-3 py-2 text-left text-[10px] font-semibold normal-case leading-relaxed tracking-normal text-white opacity-0 shadow-xl transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-spes-dark-primary">
-                    ${escHtml(isAdmin ? `${description} Administrators always have this permission.` : !s.approved ? `${description} Approve this account before assigning optional permissions.` : description)}
+                    ${escHtml(tooltipText)}
                     <span class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-spes-blue dark:border-t-spes-dark-primary"></span>
                   </div>
                 </div>
@@ -1718,27 +1754,17 @@ async function showEditStaffModal(staff) {
 }
 
 // ── Permissions page handlers ─────────────────────────────────
-const PERM_COL_MAP = {
-  "users:view": "view_users",
-  "offices:view-other": "view_other_offices",
-  "analytics:view-global": "view_global_stats",
-  "users:create": "create_users",
-  "users:edit": "edit_users",
-  "users:delete": "delete_users",
-  "reports:export": "export_reports",
-  "payroll:view": "view_payroll",
-};
-const ALL_PERMISSIONS_GRANTED = Object.fromEntries(
-  Object.values(PERM_COL_MAP).map((column) => [column, true])
-);
-const ALL_PERMISSIONS_REVOKED = Object.fromEntries(
-  Object.values(PERM_COL_MAP).map((column) => [column, false])
-);
 
 function eligiblePermissionStaff() {
-  return allImplementors.filter(
-    (staff) => staff.approved === true && String(staff.role).toUpperCase() !== "ADMIN"
-  );
+  const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+  return allImplementors.filter((staff) => {
+    if (staff.approved !== true) return false;
+    const isStaffAdmin = String(staff.role).toUpperCase() === "ADMIN" || Number(staff.role_id) === 1;
+    const isStaffHr = String(staff.role).toUpperCase() === "HR" || Number(staff.role_id) === 2;
+    // Admins and approved HR have all permissions automatically active and fixed to true
+    if (isStaffAdmin || isStaffHr) return false;
+    return true;
+  });
 }
 
 function updatePermissionSelectionControls() {

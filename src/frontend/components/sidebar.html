@@ -14,7 +14,7 @@
 </button>
 
 <aside id="sidebar-dashboard"
-  class="fixed top-0 right-0 z-40 h-screen w-64 2xl:w-80 translate-x-full border-l border-spes-blue/15 bg-spes-white transition-transform dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:left-0 sm:right-auto sm:translate-x-0 sm:border-l-0 sm:border-r"
+  class="fixed top-0 right-0 z-[70] h-screen w-64 2xl:w-80 translate-x-full border-l border-spes-blue/15 bg-spes-white shadow-2xl transition-transform dark:border-spes-white/10 dark:bg-spes-dark-secondary sm:left-0 sm:right-auto sm:z-40 sm:translate-x-0 sm:border-l-0 sm:border-r sm:shadow-none"
   aria-label="Dashboard Sidebar">
   <div class="flex h-full flex-col overflow-y-auto px-3 py-5">
     <!-- Brand -->
@@ -52,7 +52,7 @@
 
 
       <!-- Beneficiaries Program Dropdown -->
-      <li data-permission="beneficiaries:view" class="hidden">
+      <li data-permission="beneficiaries:group" class="hidden">
         <button type="button"
           class="sidebar-dropdown-btn group flex w-full items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow cursor-pointer"
           aria-controls="sidebar-dropdown-beneficiaries" data-collapse-toggle="sidebar-dropdown-beneficiaries">
@@ -73,7 +73,7 @@
         </button>
         <!-- Connected Tree-Branch -->
         <ul id="sidebar-dropdown-beneficiaries" class="relative ml-[1.375rem] hidden py-0">
-          <li class="group/item relative pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="beneficiaries">
+          <li data-permission="beneficiaries:view" class="group/item relative hidden pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="beneficiaries">
             <span class="tree-dot pointer-events-none absolute left-3.5 top-1/2 z-10 h-2 w-2 -translate-y-1/2 rounded-full border-2 border-spes-blue/30 bg-spes-white dark:border-white/30 dark:bg-spes-dark-secondary transition-colors duration-200"></span>
             <a href="/src/frontend/pages/beneficiaries/" data-nav-item="beneficiaries"
               class="group cursor-pointer sidebar-link sidebar-sub-link flex items-center rounded-lg py-2 pl-3 pr-3 text-sm text-spes-black/70 transition-colors duration-200 hover:text-spes-blue dark:text-spes-white/70 dark:hover:text-spes-yellow">
@@ -92,7 +92,7 @@
       </li>
 
       <!-- User Management (admin + officer can see, but edit/delete is admin-only via RBAC) -->
-      <li data-permission="users:view" class="hidden">
+      <li data-permission="users:group" class="hidden">
         <button type="button"
           class="sidebar-dropdown-btn group flex w-full items-center rounded-lg px-3 py-2.5 text-spes-black/80 transition-colors hover:bg-spes-blue/8 hover:text-spes-blue dark:text-spes-white/80 dark:hover:bg-spes-white/8 dark:hover:text-spes-yellow cursor-pointer"
           aria-controls="sidebar-dropdown-users" data-collapse-toggle="sidebar-dropdown-users">
@@ -113,7 +113,7 @@
         </button>
         <!-- Connected Tree-Branch: Vertical trunk starts directly below the icon center (22px / 1.375rem) with ZERO bottom overlap -->
         <ul id="sidebar-dropdown-users" class="relative ml-[1.375rem] hidden py-0">
-          <li class="group/item relative pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="implementor-list">
+          <li data-permission="users:view" class="group/item relative hidden pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="implementor-list">
             <span class="tree-dot pointer-events-none absolute left-3.5 top-1/2 z-10 h-2 w-2 -translate-y-1/2 rounded-full border-2 border-spes-blue/30 bg-spes-white dark:border-white/30 dark:bg-spes-dark-secondary transition-colors duration-200"></span>
             <a href="/src/frontend/pages/implementors/" data-nav-item="implementor-list"
               class="group cursor-pointer sidebar-link sidebar-sub-link flex items-center rounded-lg py-2 pl-3 pr-3 text-sm text-spes-black/70 transition-colors duration-200 hover:text-spes-blue dark:text-spes-white/70 dark:hover:text-spes-yellow">
@@ -121,7 +121,7 @@
             </a>
           </li>
 
-          <li data-permission="users:view" class="group/item relative hidden pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="roles">
+          <li data-permission="roles:manage" class="group/item relative hidden pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-spes-blue/25 dark:before:bg-white/20 last:before:h-1/2 after:absolute after:left-0 after:top-1/2 after:h-px after:w-3.5 after:bg-spes-blue/25 dark:after:bg-white/20" data-nav-target="roles">
             <span class="tree-dot pointer-events-none absolute left-3.5 top-1/2 z-10 h-2 w-2 -translate-y-1/2 rounded-full border-2 border-spes-blue/30 bg-spes-white dark:border-white/30 dark:bg-spes-dark-secondary transition-colors duration-200"></span>
             <a href="/src/frontend/pages/roles/" data-nav-item="roles"
               class="group cursor-pointer sidebar-link sidebar-sub-link flex items-center rounded-lg py-2 pl-3 pr-3 text-sm text-spes-black/70 transition-colors duration-200 hover:text-spes-blue dark:text-spes-white/70 dark:hover:text-spes-yellow">

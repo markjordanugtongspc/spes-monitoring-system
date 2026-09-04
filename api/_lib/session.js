@@ -61,8 +61,35 @@ export function readSession(req) {
   }
 }
 
+export async function requireStrictAdmin(req, res, supabase) {
+  const session = readSession(req);
+  if (!session) {
+    res.status(401).json({ error: "Your secure session is missing or expired. Please sign in again." });
+    return null;
+  }
+
+  const { data: staff, error } = await supabase
+    .from("staffs")
+    .select("id, role_id, approved, archive_at")
+    .eq("id", session.staffId)
+    .maybeSingle();
+
+  if (error || !staff) {
+    res.status(401).json({ error: "Your staff account could not be verified." });
+    return null;
+  }
+
+  const isAdmin = Number(staff.role_id) === 1;
+  if (!isAdmin || !staff.approved || staff.archive_at) {
+    res.status(403).json({ error: "Access Denied: Administrator role is strictly required." });
+    return null;
+  }
+
+  return staff;
+}
+
 export async function requireAdmin(req, res, supabase) {
-  return requireAdminOrAuthorized(req, res, supabase, "edit_users");
+  return requireStrictAdmin(req, res, supabase);
 }
 
 // --- START: REQUIRE ADMIN OR AUTHORIZED - checks staff session and permissions from staff_permissions table ---
@@ -73,28 +100,48 @@ export async function requireAdminOrAuthorized(req, res, supabase, requiredPerm 
     return null;
   }
 
-  const { data: staff, error } = await supabase
+  let staff = null;
+  let sp = {};
+
+  // Try permissions table first, fallback to staff_permissions
+  const permQuery = await supabase
     .from("staffs")
     .select(`
       id, role_id, approved, archive_at,
-      staff_permissions!staff_id(
+      permissions!staff_id(
         edit_users, view_users, create_users, delete_users, view_other_offices
       )
     `)
     .eq("id", session.staffId)
     .maybeSingle();
 
-  if (error || !staff) {
+  if (!permQuery.error && permQuery.data) {
+    staff = permQuery.data;
+    sp = Array.isArray(staff.permissions) ? (staff.permissions[0] ?? {}) : (staff.permissions ?? {});
+  } else {
+    const fallbackQuery = await supabase
+      .from("staffs")
+      .select(`
+        id, role_id, approved, archive_at,
+        staff_permissions!staff_id(
+          edit_users, view_users, create_users, delete_users, view_other_offices
+        )
+      `)
+      .eq("id", session.staffId)
+      .maybeSingle();
+    staff = fallbackQuery.data;
+    sp = Array.isArray(staff?.staff_permissions) ? (staff?.staff_permissions[0] ?? {}) : (staff?.staff_permissions ?? {});
+  }
+
+  if (!staff) {
     res.status(401).json({ error: "Your staff account could not be verified." });
     return null;
   }
 
-  const sp = Array.isArray(staff.staff_permissions)
-    ? (staff.staff_permissions[0] ?? {})
-    : (staff.staff_permissions ?? {});
   const isAdmin = Number(staff.role_id) === 1;
+  const isHr = Number(staff.role_id) === 2;
   const hasPerm = Boolean(sp[requiredPerm]) || Boolean(sp["edit_users"]);
-  const isAuthorized = !staff.archive_at && staff.approved && (isAdmin || hasPerm);
+  const isAuthorized = !staff.archive_at && staff.approved && (isAdmin || isHr || hasPerm);
 
   if (!isAuthorized) {
     res.status(403).json({ error: "You do not have permission to perform this administrative action." });

@@ -20,23 +20,46 @@
  */
 import { canDo } from "./config.js";
 import { modals } from "../components/modals.js";
+import { initPresence, destroyPresence } from "../components/presence.js";
+
+/**
+ * Check if the session belongs to Admin or HR role.
+ * Both roles enjoy full baseline capability across the portal.
+ */
+export function isHrOrAdmin(session) {
+  if (!session) return false;
+  const role = String(session.role || "").trim().toLowerCase();
+  const roleId = Number(session.role_id);
+  return role === "admin" || role === "hr" || roleId === 1 || roleId === 2;
+}
 
 // Map permission strings used in HTML → DB column names in session.permissions
 const DB_PERM_MAP = {
-  "users:view":    (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_users)),
-  "users:create":  (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.create_users)),
-  "users:manage":  (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.create_users || p?.edit_users)),
-  "users:edit":    (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.edit_users)),
-  "users:delete":  (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.delete_users)),
-  "offices:view-other": (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_other_offices)),
-  "analytics:view-global": (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_global_stats)),
-  "payroll:view":  (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_payroll)),
-  "payroll:manage":(p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_payroll)),
+  // Navigation groups on sidebar
+  "beneficiaries:group": (_p, session) => session?.approved === true,
+  "beneficiaries:view":  (_p, session) => session?.approved === true,
+  "payroll:view":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_payroll)),
+  "payroll:manage":      (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_payroll)),
+
+  "users:group":         (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users)),
+  "users:view":          (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users)),
+  "users:create":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.create_users)),
+  "users:manage":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.create_users || p?.edit_users)),
+  "users:edit":          (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.edit_users)),
+  "users:delete":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.delete_users)),
+
+  "offices:view-other":   (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_other_offices)),
+  "analytics:view-global":(p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_global_stats)),
+
+  // Roles & Permissions: STRICTLY ADMIN ONLY (No Officer, No HR)
+  "roles:manage":        (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
+
   // Approved users may export their own office.
-  "reports:export":(_p, session) => String(session?.role || "").toLowerCase() === "admin" || session?.approved === true,
-  "reports:view":  (p, session) => String(session?.role || "").toLowerCase() === "admin" || (session?.approved === true && Boolean(p?.view_users || p?.export_reports)),
-  "beneficiaries:view": (_p, session) => String(session?.role || "").toLowerCase() === "admin" || session?.approved === true,
-  "services:manage": (_p, session) => String(session?.role || "").toLowerCase() === "admin",
+  "reports:export":      (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.export_reports)),
+  "reports:view":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users || p?.export_reports)),
+
+  // Auto Import Tool: STRICTLY ADMIN ONLY (No Officer, No HR)
+  "services:manage":     (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
 };
 
 /**
@@ -50,22 +73,25 @@ function _checkDbPermission(dbPerms, permission, session) {
 
 /**
  * Resolve whether the current user has a given permission.
- * Admins always win via static RBAC.
+ * Admins and HR always win via static RBAC (all true).
  * Officers/students use DB permissions first, then static RBAC.
  */
 async function _hasPermission(userRole, permission, session) {
-  // Admin is fully handled by the static RBAC which grants everything
-  if (userRole === "admin") return true;
+  const isAdmin = String(session?.role || userRole || "").toLowerCase() === "admin" || Number(session?.role_id) === 1;
 
-  // Unapproved accounts cannot view beneficiaries, implementors, payroll, or export reports
-  if (session?.approved !== true) {
+  // Strict Admin-only permissions (Auto Import Tool & Roles & Permissions)
+  if (permission === "roles:manage" || permission === "services:manage") {
+    return isAdmin && session?.approved === true;
+  }
+
+  // Any unapproved user (approved !== true) is strictly blocked from all protected navigation and resources
+  const isApproved = session?.approved === true || session?.approved === "true" || session?.approved === 1;
+  if (!isApproved) {
     return false;
   }
 
-  // Baseline approved access for exports and beneficiaries
-  if (permission === "reports:export" || permission === "beneficiaries:view") {
-    return true;
-  }
+  // Admin and HR who are approved enjoy full baseline capability across the portal
+  if (isHrOrAdmin(session) || userRole === "admin" || userRole === "hr") return true;
 
   // Check DB-stored permissions for officer / student
   const dbResult = _checkDbPermission(session?.permissions, permission, session);
@@ -278,10 +304,124 @@ export function getSession() {
   try {
     // SSO writes only safe display data to this tab. Authentication remains the HttpOnly server cookie.
     const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (session && session.role) {
+      const role = String(session.role).trim().toLowerCase();
+      // Enforce correct role_id mapping (Admin: 1, HR: 2, Officer: 3)
+      if (role === "admin" && session.role_id !== 1) {
+        session.role_id = 1;
+        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
+      } else if (role === "hr" && session.role_id !== 2) {
+        session.role_id = 2;
+        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
+      } else if (role === "officer" && session.role_id !== 3) {
+        session.role_id = 3;
+        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
+      }
+    }
+    return session;
   } catch {
     return null;
   }
+}
+
+let _permChannel = null;
+let _isInitializingPerms = false;
+
+/**
+ * Subscribe to realtime permission updates for the current staff session.
+ */
+export function initStaffPermissionsRealtime(staffId) {
+  if (!staffId || _permChannel || _isInitializingPerms) return;
+  _isInitializingPerms = true;
+
+  import("../../../../backend/api/supabase.js").then(({ supabase }) => {
+    try {
+      // Clean up any existing channel with same name to prevent "cannot add callbacks after subscribe"
+      const existing = supabase.getChannels().find(ch => ch.topic === "realtime:spes-permissions-sync");
+      if (existing) {
+        supabase.removeChannel(existing);
+      }
+
+      _permChannel = supabase
+        .channel("spes-permissions-sync")
+        .on(
+          "broadcast",
+          { event: "permissions_updated" },
+          async ({ payload }) => {
+            const currentStaffId = Number(staffId);
+            const affectedIds = (payload?.staffIds || []).map(Number);
+            if (affectedIds.includes(currentStaffId) || (payload?.data && payload.data[currentStaffId])) {
+              const fresh = (payload.data && payload.data[currentStaffId]) || payload.updates;
+              const session = getSession();
+              if (session) {
+                session.permissions = {
+                  ...(session.permissions || {}),
+                  ...fresh,
+                };
+                try {
+                  localStorage.setItem("spes_session", JSON.stringify(session));
+                  sessionStorage.setItem("spes_session", JSON.stringify(session));
+                } catch {}
+                await applyPermissions(session.role);
+                if (window.location.pathname.includes("/dashboard/")) {
+                  try {
+                    const { initDashboardCharts } = await import("../components/charts.js");
+                    await initDashboardCharts();
+                  } catch {}
+                }
+              }
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "staff_permissions",
+            filter: `staff_id=eq.${staffId}`,
+          },
+          async (payload) => {
+            if (payload.new) {
+              const session = getSession();
+              if (session) {
+                session.permissions = {
+                  view_users: Boolean(payload.new.view_users),
+                  create_users: Boolean(payload.new.create_users),
+                  edit_users: Boolean(payload.new.edit_users),
+                  delete_users: Boolean(payload.new.delete_users),
+                  export_reports: Boolean(payload.new.export_reports),
+                  view_other_offices: Boolean(payload.new.view_other_offices),
+                  view_global_stats: Boolean(payload.new.view_global_stats),
+                  view_payroll: Boolean(payload.new.view_payroll),
+                };
+                try {
+                  localStorage.setItem("spes_session", JSON.stringify(session));
+                  sessionStorage.setItem("spes_session", JSON.stringify(session));
+                } catch {}
+                await applyPermissions(session.role);
+                if (window.location.pathname.includes("/dashboard/")) {
+                  try {
+                    const { initDashboardCharts } = await import("../components/charts.js");
+                    await initDashboardCharts();
+                  } catch {}
+                }
+              }
+            }
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("[SPES Realtime] Perm channel init error:", err);
+      _permChannel = null;
+    } finally {
+      _isInitializingPerms = false;
+    }
+  }).catch(() => {
+    _isInitializingPerms = false;
+  });
 }
 
 /**
@@ -294,6 +434,11 @@ export function requireAuth() {
     window.location.href = "/src/frontend/login/";
     return null;
   }
+  // Auto-establish Presence channel on every protected page load (idempotent)
+  if (session.id) {
+    initPresence(session.id);
+    initStaffPermissionsRealtime(session.id);
+  }
   return session;
 }
 
@@ -305,7 +450,10 @@ export function requireAdmin() {
   const session = requireAuth();
   if (!session) return null;
   const role = String(session.role || "").toLowerCase();
-  if (role !== "admin") {
+  const roleId = Number(session.role_id);
+  const isApproved = session.approved === true || session.approved === "true" || session.approved === 1;
+  const isAdmin = (role === "admin" || roleId === 1) && isApproved;
+  if (!isAdmin) {
     window.location.href = "/src/frontend/pages/dashboard/";
     return null;
   }
@@ -319,11 +467,10 @@ export function requireAdmin() {
 export function requireBeneficiariesAccess() {
   const session = requireAuth();
   if (!session) return null;
-  const role = String(session.role || "").toLowerCase();
-  const isAdmin = role === "admin" || Number(session.role_id) === 1;
+  const isExecutive = isHrOrAdmin(session);
   const isApproved = session.approved === true;
 
-  if (!isAdmin && !isApproved) {
+  if (!isExecutive && !isApproved) {
     window.location.href = "/src/frontend/pages/dashboard/";
     return null;
   }
@@ -331,18 +478,17 @@ export function requireBeneficiariesAccess() {
 }
 
 /**
- * Require payroll access permission (Admin or approved staff with view_payroll permission).
+ * Require payroll access permission (Admin, HR, or approved staff with view_payroll permission).
  * Redirects unauthorized users to the dashboard.
  */
 export function requirePayrollAccess() {
   const session = requireAuth();
   if (!session) return null;
-  const role = String(session.role || "").toLowerCase();
-  const isAdmin = role === "admin" || Number(session.role_id) === 1;
+  const isExecutive = isHrOrAdmin(session);
   const isApproved = session.approved === true;
   const hasPayrollPerm = isApproved && Boolean(session.permissions?.view_payroll);
 
-  if (!isAdmin && !hasPayrollPerm) {
+  if (!isExecutive && !hasPayrollPerm) {
     window.location.href = "/src/frontend/pages/dashboard/";
     return null;
   }
@@ -360,6 +506,9 @@ export function signOut() {
     "Cancel"
   ).then(async (result) => {
     if (result.isConfirmed) {
+      // Tear down Presence channel before clearing session
+      destroyPresence();
+
       // Set staff status to OFFLINE in DB before clearing the session
       try {
         const raw = localStorage.getItem("spes_session");

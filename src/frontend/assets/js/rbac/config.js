@@ -27,34 +27,38 @@ const roles = {
   officer: {
     can: [
       "implementor-dashboard:view",
-      "users:view",
-
       "attendance:verify",
       "reports:view",
       "beneficiaries:view"
     ],
     inherits: ["student"]
   },
-  admin: {
+  hr: {
     can: [
       "users:create",
       "users:edit",
       "users:delete",
       "users:manage",
+      "users:view",
       "offices:view-other",
       "analytics:view-global",
-      "roles:manage",
       "settings:manage",
       "reports:export",
       "beneficiaries:edit",
       "beneficiaries:delete",
       "payroll:view",
-      "payroll:manage",
+      "payroll:manage"
+    ],
+    inherits: ["officer"]
+  },
+  admin: {
+    can: [
+      "roles:manage",
       "services:manage",
       "services:access",
       "system:*"
     ],
-    inherits: ["officer"]
+    inherits: ["hr"]
   }
 };
 

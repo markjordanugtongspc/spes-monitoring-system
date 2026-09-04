@@ -12,6 +12,8 @@ import {
   updateBeneficiary,
   archiveBeneficiary,
   fetchBatches,
+  invalidateBatchCache,
+  invalidateBeneficiaryCache,
   fetchBeneficiaryTransferDestinations,
   fetchBeneficiaryBatchDestinations,
   bulkTransferBeneficiaries,
@@ -1297,9 +1299,15 @@ export function initBeneficiaries() {
   });
 
   const batchFormDrawer = initBatchFormDrawer({
-    onSuccess: async () => {
+    onSuccess: async (data, meta) => {
+      invalidateBatchCache();
+      invalidateBeneficiaryCache();
       await batchSortPanel?.rebuild?.();
-      if (viewMode === "beneficiaries") renderPaginatedTable();
+      if (viewMode === "batches") {
+        await renderBatchCards({ forceRefresh: true });
+      } else {
+        renderPaginatedTable();
+      }
     }
   });
   const batchCardsWrap = document.getElementById("batches-kanban-wrapper");
@@ -2363,13 +2371,13 @@ export function initBeneficiaries() {
     }
   }
 
-  async function renderBatchCards() {
+  async function renderBatchCards({ forceRefresh = false } = {}) {
     const kanbanWrap = document.getElementById("batches-kanban-wrapper");
     kanbanWrap.innerHTML = "";
     kanbanWrap.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 pb-2 select-none items-start";
 
     // Fetch batches to know the columns
-    const { data: batchesData } = await fetchBatches({ forceRefresh: false });
+    const { data: batchesData } = await fetchBatches({ forceRefresh });
     const batches = batchesData || [];
 
     // Group active beneficiaries

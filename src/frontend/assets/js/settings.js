@@ -41,10 +41,12 @@ async function boot() {
   const user = getSession();
   if (!user) return;
 
-  // Session healer (mirrors other entries)
-  if (!user.role_id && user.role) {
-    if (user.role === "admin")   user.role_id = 1;
-    if (user.role === "officer") user.role_id = 2;
+  // Session healer: if role_id is missing or inaccurate, sync it dynamically from role string
+  if (user && user.role) {
+    const r = String(user.role).trim().toLowerCase();
+    if (r === "admin") user.role_id = 1;
+    else if (r === "hr") user.role_id = 2;
+    else if (r === "officer") user.role_id = 3;
   }
 
   _populateSidebar(user);

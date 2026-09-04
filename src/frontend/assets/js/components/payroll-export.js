@@ -99,7 +99,12 @@ function populateOfficeScopeOptions() {
   if (!select) return;
 
   const currentVal = select.value;
-  select.innerHTML = '<option value="all">All Implementors & Offices</option>';
+  select.innerHTML = "";
+
+  if (_allOffices.length > 1) {
+    select.innerHTML = '<option value="all">All Implementors & Offices</option>';
+    select.disabled = false;
+  }
 
   _allOffices.forEach(office => {
     const opt = document.createElement("option");
@@ -108,7 +113,10 @@ function populateOfficeScopeOptions() {
     select.appendChild(opt);
   });
 
-  if (_currentOfficeScope && _currentOfficeScope !== "all") {
+  if (_allOffices.length === 1) {
+    select.value = String(_allOffices[0].id);
+    select.disabled = true;
+  } else if (_currentOfficeScope && _currentOfficeScope !== "all") {
     select.value = String(_currentOfficeScope);
   } else if (currentVal) {
     select.value = currentVal;
@@ -118,7 +126,10 @@ function populateOfficeScopeOptions() {
 
 // --- START: COMPUTE FILTERED EXPORT BENEFICIARIES ---
 function getFilteredExportBeneficiaries() {
-  const officeScope = document.getElementById("export-office-scope")?.value || "all";
+  const officeScopeEl = document.getElementById("export-office-scope");
+  const officeScope = (_allOffices.length === 1 && _allOffices[0]?.id)
+    ? String(_allOffices[0].id)
+    : (officeScopeEl?.value || "all");
   const statusFilter = document.getElementById("export-status-filter")?.value || "all";
 
   let list = [..._allBeneficiaries].filter(b => !b.archived_at);

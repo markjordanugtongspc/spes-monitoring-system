@@ -97,6 +97,96 @@ export async function updateBatch(id, payload = {}) {
   invalidateBatchCache();
   return { success: true, data };
 }
+
+/**
+ * Hard-deletes a batch from the batch table.
+ * Restricted to administrators and HR officers.
+ *
+ * @param {number|string} batchId
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function deleteBatchPermanently(batchId) {
+  const bId = Number(batchId);
+  if (!bId || isNaN(bId)) return { success: false, error: "Invalid batch ID." };
+
+  const session = _getStoredSession();
+  const role = String(session?.role || "").toLowerCase();
+  const isAdminOrHr = role === "admin" || role === "hr" || Number(session?.role_id) === 1;
+  if (!isAdminOrHr) {
+    return { success: false, error: "Unauthorized. Only administrators and HR staff can delete batches." };
+  }
+
+  // 1. Primary: Use secure API endpoint with service-role admin permissions
+  try {
+    const res = await fetch("/api/batch", {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ batchId: bId }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.success) {
+      invalidateBatchCache();
+      invalidateBeneficiaryCache();
+      return { success: true, batchId: bId };
+    }
+    if (!res.ok && json.error) {
+      console.warn("[SPES Batch] API delete returned error:", json.error);
+    }
+  } catch (apiErr) {
+    console.warn("[SPES Batch] API delete fetch error, attempting direct client fallback:", apiErr?.message);
+  }
+
+  // 2. Fallback: Direct Supabase client
+  const { error } = await supabase
+    .from("batch")
+    .delete()
+    .eq("id", bId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] delete error:", error.code, error.hint, error.message);
+    return { success: false, error: "Failed to delete batch. " + (error.message || "Please try again.") };
+  }
+
+  invalidateBatchCache();
+  invalidateBeneficiaryCache();
+  return { success: true };
+}
+
+/**
+ * Soft-archives all beneficiaries belonging to a batch by setting archive_at = now().
+ * Also unlinks batch_id to satisfy foreign key constraints on hard deletion.
+ * Restricted to administrators and HR officers.
+ *
+ * @param {number|string} batchId
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function archiveBeneficiariesByBatch(batchId) {
+  const bId = Number(batchId);
+  if (!bId || isNaN(bId)) return { success: false, error: "Invalid batch ID." };
+
+  const session = _getStoredSession();
+  const role = String(session?.role || "").toLowerCase();
+  const isAdminOrHr = role === "admin" || role === "hr" || Number(session?.role_id) === 1;
+  if (!isAdminOrHr) {
+    return { success: false, error: "Unauthorized. Only administrators and HR staff can archive beneficiaries." };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { error } = await supabase
+    .from("beneficiary")
+    .update({ archive_at: nowIso, updated_at: nowIso, batch_id: null })
+    .eq("batch_id", bId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Beneficiary] archive batch beneficiaries error:", error.code, error.hint, error.message);
+    return { success: false, error: "Failed to archive beneficiaries for batch." };
+  }
+
+  invalidateBeneficiaryCache();
+  return { success: true };
+}
+
 // -- Cache helpers ----------------------------------------------
 function _readCache(cacheKey = CACHE_KEY) {
   try {
@@ -212,12 +302,13 @@ async function _fetchBeneficiaryPages(selectStr, officeId, canViewOtherOffices) 
 
   return { data: records, error: null };
 }
-export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
+export async function fetchBeneficiaries({ forceRefresh = false, forceGlobal = false } = {}) {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
   const access = getOfficeAccessScope(session);
-  const officeId = session.office_id;
-  const cacheKey = `${CACHE_KEY}:${access.canViewOtherOffices ? "global" : `office-${officeId ?? "none"}`}`;
+  const isGlobal = access.canViewOtherOffices || forceGlobal;
+  const officeId = isGlobal ? null : session.office_id;
+  const cacheKey = `${CACHE_KEY}:${isGlobal ? "global" : `office-${session.office_id ?? "none"}`}`;
 
   if (!forceRefresh) {
     const cached = _readCache(cacheKey);
@@ -233,7 +324,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   }
 
   let selectStr = "*, batch:batch_id(id, batch_name), education:education!beneficiary_educ_id_fkey(id, name), education_level:education_levels!beneficiary_education_level_id_fkey(id, name), gender:gender_id(id, name)";
-  if (!access.canViewOtherOffices && officeId) {
+  if (!isGlobal && officeId) {
     selectStr += ", staffs!staff_id!inner(office_id, full_name)";
   } else {
     // Cross-office readers need office metadata for local read-only filtering.
@@ -243,7 +334,7 @@ export async function fetchBeneficiaries({ forceRefresh = false } = {}) {
   let result = await _fetchBeneficiaryPages(
     selectStr,
     officeId,
-    access.canViewOtherOffices
+    isGlobal
   );
 
   // Preserve schema compatibility if a deployment reports a missing column.

@@ -73,11 +73,11 @@ export function enrichBeneficiaryWithPayroll(beneficiary, dbRecord = null) {
  * @param {{ forceRefresh?: boolean, officeId?: string|number|null }} options
  * @returns {Promise<{ data: Array, error?: string }>}
  */
-export async function fetchBeneficiaryPayrollRoster({ forceRefresh = false, officeId = null } = {}) {
+export async function fetchBeneficiaryPayrollRoster({ forceRefresh = false, officeId = null, forceGlobal = true } = {}) {
   // Parallel fetch: beneficiaries and DB payroll records
   const [beneRes, payrollRes] = await Promise.all([
-    fetchBeneficiaries({ forceRefresh }),
-    fetchDbPayrollRecords({ forceRefresh, officeId }),
+    fetchBeneficiaries({ forceRefresh, forceGlobal }),
+    fetchDbPayrollRecords({ forceRefresh, officeId: forceGlobal ? null : officeId }),
   ]);
 
   if (beneRes.error) {

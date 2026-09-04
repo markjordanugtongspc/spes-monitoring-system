@@ -87,10 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-// --- START: SUPABASE REALTIME PERMISSIONS LISTENER (staff_permissions table) ---
+// --- START: SUPABASE REALTIME PERMISSIONS LISTENER ---
 function setupRealtimePermissionsListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  if (!session || !session.id || session.role === "admin") return;
+  const isExecutive = session.role === "admin" || session.role === "hr" || Number(session.role_id) === 1 || Number(session.role_id) === 2;
+  if (!session || !session.id || isExecutive) return;
+
   const permissionFields = [
     "view_users",
     "create_users",
@@ -102,8 +104,42 @@ function setupRealtimePermissionsListener() {
     "view_payroll",
   ];
 
+  const handlePermChange = async (payload) => {
+    const permissionChanged = permissionFields.some((field) => (
+      Boolean(payload.new?.[field]) !== Boolean(session.permissions?.[field])
+    ));
+    if (!permissionChanged) return;
+
+    // Refresh local cache and localStorage
+    const { fetchStaffPermissions } = await import("../../../backend/api/permissions.js");
+    const { data: freshPerms } = await fetchStaffPermissions(session.id, { forceRefresh: true });
+    if (freshPerms) {
+      session.permissions = freshPerms;
+      localStorage.setItem("spes_session", JSON.stringify(session));
+
+      const { modals } = await import("./components/modals.js");
+      modals.info(
+        "Permissions Updated",
+        "Your access permissions have been updated in real-time. Reloading the page..."
+      );
+      setTimeout(() => {
+        window.location.reload();
+      }, 2500);
+    }
+  };
+
   supabase
     .channel(`global-staff-permissions-${session.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "permissions",
+        filter: `staff_id=eq.${session.id}`
+      },
+      handlePermChange
+    )
     .on(
       "postgres_changes",
       {
@@ -112,36 +148,7 @@ function setupRealtimePermissionsListener() {
         table: "staff_permissions",
         filter: `staff_id=eq.${session.id}`
       },
-      async (payload) => {
-        const permissionChanged = permissionFields.some((field) => (
-          Boolean(payload.new?.[field]) !== Boolean(session.permissions?.[field])
-        ));
-        if (!permissionChanged) return;
-
-        // Refresh local cache and localStorage
-        const { fetchStaffPermissions } = await import("../../../backend/api/permissions.js");
-        const { data: freshPerms } = await fetchStaffPermissions(session.id, { forceRefresh: true });
-        if (freshPerms) {
-          session.permissions = freshPerms;
-          localStorage.setItem("spes_session", JSON.stringify(session));
-          
-          Swal.fire({
-            title: "Permissions Updated",
-            text: "Your access permissions have been updated in real-time. Reloading the page...",
-            icon: "info",
-            timer: 3000,
-            timerProgressBar: true,
-            showConfirmButton: false,
-            customClass: {
-              popup: "rounded-2xl border-none shadow-2xl"
-            },
-            background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
-            color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
-          }).then(() => {
-            window.location.reload();
-          });
-        }
-      }
+      handlePermChange
     )
     .subscribe();
 }

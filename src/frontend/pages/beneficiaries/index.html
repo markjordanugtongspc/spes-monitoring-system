@@ -997,6 +997,14 @@
             class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
             placeholder="e.g. SUMMER BATCH" />
         </div>
+
+        <!-- DELETE BATCH (Admin/HR only) — hidden by default, shown via JS in edit mode -->
+        <div id="batch-delete-section" class="hidden pt-2">
+          <button type="button" id="btn-delete-batch-permanent"
+            class="cursor-pointer w-full rounded-none bg-rose-600 px-4 py-3 text-xs sm:text-sm font-black uppercase tracking-widest text-white shadow-md transition-all hover:bg-rose-700 hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-rose-500/40">
+            DELETE BATCH
+          </button>
+        </div>
       </form>
     </div>
     

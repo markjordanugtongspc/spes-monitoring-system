@@ -52,23 +52,49 @@ export default async function handler(req, res) {
       });
     }
 
-    // --- START: FETCH PERMISSIONS from staff_permissions table after successful login ---
-    let staffPerms = {};
-    const { data: permRow, error: permError } = await supabase
-      .from("staff_permissions")
-      .select(`
-        view_users, create_users, edit_users, delete_users,
-        export_reports, view_other_offices, view_global_stats, view_payroll
-      `)
-      .eq("staff_id", data.user.id)
-      .maybeSingle();
+    // --- START: FETCH PERMISSIONS with fallback & auto-grant for Admin/HR ---
+    const isAdmin = Number(data.user.role_id) === 1 || String(data.user.role || "").toLowerCase() === "admin";
+    const isHr = Number(data.user.role_id) === 2 || String(data.user.role || "").toLowerCase() === "hr";
 
-    if (!permError && permRow) {
-      staffPerms = permRow;
+    if (isAdmin || isHr) {
+      data.user.permissions = {
+        view_users: true,
+        create_users: true,
+        edit_users: true,
+        delete_users: true,
+        export_reports: true,
+        view_other_offices: true,
+        view_global_stats: true,
+        view_payroll: true,
+      };
+    } else {
+      const { data: permRow } = await supabase
+        .from("staff_permissions")
+        .select(`
+          view_users, create_users, edit_users, delete_users,
+          export_reports, view_other_offices, view_global_stats, view_payroll
+        `)
+        .eq("staff_id", data.user.id)
+        .maybeSingle();
+
+      data.user.permissions = normalizeStaffPermissions(permRow || {});
     }
-
-    data.user.permissions = normalizeStaffPermissions(staffPerms);
     // --- END: FETCH PERMISSIONS ---
+
+    // --- START: SUPPLEMENT DEPLOYMENT DATES & OFFICE SCOPE ---
+    // Supplement started_at, ended_at, office_id, and role_id from staffs table
+    const { data: staffMeta } = await supabase
+      .from("staffs")
+      .select("started_at, ended_at, office_id, role_id")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (staffMeta) {
+      if (staffMeta.started_at && !data.user.started_at) data.user.started_at = staffMeta.started_at;
+      if (staffMeta.ended_at && !data.user.ended_at) data.user.ended_at = staffMeta.ended_at;
+      if (staffMeta.office_id != null && data.user.office_id == null) data.user.office_id = staffMeta.office_id;
+      if (staffMeta.role_id != null && data.user.role_id == null) data.user.role_id = staffMeta.role_id;
+    }
+    // --- END: SUPPLEMENT DEPLOYMENT DATES & OFFICE SCOPE ---
 
     res.setHeader("Set-Cookie", createSessionCookie(data.user));
     return res.status(200).json({ success: true, user: data.user });

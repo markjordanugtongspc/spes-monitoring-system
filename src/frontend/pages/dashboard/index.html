@@ -156,28 +156,28 @@
         class="absolute -top-12 inset-x-0 bottom-0 z-0 bg-gradient-to-br from-spes-blue/85 to-[#002878]/95 dark:from-spes-dark-primary/90 dark:to-[#0A0A0A]/95">
       </div>
 
-      <div class="relative z-40 mx-auto max-w-7xl 2xl:max-w-[2200px]">
-        <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div class="order-2 min-w-0 sm:order-1">
-            <h1 class="font-montserrat text-3xl font-black text-spes-white">Dashboard</h1>
-            <p class="mt-1 text-sm text-spes-white/70">Welcome back, <span id="header-user-name"
+      <div class="relative z-10 mx-auto max-w-7xl 2xl:max-w-[2200px]">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="order-1 min-w-0 sm:order-1">
+            <h1 class="font-montserrat text-2xl sm:text-3xl font-black text-spes-white">Dashboard</h1>
+            <p class="mt-0.5 sm:mt-1 text-xs sm:text-sm text-spes-white/75">Welcome back, <span id="header-user-name"
                 class="font-bold">Admin</span></p>
           </div>
 
-          <div class="contents sm:order-2 sm:flex sm:w-auto sm:flex-col sm:items-end sm:gap-2">
-            <!-- Real-time Clock (above the period selector on mobile) -->
+          <div class="order-2 flex flex-col gap-2 sm:order-2 sm:w-auto sm:items-end">
+            <!-- Real-time Clock (priority 2 on mobile, directly beneath title) -->
             <div
-              class="order-1 flex w-full max-w-md items-center justify-center gap-2 rounded px-3 py-2.5 text-[9px] font-bold text-white ring-1 ring-white/30 transition-all hover:ring-white/50 sm:order-none sm:w-auto sm:min-w-72 sm:px-4 sm:py-3 sm:text-xs">
-              <svg class="h-3 w-3 text-spes-yellow sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              class="flex w-full max-w-md items-center justify-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-[10px] font-bold text-white ring-1 ring-white/20 transition-all hover:ring-white/40 sm:w-auto sm:min-w-72 sm:px-4 sm:py-2.5 sm:text-xs">
+              <svg class="h-3.5 w-3.5 text-spes-yellow sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
                   d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
               <span id="real-time-clock"
-                class="whitespace-nowrap tracking-wider text-[8px] sm:text-[10px] md:text-xs">Loading...</span>
+                class="whitespace-nowrap tracking-wider text-[9px] sm:text-[10px] md:text-xs">Loading...</span>
             </div>
             <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
             <div id="dashboard-period-selector" role="group" aria-label="Dashboard period filters"
-              class="relative order-3 flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-md bg-spes-blue/25 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:order-none sm:w-auto sm:min-w-72 sm:text-xs">
+              class="relative flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-lg bg-spes-blue/30 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:w-auto sm:min-w-72 sm:text-xs">
               <button id="dashboard-period-all" type="button"
                 class="cursor-pointer shrink-0 whitespace-nowrap rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3 sm:py-1.5">All
                 Time</button>
@@ -192,7 +192,7 @@
                   </svg>
                 </button>
                 <div id="dashboard-year-dropdown-menu"
-                  class="absolute left-0 top-full z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  class="absolute left-0 top-full z-30 sm:z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
                   <div id="dashboard-year-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>
@@ -207,7 +207,7 @@
                   </svg>
                 </button>
                 <div id="dashboard-month-dropdown-menu"
-                  class="absolute right-0 top-full z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  class="absolute right-0 top-full z-30 sm:z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
                   <div id="dashboard-month-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>

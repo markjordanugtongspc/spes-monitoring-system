@@ -135,6 +135,7 @@ function highlightMatchText(text, query) {
 // --- END: HIGHLIGHT MATCH TEXT HELPER ---
 
 // Global state
+let globalBeneficiaries = [];
 let allBeneficiaries = [];
 let filteredBeneficiaries = [];
 let allImplementors = [];
@@ -157,16 +158,54 @@ const editingOfficeIds = new Set();
 let currentPage = 1;
 const selectedBeneficiaryIds = new Set();
 
+// --- START: BENEFICIARY PAYROLL IN-MEMORY SYNC HELPER ---
+function syncBeneficiaryPayrollMemory(beneIdOrIds, payrollPatch = {}) {
+  const ids = Array.isArray(beneIdOrIds) ? beneIdOrIds.map(String) : [String(beneIdOrIds)];
+
+  allBeneficiaries.forEach(b => {
+    if (ids.includes(String(b.id))) {
+      b.payroll = { ...(b.payroll || {}), ...payrollPatch };
+    }
+  });
+
+  globalBeneficiaries.forEach(b => {
+    if (ids.includes(String(b.id))) {
+      b.payroll = { ...(b.payroll || {}), ...payrollPatch };
+    }
+  });
+
+  preferenceStorage.savePayrollCache({
+    globalBeneficiaries,
+    beneficiaries: allBeneficiaries,
+    offices: allOffices,
+    implementors: allImplementors,
+  });
+}
+// --- END: BENEFICIARY PAYROLL IN-MEMORY SYNC HELPER ---
+
 // --- START: HR / ADMIN PERMISSION HELPER ---
 function isHrOrAdmin(session) {
   if (!session) return false;
   const role = String(session.role || "").trim().toLowerCase();
   const roleId = Number(session.role_id);
-  const u = String(session.username || "").trim().toLowerCase();
-  const email = String(session.email || "").trim().toLowerCase();
+  // Officers are strictly never Admin or HR
+  if (role === "officer" || roleId === 3) return false;
   const isAdm = role === "admin" || roleId === 1 || role.includes("super");
-  const isHr = u === "lace_arrellano" || u.includes("lace") || email.includes("lace") || role === "hr" || role.includes("human resource");
+  const isHr = roleId === 2 || role === "hr" || role.includes("human resource");
   return isAdm || isHr;
+}
+
+/**
+ * Validates whether the deployment start date is set and not "N/A", null, or empty.
+ * @param {string|null} val
+ * @returns {boolean}
+ */
+export function hasValidDeploymentDate(val) {
+  if (!val) return false;
+  const s = String(val).trim().toLowerCase();
+  if (s === "n/a" || s === "null" || s === "undefined" || s === "none" || s === "") return false;
+  const d = new Date(val);
+  return !isNaN(d.getTime());
 }
 // --- END: HR / ADMIN PERMISSION HELPER ---
 
@@ -175,10 +214,29 @@ let _lastExecutiveStatsKey = null;
 // --- START: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
 function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFirstVisit = false) {
   const session = getSession();
-  const isExecutive = isHrOrAdmin(session);
+  const access = getOfficeAccessScope(session);
+  const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
+  const isExecutive = access.canViewGlobalStats && !isOfficer; // true for Admin and HR only
 
-  // Global totals for budget, beneficiaries, pending, balance, and disburse rate
-  const globalStats = computePayrollExecutiveSummary(beneficiaries, customGeneralBudget);
+  // Global pool: full beneficiary roster across all offices for literal global budget & balance
+  const globalPool = (globalBeneficiaries && globalBeneficiaries.length > 0) ? globalBeneficiaries : (beneficiaries || []);
+  const globalStats = computePayrollExecutiveSummary(globalPool, customGeneralBudget);
+
+  // Scoped pool for Card 02 (Paid) and Card 03 (Pending):
+  // For Admin / HR: Global stats
+  // For Officer: Scoped strictly to their own assigned office
+  const officeId = session?.office_id;
+  const scopedBeneficiaries = isExecutive
+    ? globalPool
+    : (officeId ? globalPool.filter(b => String(b.staffs?.office_id) === String(officeId)) : globalPool);
+
+  const targetOfficeBudget = (!isExecutive && officeId)
+    ? (customOfficeBudgets[String(officeId)] || null)
+    : null;
+
+  const scopedStats = isExecutive
+    ? globalStats
+    : computePayrollExecutiveSummary(scopedBeneficiaries, targetOfficeBudget);
 
   const budgetEl = document.getElementById("stat-total-budget");
   const paidEl = document.getElementById("stat-total-paid");
@@ -191,33 +249,28 @@ function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFir
   const disburseRateEl = document.getElementById("stat-disbursement-rate");
   const inputBudget = document.getElementById("input-edit-total-budget");
 
+  // Card 01 (TOTAL BUDGET): Always GLOBAL
+  const displayTotalBudget = globalStats.totalBudget;
+  const displayTotalBeneficiaries = globalStats.totalBeneficiaries;
+
   if (inputBudget && !isInlineEditMode) {
-    inputBudget.value = formatNumberWithCommas(globalStats.totalBudget, true);
+    inputBudget.value = formatNumberWithCommas(displayTotalBudget, true);
   }
 
-  // Calculate Total Paid & Paid Count:
-  // For HR / Admin (Lace / Admin) -> OVERALL TOTAL of all paid across all offices
-  // For Normal Staff -> ONLY how much was paid in their specific assigned office
-  let displayPaidAmount = 0;
-  let displayPaidCount = 0;
+  // Card 02 (TOTAL PAID): Scoped to Officer's office for Officer, Global for Admin/HR
+  const displayPaidAmount = scopedStats.totalPaid;
+  const displayPaidCount = scopedBeneficiaries.filter(b => (b.payroll?.payment_status || (b.is_paid ? "PAID" : "PENDING")) === "PAID").length;
 
-  if (isExecutive) {
-    displayPaidAmount = globalStats.totalPaid;
-    displayPaidCount = beneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
-  } else {
-    const myOfficeBeneficiaries = session?.office_id
-      ? beneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id))
-      : [];
-    displayPaidAmount = myOfficeBeneficiaries
-      .filter(b => b.payroll?.payment_status === "PAID")
-      .reduce((sum, b) => sum + (Number(b.payroll?.stipend_amount) || DEFAULT_STIPEND_RATE), 0);
-    displayPaidCount = myOfficeBeneficiaries.filter(b => b.payroll?.payment_status === "PAID").length;
-  }
+  // Card 03 (TOTAL PENDING): Scoped to Officer's office for Officer, Global for Admin/HR
+  const displayPendingAmount = scopedStats.totalPending;
+  const displayPendingCount = scopedBeneficiaries.filter(b => (b.payroll?.payment_status || (b.is_paid ? "PAID" : "PENDING")) === "PENDING").length;
 
-  const globalPendingCount = beneficiaries.filter(b => b.payroll?.payment_status === "PENDING").length;
+  // Card 04 (REMAINING BALANCE): Always GLOBAL
+  const displayRemainingBalance = globalStats.remainingBalance;
+  const displayDisbursementRate = globalStats.disbursementRate;
 
   // Check if data has actually changed before triggering animation to prevent idle/re-render jumping
-  const statsKey = `${globalStats.totalBudget}_${displayPaidAmount}_${globalStats.totalPending}_${globalStats.remainingBalance}_${globalStats.totalBeneficiaries}_${displayPaidCount}_${globalPendingCount}_${globalStats.disbursementRate}`;
+  const statsKey = `${displayTotalBudget}_${displayPaidAmount}_${displayPendingAmount}_${displayRemainingBalance}_${displayTotalBeneficiaries}_${displayPaidCount}_${displayPendingCount}_${displayDisbursementRate}`;
   if (_lastExecutiveStatsKey === statsKey && !forceFromZero) {
     return;
   }
@@ -232,16 +285,16 @@ function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFir
   const pendingDelay = isFirstVisit ? 340 : 0;
   const remainingDelay = isFirstVisit ? 460 : 0;
 
-  if (budgetEl) animateCounter(budgetEl, globalStats.totalBudget, { isCurrency: true, duration: cardDuration, delay: budgetDelay, forceFromZero });
+  if (budgetEl) animateCounter(budgetEl, displayTotalBudget, { isCurrency: true, duration: cardDuration, delay: budgetDelay, forceFromZero });
   if (paidEl) animateCounter(paidEl, displayPaidAmount, { isCurrency: true, duration: cardDuration, delay: paidDelay, forceFromZero });
-  if (pendingEl) animateCounter(pendingEl, globalStats.totalPending, { isCurrency: true, duration: cardDuration, delay: pendingDelay, forceFromZero });
-  if (remainingEl) animateCounter(remainingEl, globalStats.remainingBalance, { isCurrency: true, duration: cardDuration, delay: remainingDelay, forceFromZero });
+  if (pendingEl) animateCounter(pendingEl, displayPendingAmount, { isCurrency: true, duration: cardDuration, delay: pendingDelay, forceFromZero });
+  if (remainingEl) animateCounter(remainingEl, displayRemainingBalance, { isCurrency: true, duration: cardDuration, delay: remainingDelay, forceFromZero });
 
   // Animate subtitle counts and percentages
-  if (beneCountEl) animateCounter(beneCountEl, globalStats.totalBeneficiaries, { suffix: " Beneficiaries", duration: subDuration, delay: isFirstVisit ? 150 : 0, forceFromZero });
+  if (beneCountEl) animateCounter(beneCountEl, displayTotalBeneficiaries, { suffix: " Beneficiaries", duration: subDuration, delay: isFirstVisit ? 150 : 0, forceFromZero });
   if (paidCountEl) animateCounter(paidCountEl, displayPaidCount, { suffix: isExecutive ? " Paid Accounts" : " Paid (My Office)", duration: subDuration, delay: isFirstVisit ? 270 : 0, forceFromZero });
-  if (pendingCountEl) animateCounter(pendingCountEl, globalPendingCount, { suffix: " In Processing", duration: subDuration, delay: isFirstVisit ? 390 : 0, forceFromZero });
-  if (disburseRateEl) animateCounter(disburseRateEl, globalStats.disbursementRate, { suffix: "% Disbursed", decimals: 0, duration: subDuration, delay: isFirstVisit ? 510 : 0, forceFromZero });
+  if (pendingCountEl) animateCounter(pendingCountEl, displayPendingCount, { suffix: " In Processing", duration: subDuration, delay: isFirstVisit ? 390 : 0, forceFromZero });
+  if (disburseRateEl) animateCounter(disburseRateEl, displayDisbursementRate, { suffix: "% Disbursed", decimals: 0, duration: subDuration, delay: isFirstVisit ? 510 : 0, forceFromZero });
 }
 // --- END: UPDATE EXECUTIVE STATISTIC CARDS DATA ---
 
@@ -283,9 +336,10 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
   // Group beneficiaries by office
   const session = getSession();
   const access = getOfficeAccessScope(session);
+  const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
   const officeMap = new Map();
 
-  const scopedOffices = (!access.canViewOtherOffices && session?.office_id)
+  const scopedOffices = ((!access.canViewOtherOffices || isOfficer) && session?.office_id)
     ? allOffices.filter(o => String(o.id) === String(session.office_id))
     : allOffices;
 
@@ -357,7 +411,9 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
     tbody.innerHTML = `
       <tr>
         <td colspan="7" class="text-center py-16 text-sm font-bold uppercase tracking-wider text-spes-black/40 dark:text-white/40">
-          No implementors or offices match "${escHtml(searchQ)}".
+          ${!access.canViewOtherOffices && !session?.office_id
+            ? "Your Officer account has not been assigned to a designated office yet. Please contact an Administrator or HR."
+            : `No implementors or offices match "${escHtml(searchQ)}".`}
         </td>
       </tr>
     `;
@@ -472,6 +528,11 @@ function renderImplementorsView(isFirstVisit = false, updateUrl = true) {
   tbody.querySelectorAll(".btn-save-row-budget").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
+      const session = getSession();
+      if (!isHrOrAdmin(session)) {
+        modals.warning("Access Denied", "Only Administrators and HR personnel are authorized to modify office budgets.");
+        return;
+      }
       const officeId = btn.dataset.officeId;
       const input = tbody.querySelector(`.input-edit-office-budget[data-office-id="${officeId}"]`);
       if (input && officeId) {
@@ -516,11 +577,18 @@ function switchToBatchesView(officeId, officeName, updateUrl = true) {
   const titleEl = document.getElementById("payroll-table-title");
   if (titleEl) titleEl.textContent = `Batches & ET.AL Payroll — ${officeName.toUpperCase()}`;
 
-  // Reveal Back Button
+  // Back button: only visible if user can view other offices (Admin/HR)
+  const session = getSession();
+  const access = getOfficeAccessScope(session);
   const backBtn = document.getElementById("btn-back-to-payroll-implementors");
   if (backBtn) {
-    backBtn.classList.remove("hidden");
-    backBtn.classList.add("inline-flex");
+    if (!access.canViewOtherOffices) {
+      backBtn.classList.add("hidden");
+      backBtn.classList.remove("inline-flex");
+    } else {
+      backBtn.classList.remove("hidden");
+      backBtn.classList.add("inline-flex");
+    }
   }
 
   const implView = document.getElementById("payroll-implementors-view");
@@ -830,6 +898,9 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       </tr>
     `;
   } else {
+    const currentSession = getSession();
+    const canPerformActions = isHrOrAdmin(currentSession) || hasValidDeploymentDate(currentSession?.started_at);
+
     tbody.innerHTML = pageItems.map((b, idx) => {
       const p = b.payroll || {};
       const isSelected = selectedBeneficiaryIds.has(String(b.id));
@@ -847,14 +918,12 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
              <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
              PAID
              ${datePaidFormatted ? `
-             <div role="tooltip" class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition-all duration-200 whitespace-nowrap rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xl dark:bg-slate-800 border border-emerald-500/30 flex items-center gap-2">
-               <svg class="h-4 w-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-               </svg>
-               <div>
-                 <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-black block">Disbursement Timestamp</span>
-                 <span class="font-mono text-white text-xs">${escHtml(datePaidFormatted)}</span>
+             <div class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 dark:bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-white shadow-xl opacity-0 transition-opacity duration-200 group-hover/status:opacity-100 border border-white/10">
+               <div class="flex items-center gap-1.5 text-emerald-400">
+                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                 <span>Disbursed &amp; Finalized</span>
                </div>
+               <div class="text-[10px] text-slate-300 font-medium mt-0.5">${escHtml(datePaidFormatted)}</div>
                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
              </div>` : ''}
            </span>`
@@ -877,16 +946,16 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
       return `
         <tr class="beneficiary-row cursor-pointer border-b border-gray-100 dark:border-white/5 bg-white dark:bg-spes-dark-primary hover:bg-spes-blue/5 dark:hover:bg-spes-yellow/5 transition-all duration-300 text-sm sm:text-base ${highlightMatchedRow}"
             data-bene-id="${b.id}"
-            draggable="true">
+            ${canPerformActions ? 'draggable="true"' : ''}>
           <td class="p-5 text-center" onclick="event.stopPropagation()">
             <div class="flex items-center justify-center gap-2">
-              <button type="button" class="cursor-grab active:cursor-grabbing text-spes-black/30 hover:text-spes-blue dark:text-white/30 dark:hover:text-spes-yellow transition-colors drag-handle p-1" title="Hold & Drag to reorder row in this batch">
+              <button type="button" class="cursor-grab active:cursor-grabbing text-spes-black/30 hover:text-spes-blue dark:text-white/30 dark:hover:text-spes-yellow transition-colors drag-handle p-1 ${canPerformActions ? '' : 'pointer-events-none opacity-20'}" title="${canPerformActions ? 'Hold & Drag to reorder row in this batch' : 'Reordering requires active deployment start date.'}">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
                 </svg>
               </button>
-              <input type="checkbox" data-checkbox-bene-id="${b.id}" ${isSelected ? "checked" : ""}
-                class="payroll-row-checkbox h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow" />
+              <input type="checkbox" data-checkbox-bene-id="${b.id}" ${isSelected ? "checked" : ""} ${canPerformActions ? "" : "disabled"}
+                class="payroll-row-checkbox h-5 w-5 cursor-pointer rounded-full border-spes-blue/25 text-spes-blue focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/25 dark:bg-spes-dark-secondary dark:text-spes-yellow ${canPerformActions ? '' : 'cursor-not-allowed opacity-30'}" />
             </div>
           </td>
           <td class="px-6 py-5 font-black text-base text-spes-black dark:text-white uppercase whitespace-nowrap">
@@ -907,12 +976,12 @@ function renderBeneficiariesPaginatedTable(isFirstVisit = false) {
           </td>
           <td class="px-6 py-5 text-center whitespace-nowrap" onclick="event.stopPropagation()">
             <div class="inline-flex items-center gap-2">
-              <button type="button" class="btn-quick-edit-row cursor-pointer rounded-xl p-2 text-spes-blue hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors" title="Edit Payroll Record in Drawer">
+              <button type="button" class="btn-quick-edit-row cursor-pointer rounded-xl p-2 text-spes-blue hover:bg-spes-blue/10 dark:text-spes-yellow dark:hover:bg-spes-yellow/10 transition-colors ${canPerformActions ? '' : 'pointer-events-none opacity-30 cursor-not-allowed'}" ${canPerformActions ? '' : 'disabled'} title="${canPerformActions ? 'Edit Payroll Record in Drawer' : 'Editing requires an active start date set by HR or Admin first.'}">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </button>
-              <button type="button" class="btn-toggle-pay-row cursor-pointer rounded-xl p-2 ${isPaid ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-500/10'} transition-colors" title="${isPaid ? 'Mark as Pending / Unpaid' : 'Quick Disburse / Mark Paid'}">
+              <button type="button" class="btn-toggle-pay-row cursor-pointer rounded-xl p-2 ${isPaid ? 'text-emerald-600 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-500/10'} transition-colors ${canPerformActions ? '' : 'pointer-events-none opacity-30 cursor-not-allowed'}" ${canPerformActions ? '' : 'disabled'} title="${!canPerformActions ? 'Marking as paid requires an active start date set by HR or Admin first.' : isPaid ? 'Mark as Pending / Unpaid' : 'Quick Disburse / Mark Paid'}">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -1073,6 +1142,45 @@ function initPayrollRowDragAndDrop() {
 }
 // --- END: BENEFICIARY ROW DRAG-AND-DROP REORDERING ---
 
+// --- START: PAYROLL RBAC ACTION GATING ---
+/**
+ * Restricts payroll actions for non-admin/HR users without an active deployment date (started_at).
+ * Allows view-only access, but disables modification and export actions.
+ */
+function applyPayrollActionGating(session) {
+  const currentSession = session || getSession();
+  if (!currentSession) return;
+
+  if (isHrOrAdmin(currentSession)) return; // Full access bypass for admin / HR
+
+  const hasStartDate = hasValidDeploymentDate(currentSession.started_at);
+  if (hasStartDate) return; // Has deployment start date -> full payroll action access
+
+  // View-only mode for implementor with missing or invalid started_at
+  const disableTargets = [
+    document.getElementById("btn-export-payroll-summary"),
+    document.getElementById("btn-toggle-inline-edit"),
+    document.getElementById("btn-bulk-disburse"),
+    document.getElementById("btn-payroll-bulk-actions"),
+    document.getElementById("btn-switch-to-edit-drawer"),
+    ...document.querySelectorAll(".btn-quick-edit-row"),
+    ...document.querySelectorAll(".btn-toggle-pay-row"),
+    ...document.querySelectorAll(".payroll-row-checkbox"),
+    document.getElementById("payroll-checkbox-all"),
+  ].filter(Boolean);
+
+  disableTargets.forEach(el => {
+    el.classList.add("pointer-events-none", "opacity-40", "cursor-not-allowed");
+    el.setAttribute("disabled", "true");
+    el.setAttribute("title", "Payroll actions require an active start date set by HR or Admin first.");
+  });
+
+  document.querySelectorAll(".beneficiary-row").forEach(r => {
+    r.removeAttribute("draggable");
+  });
+}
+// --- END: PAYROLL RBAC ACTION GATING ---
+
 // --- START: WIRE TABLE ACTIONS (ROW CLICK = VIEW, EDIT ICON = EDIT) ---
 function wireTableActions() {
   const tbody = document.getElementById("payroll-beneficiaries-tbody");
@@ -1107,7 +1215,18 @@ function wireTableActions() {
       const row = btn.closest("tr");
       const bId = row.dataset.beneId;
       const bene = allBeneficiaries.find(b => String(b.id) === String(bId));
-      if (bene) openPayrollDrawer(bene, "edit");
+      if (!bene) return;
+
+      const session = getSession();
+      if (!isHrOrAdmin(session) && !hasValidDeploymentDate(session?.started_at)) {
+        modals.warning(
+          "Deployment Date Required",
+          "Editing payroll records requires an active start date set by HR or Admin first."
+        );
+        openPayrollDrawer(bene, "view");
+        return;
+      }
+      openPayrollDrawer(bene, "edit");
     });
   });
 
@@ -1115,6 +1234,15 @@ function wireTableActions() {
   tbody.querySelectorAll(".btn-toggle-pay-row").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       e.stopPropagation();
+      const session = getSession();
+      if (!isHrOrAdmin(session) && !hasValidDeploymentDate(session?.started_at)) {
+        modals.warning(
+          "Deployment Date Required",
+          "Marking as paid requires an active start date set by HR or Admin first."
+        );
+        return;
+      }
+
       const row = btn.closest("tr");
       const bId = row.dataset.beneId;
       const bene = allBeneficiaries.find(b => String(b.id) === String(bId));
@@ -1124,16 +1252,19 @@ function wireTableActions() {
       const nextStatus = currentStatus === "PAID" ? "PENDING" : "PAID";
       const nowStr = new Date().toISOString();
       const nextDatePaid = nextStatus === "PAID" ? nowStr : null;
-      const session = getSession();
 
       await updateBeneficiaryPayrollRecord(bene.id, {
         payment_status: nextStatus,
         date_paid: nextDatePaid,
+        stipend_amount: bene.payroll?.stipend_amount ?? DEFAULT_STIPEND_RATE,
+        days_worked: bene.payroll?.days_worked ?? DEFAULT_WORK_DAYS,
         updated_by: session?.id || null,
       }, bene.staffs?.office_id || null);
 
-      bene.payroll.payment_status = nextStatus;
-      bene.payroll.date_paid = nextDatePaid;
+      syncBeneficiaryPayrollMemory(bene.id, {
+        payment_status: nextStatus,
+        date_paid: nextDatePaid,
+      });
 
       const timestampLog = nextStatus === "PAID" ? ` (Logged: ${formatPhilippineTimestamp(nowStr)})` : "";
       modals.flowbiteToast(
@@ -1146,6 +1277,9 @@ function wireTableActions() {
       applyBeneficiaryFiltersAndRender();
     });
   });
+
+  // Apply RBAC gating to row actions if user has no started_at date
+  applyPayrollActionGating();
 }
 // --- END: WIRE TABLE ACTIONS (ROW CLICK = VIEW, EDIT ICON = EDIT) ---
 
@@ -1154,6 +1288,21 @@ function openPayrollDrawer(beneficiary, mode = "view") {
   const overlay = document.getElementById("drawer-payroll-edit-overlay");
   const drawer = document.getElementById("drawer-payroll-edit");
   if (!drawer || !overlay) return;
+
+  const session = getSession();
+  const canEdit = isHrOrAdmin(session) || hasValidDeploymentDate(session?.started_at);
+  if (!canEdit) {
+    mode = "view";
+  }
+
+  const switchBtn = document.getElementById("btn-switch-to-edit-drawer");
+  if (switchBtn) {
+    if (!canEdit) {
+      switchBtn.classList.add("hidden");
+    } else {
+      switchBtn.classList.remove("hidden");
+    }
+  }
 
   currentActiveBeneficiary = beneficiary;
   const p = beneficiary.payroll || {};
@@ -1564,6 +1713,15 @@ function exportPayrollReport(e) {
   if (e) {
     e.preventDefault();
   }
+  const session = getSession();
+  const canExport = isHrOrAdmin(session) || hasValidDeploymentDate(session?.started_at);
+  if (!canExport) {
+    modals.warning(
+      "Action Restricted",
+      "Payroll export requires an active deployment date. Contact your administrator."
+    );
+    return;
+  }
   updatePayrollExportData({
     allBeneficiaries,
     allOffices,
@@ -1670,6 +1828,8 @@ function updateBulkDisburseButtonState() {
       bulkActionsBtn.classList.remove("inline-flex");
     }
   }
+
+  applyPayrollActionGating(session);
 
   if (!btn) return;
 
@@ -1890,11 +2050,9 @@ function setupPayrollBulkActions() {
     modals.close();
 
     // Update memory
-    allBeneficiaries.forEach(b => {
-      if (ids.includes(String(b.id))) {
-        b.payroll.stipend_amount = amount;
-        b.payroll.rate_per_day = b.payroll.days_worked > 0 ? (amount / b.payroll.days_worked) : (amount / DEFAULT_WORK_DAYS);
-      }
+    syncBeneficiaryPayrollMemory(ids, {
+      stipend_amount: amount,
+      rate_per_day: amount > 0 ? (amount / DEFAULT_WORK_DAYS) : 0,
     });
 
     hideFlowbiteModalById("modal-bulk-edit-stipend");
@@ -1937,11 +2095,8 @@ function setupPayrollBulkActions() {
     modals.close();
 
     // Update memory
-    allBeneficiaries.forEach(b => {
-      if (ids.includes(String(b.id))) {
-        b.payroll.days_worked = days;
-        b.payroll.rate_per_day = days > 0 ? (b.payroll.stipend_amount / days) : (DEFAULT_STIPEND_RATE / DEFAULT_WORK_DAYS);
-      }
+    syncBeneficiaryPayrollMemory(ids, {
+      days_worked: days,
     });
 
     hideFlowbiteModalById("modal-bulk-edit-days");
@@ -1977,10 +2132,8 @@ function setupPayrollBulkActions() {
     modals.close();
 
     // Update memory
-    allBeneficiaries.forEach(b => {
-      if (ids.includes(String(b.id))) {
-        b.payroll.notes = notesVal;
-      }
+    syncBeneficiaryPayrollMemory(ids, {
+      notes: notesVal,
     });
 
     hideFlowbiteModalById("modal-bulk-edit-notes");
@@ -2021,11 +2174,9 @@ function setupPayrollBulkActions() {
     modals.close();
 
     // Update memory
-    allBeneficiaries.forEach(b => {
-      if (ids.includes(String(b.id))) {
-        b.payroll.payment_status = "UNPAID";
-        b.payroll.date_paid = null;
-      }
+    syncBeneficiaryPayrollMemory(ids, {
+      payment_status: "UNPAID",
+      date_paid: null,
     });
 
     selectedBeneficiaryIds.clear();
@@ -2119,8 +2270,15 @@ function checkAndSyncEditModeState() {
 }
 
 function saveInlineDataChanges() {
-  let hasChanges = false;
   const session = getSession();
+  if (!isHrOrAdmin(session)) {
+    modals.warning(
+      "Access Denied",
+      "Only Administrators and HR personnel are authorized to edit payroll budgets."
+    );
+    return;
+  }
+  let hasChanges = false;
 
   if (isBudgetCardEditing) {
     const inputBudget = document.getElementById("input-edit-total-budget");
@@ -2195,8 +2353,10 @@ function restoreViewFromUrl(isFirstVisit = false) {
   let officeParam = params.get("office");
   const batchParam = params.get("batch");
 
-  // If user cannot view other offices, force their assigned office
-  if (!access.canViewOtherOffices && session?.office_id) {
+  const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
+
+  // If user cannot view other offices or is an officer, force directly to their assigned office
+  if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
     officeParam = String(session.office_id);
   }
 
@@ -2245,9 +2405,14 @@ function restoreViewFromUrl(isFirstVisit = false) {
  * @param {{ silent?: boolean }} options
  */
 async function refreshPayrollData({ silent = true } = {}) {
+  const session = getSession();
+  const access = getOfficeAccessScope(session);
   try {
     const [beneRes, officeRes, implRes, budgetRes, batchRes] = await Promise.all([
-      fetchBeneficiaryPayrollRoster({ forceRefresh: true }),
+      fetchBeneficiaryPayrollRoster({
+        forceRefresh: true,
+        officeId: null
+      }),
       fetchOffices({ forceRefresh: true }),
       fetchImplementorList({ forceRefresh: true }),
       fetchDbPayrollBudgets({ forceRefresh: true }),
@@ -2255,6 +2420,7 @@ async function refreshPayrollData({ silent = true } = {}) {
     ]);
 
     if (!beneRes.error && Array.isArray(beneRes.data)) {
+      globalBeneficiaries = beneRes.data;
       allBeneficiaries = beneRes.data;
     }
     if (!officeRes.error && Array.isArray(officeRes.data)) {
@@ -2265,6 +2431,16 @@ async function refreshPayrollData({ silent = true } = {}) {
     }
     if (batchRes && Array.isArray(batchRes.data)) {
       allBatches = batchRes.data;
+    }
+
+    const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
+    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+      allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
+      allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
+      allImplementors = allImplementors.filter(
+        s => String(s.office_id) === String(session.office_id) ||
+             (allOffices[0] && String(s.office || "").toLowerCase() === String(allOffices[0].name || "").toLowerCase())
+      );
     }
 
     if (budgetRes) {
@@ -2278,6 +2454,7 @@ async function refreshPayrollData({ silent = true } = {}) {
     }
 
     preferenceStorage.savePayrollCache({
+      globalBeneficiaries,
       beneficiaries: allBeneficiaries,
       offices: allOffices,
       implementors: allImplementors,
@@ -2318,11 +2495,54 @@ export async function initPayroll() {
 
   _purgeLegacyPayrollStorage();
 
-  const canEditBudgets = isHrOrAdmin(session);
+  // Fresh live profile & permissions refresh from Supabase
+  try {
+    if (session?.id) {
+      const { supabase } = await import("../../../../backend/api/supabase.js");
+      const [staffRes, permRes] = await Promise.all([
+        supabase.from("staffs").select("id, role_id, office_id, approved, started_at, ended_at, status").eq("id", session.id).maybeSingle(),
+        supabase.from("staff_permissions").select("*").eq("staff_id", session.id).maybeSingle()
+      ]);
+      if (staffRes?.data) {
+        session.started_at = staffRes.data.started_at;
+        session.ended_at = staffRes.data.ended_at;
+        session.approved = staffRes.data.approved;
+        if (staffRes.data.office_id != null) session.office_id = staffRes.data.office_id;
+        if (staffRes.data.role_id != null) session.role_id = staffRes.data.role_id;
+      }
+      if (permRes?.data) {
+        session.permissions = {
+          view_users: Boolean(permRes.data.view_users),
+          create_users: Boolean(permRes.data.create_users),
+          edit_users: Boolean(permRes.data.edit_users),
+          delete_users: Boolean(permRes.data.delete_users),
+          export_reports: Boolean(permRes.data.export_reports),
+          view_other_offices: Boolean(permRes.data.view_other_offices),
+          view_global_stats: Boolean(permRes.data.view_global_stats),
+          view_payroll: Boolean(permRes.data.view_payroll),
+        };
+      }
+      try {
+        localStorage.setItem("spes_session", JSON.stringify(session));
+        sessionStorage.setItem("spes_session", JSON.stringify(session));
+      } catch {}
+    }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn("[SPES Payroll] Session refresh warning:", err);
+  }
+
+  const access = getOfficeAccessScope(session);
+  const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
+  const canEditBudgets = isHrOrAdmin(session) && !isOfficer;
   const editDataBtn = document.getElementById("btn-toggle-inline-edit");
-  if (editDataBtn && !canEditBudgets) {
-    editDataBtn.classList.add("hidden");
-    editDataBtn.classList.remove("inline-flex");
+  if (editDataBtn) {
+    if (!canEditBudgets) {
+      editDataBtn.classList.add("hidden");
+      editDataBtn.classList.remove("inline-flex");
+    } else {
+      editDataBtn.classList.remove("hidden");
+      editDataBtn.classList.add("inline-flex");
+    }
   }
   const editBudgetContainer = document.getElementById("stat-total-budget-edit-container");
   if (editBudgetContainer && !canEditBudgets) {
@@ -2333,10 +2553,21 @@ export async function initPayroll() {
   const cachedData = preferenceStorage.getPayrollCache();
 
   // If cached data is available in session, load it instantly with snappy counter animation
-  if (cachedData && cachedData.beneficiaries) {
+  if (cachedData && (cachedData.beneficiaries || cachedData.globalBeneficiaries)) {
+    globalBeneficiaries = cachedData.globalBeneficiaries || cachedData.beneficiaries || [];
     allBeneficiaries = cachedData.beneficiaries || [];
     allOffices = cachedData.offices || [];
     allImplementors = cachedData.implementors || [];
+
+    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+      allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
+      allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
+      allImplementors = allImplementors.filter(
+        s => String(s.office_id) === String(session.office_id) ||
+             (allOffices[0] && String(s.office || "").toLowerCase() === String(allOffices[0].name || "").toLowerCase())
+      );
+    }
+
     customGeneralBudget = preferenceStorage.getCustomGeneralBudget();
     customOfficeBudgets = preferenceStorage.getCustomOfficeBudgets();
 
@@ -2349,17 +2580,30 @@ export async function initPayroll() {
 
   try {
     const [beneRes, officeRes, implRes, budgetRes, batchRes] = await Promise.all([
-      fetchBeneficiaryPayrollRoster({ forceRefresh: false }),
+      fetchBeneficiaryPayrollRoster({
+        forceRefresh: false,
+        officeId: null
+      }),
       fetchOffices({ forceRefresh: false }),
       fetchImplementorList({ forceRefresh: false }),
       fetchDbPayrollBudgets({ forceRefresh: false }),
       fetchBatches({ forceRefresh: false }),
     ]);
 
+    globalBeneficiaries = beneRes.data || [];
     allBeneficiaries = beneRes.data || [];
     allOffices = officeRes.data || [];
     allImplementors = implRes || [];
     allBatches = batchRes?.data || [];
+
+    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+      allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
+      allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
+      allImplementors = allImplementors.filter(
+        s => String(s.office_id) === String(session.office_id) ||
+             (allOffices[0] && String(s.office || "").toLowerCase() === String(allOffices[0].name || "").toLowerCase())
+      );
+    }
 
     if (budgetRes) {
       if (budgetRes.generalBudget !== undefined && budgetRes.generalBudget !== null) {
@@ -2378,6 +2622,7 @@ export async function initPayroll() {
 
     // Save fetched data to session cache
     preferenceStorage.savePayrollCache({
+      globalBeneficiaries,
       beneficiaries: allBeneficiaries,
       offices: allOffices,
       implementors: allImplementors,
@@ -2398,6 +2643,7 @@ export async function initPayroll() {
     if (isStillFirstVisit) {
       preferenceStorage.markPayrollIntroSeen();
     }
+    applyPayrollActionGating(session);
   } catch (err) {
     if (import.meta.env.DEV) console.error("[SPES Payroll] Init error:", err);
     if (!cachedData) {
@@ -2416,9 +2662,11 @@ export async function initPayroll() {
 
   // Back button navigation
   document.getElementById("btn-back-to-payroll-implementors")?.addEventListener("click", () => {
+    const session = getSession();
+    const access = getOfficeAccessScope(session);
     if (currentView === "beneficiaries") {
       switchToBatchesView(selectedOfficeId, selectedOfficeName, true);
-    } else {
+    } else if (access.canViewOtherOffices) {
       renderImplementorsView(false, true);
     }
   });
@@ -2521,6 +2769,15 @@ export async function initPayroll() {
 
   // Smart Dynamic Bulk Action (Auto-toggles between Mark Paid and Mark Pending based on selection)
   document.getElementById("btn-bulk-disburse")?.addEventListener("click", async () => {
+    const session = getSession();
+    if (!isHrOrAdmin(session) && !hasValidDeploymentDate(session?.started_at)) {
+      modals.warning(
+        "Deployment Date Required",
+        "Disbursement and payment actions require an active start date set by HR or Admin first."
+      );
+      return;
+    }
+
     const ids = [...selectedBeneficiaryIds];
     if (ids.length === 0) {
       modals.warning("Bulk Action", "Please select at least one beneficiary.");
@@ -2529,7 +2786,6 @@ export async function initPayroll() {
 
     const selectedItems = allBeneficiaries.filter(b => ids.includes(String(b.id)));
     const allSelectedArePaid = selectedItems.every(b => (b.payroll?.payment_status || "PENDING") === "PAID");
-    const session = getSession();
 
     if (allSelectedArePaid) {
       // ── REVERT TO PENDING / UNPAID FLOW ──
@@ -2555,11 +2811,9 @@ export async function initPayroll() {
       modals.close();
 
       // Update memory
-      allBeneficiaries.forEach(b => {
-        if (ids.includes(String(b.id))) {
-          b.payroll.payment_status = "PENDING";
-          b.payroll.date_paid = null;
-        }
+      syncBeneficiaryPayrollMemory(ids, {
+        payment_status: "PENDING",
+        date_paid: null,
       });
 
       selectedBeneficiaryIds.clear();
@@ -2596,11 +2850,9 @@ export async function initPayroll() {
       modals.close();
 
       // Update memory
-      allBeneficiaries.forEach(b => {
-        if (ids.includes(String(b.id))) {
-          b.payroll.payment_status = "PAID";
-          b.payroll.date_paid = nowStr;
-        }
+      syncBeneficiaryPayrollMemory(ids, {
+        payment_status: "PAID",
+        date_paid: nowStr,
       });
 
       selectedBeneficiaryIds.clear();
@@ -2614,6 +2866,21 @@ export async function initPayroll() {
 
   // Edit Data / Save Data Button in Header
   document.getElementById("btn-toggle-inline-edit")?.addEventListener("click", () => {
+    const session = getSession();
+    if (!isHrOrAdmin(session)) {
+      modals.warning(
+        "Access Denied",
+        "Only Administrators and HR personnel are authorized to edit payroll budgets."
+      );
+      return;
+    }
+    if (!hasValidDeploymentDate(session?.started_at)) {
+      modals.warning(
+        "Deployment Date Required",
+        "Editing payroll records requires an active start date set by HR or Admin first."
+      );
+      return;
+    }
     if (isInlineEditMode) {
       saveInlineDataChanges();
     } else {
@@ -2623,6 +2890,11 @@ export async function initPayroll() {
 
   // Card 1: Save Budget Icon Button (Specific Item Save)
   document.getElementById("btn-save-inline-budget")?.addEventListener("click", () => {
+    const session = getSession();
+    if (!isHrOrAdmin(session)) {
+      modals.warning("Access Denied", "Only Administrators and HR personnel can modify total budget.");
+      return;
+    }
     const input = document.getElementById("input-edit-total-budget");
     if (input) {
       const val = parseNumberFromCommas(input.value);
@@ -2630,7 +2902,6 @@ export async function initPayroll() {
         customGeneralBudget = val;
         preferenceStorage.saveCustomGeneralBudget(val);
 
-        const session = getSession();
         upsertDbPayrollBudget(null, val, session?.id);
 
         isBudgetCardEditing = false;
@@ -2657,6 +2928,14 @@ export async function initPayroll() {
 
   // Switch from View to Edit Drawer
   document.getElementById("btn-switch-to-edit-drawer")?.addEventListener("click", () => {
+    const session = getSession();
+    if (!isHrOrAdmin(session) && !hasValidDeploymentDate(session?.started_at)) {
+      modals.warning(
+        "Deployment Date Required",
+        "Editing payroll records requires an active start date set by HR or Admin first."
+      );
+      return;
+    }
     if (currentActiveBeneficiary) {
       openPayrollDrawer(currentActiveBeneficiary, "edit");
     }
@@ -2678,6 +2957,15 @@ export async function initPayroll() {
   // Drawer submit listener
   document.getElementById("form-payroll-drawer")?.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const session = getSession();
+    if (!isHrOrAdmin(session) && !hasValidDeploymentDate(session?.started_at)) {
+      modals.warning(
+        "Deployment Date Required",
+        "Modifying payroll records requires an active start date set by HR or Admin first."
+      );
+      return;
+    }
+
     const id = document.getElementById("pd-beneficiary-id")?.value;
     const rawStipend = document.getElementById("pd-stipend-amount")?.value;
     const stipendAmount = parseNumberFromCommas(rawStipend);
@@ -2689,7 +2977,6 @@ export async function initPayroll() {
 
     const targetBene = allBeneficiaries.find(b => String(b.id) === String(id));
     const officeId = targetBene?.staffs?.office_id || null;
-    const session = getSession();
 
     let targetDatePaid = null;
     if (paymentStatus === "PAID") {
@@ -2705,13 +2992,13 @@ export async function initPayroll() {
       updated_by: session?.id || null,
     }, officeId);
 
-    if (targetBene) {
-      targetBene.payroll.stipend_amount = stipendAmount;
-      targetBene.payroll.days_worked = daysWorked;
-      targetBene.payroll.payment_status = paymentStatus;
-      targetBene.payroll.date_paid = targetDatePaid;
-      targetBene.payroll.notes = notes;
-    }
+    syncBeneficiaryPayrollMemory(id, {
+      stipend_amount: stipendAmount,
+      days_worked: daysWorked,
+      payment_status: paymentStatus,
+      date_paid: targetDatePaid,
+      notes: notes,
+    });
 
     closePayrollDrawer();
     updateExecutiveSummaryCards(allBeneficiaries);

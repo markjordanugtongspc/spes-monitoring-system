@@ -115,6 +115,7 @@ export async function upsertDbPayrollRecord(beneficiaryId, officeId = null, payl
   }
 
   const cleanOfficeId = officeId ? Number(officeId) : null;
+  const paymentStatus = payload.payment_status || "PENDING";
   const stipendAmount = payload.stipend_amount !== undefined ? Number(payload.stipend_amount) : 5133.00;
   const daysWorked = payload.days_worked !== undefined ? Number(payload.days_worked) : 20;
   const datePaid = paymentStatus === "PAID" ? (payload.date_paid || new Date().toISOString()) : null;

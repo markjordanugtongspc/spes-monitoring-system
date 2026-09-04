@@ -7,6 +7,7 @@
  */
 import { supabase } from "./supabase.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
+import { initPresence, destroyPresence } from "../../frontend/assets/js/components/presence.js";
 
 const IMPL_CACHE_KEY = "spes_implementors_v1";
 const IMPL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -88,18 +89,27 @@ export async function loginImplementor(username, password) {
       role_id:     resolvedRoleId || null,
       office_id:   implementor.office_id || null,
       status:      "ONLINE",
+      started_at:  implementor.started_at || null,
+      ended_at:    implementor.ended_at || null,
       permissions: dbPermissions,
       portal_url:  getPortalDashboardUrl({ role: roleName, role_id: resolvedRoleId })
     };
 
-    // Update status to ONLINE in Supabase and fetch approved status
+    // Update status to ONLINE in Supabase and fetch approved status and office_id
     if (implementor.id) {
-      const { data: updatedStaff } = await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", implementor.id).select("approved").single();
+      const { data: updatedStaff } = await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", implementor.id).select("approved, office_id").single();
       session.approved = updatedStaff?.approved || false;
+      if (updatedStaff?.office_id != null && !session.office_id) {
+        session.office_id = updatedStaff.office_id;
+      }
       invalidateImplementorCache();
     }
 
     localStorage.setItem("spes_session", JSON.stringify(session));
+
+    // Subscribe to Presence channel for real-time status tracking
+    initPresence(session.id);
+
     return { success: true, user: session };
   } catch (err) {
     if (import.meta.env.DEV) console.error("[SPES Auth] catch:", err?.message);
@@ -214,27 +224,29 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
   }
 
   try {
-    let query = supabase
-      .from("staffs")
-      .select(`
+    const buildSelect = (tbl = "staff_permissions") => `
         id, full_name, username, email, phone, created_at,
         religion, language, status, approved, started_at, ended_at,
         archive_at, role_id, office_id, beneficiary_id,
-        staff_permissions!staff_id(
+        ${tbl}!staff_id(
           view_users, create_users, edit_users, delete_users,
           export_reports, view_other_offices, view_global_stats, view_payroll
         ),
         roles   ( id, name ),
         offices ( id, name, location ),
         beneficiary!beneficiary_id(full_name, return_status)
-      `)
+    `;
+
+    let query = supabase
+      .from("staffs")
+      .select(buildSelect("staff_permissions"))
       .order("created_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: false });
 
     if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);
     }
-    const { data, error } = await query;
+    let { data, error } = await query;
 
     if (error) {
       if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code, error.message);
@@ -242,9 +254,14 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
     }
 
     const list = (data ?? []).map((s) => {
-      const sp = Array.isArray(s.staff_permissions)
-        ? (s.staff_permissions[0] ?? {})
-        : (s.staff_permissions ?? {});
+      const rawSp = s.permissions || s.staff_permissions;
+      const sp = Array.isArray(rawSp)
+        ? (rawSp[0] ?? {})
+        : (rawSp ?? {});
+      const isAdmin = Number(s.role_id) === 1 || String(s.roles?.name || "").toUpperCase() === "ADMIN";
+      const isHr = Number(s.role_id) === 2 || String(s.roles?.name || "").toUpperCase() === "HR";
+      const autoAllTrue = isAdmin || (isHr && s.approved === true);
+
       return {
         id:              s.id,
         created_at:      s.created_at,
@@ -265,14 +282,14 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         language:        s.language || "",
         approved:        s.approved || false,
         permissions: {
-          view_users:         Boolean(sp.view_users),
-          create_users:       Boolean(sp.create_users),
-          edit_users:         Boolean(sp.edit_users),
-          delete_users:       Boolean(sp.delete_users),
-          export_reports:     Boolean(sp.export_reports),
-          view_other_offices: Boolean(sp.view_other_offices),
-          view_global_stats:  Boolean(sp.view_global_stats),
-          view_payroll:       Boolean(sp.view_payroll),
+          view_users:         autoAllTrue || Boolean(sp.view_users),
+          create_users:       autoAllTrue || Boolean(sp.create_users),
+          edit_users:         autoAllTrue || Boolean(sp.edit_users),
+          delete_users:       autoAllTrue || Boolean(sp.delete_users),
+          export_reports:     autoAllTrue || Boolean(sp.export_reports),
+          view_other_offices: autoAllTrue || Boolean(sp.view_other_offices),
+          view_global_stats:  autoAllTrue || Boolean(sp.view_global_stats),
+          view_payroll:       autoAllTrue || Boolean(sp.view_payroll),
         },
       };
     });
@@ -288,6 +305,10 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
 // ── Logout ─────────────────────────────────────────────────────
 export async function logoutImplementor() {
   const sessionStr = localStorage.getItem("spes_session");
+
+  // Tear down Presence channel before clearing session
+  destroyPresence();
+
   if (sessionStr) {
     try {
       const session = JSON.parse(sessionStr);

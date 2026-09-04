@@ -777,6 +777,34 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       if(notFound) notFound.classList.add("hidden");
     }
 
+    // --- START: RESTRICT HR FROM MODIFYING ADMINISTRATOR ACCOUNTS ---
+    const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+    const isCallerHr = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
+    const isTargetAdmin = staffData && (Number(staffData.role_id) === 1 || String(staffData.role).toUpperCase() === "ADMIN");
+    const isHrViewingAdmin = isCallerHr && isTargetAdmin;
+
+    [
+      "aif-full-name", "aif-username", "aif-email", "aif-office", "aif-office-search",
+      "aif-role", "aif-religion", "aif-language", "aif-phone", "aif-started-at",
+      "aif-ended-at", "aif-password", "aif-confirm-password", "aif-approved"
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = isHrViewingAdmin;
+        el.classList.toggle("opacity-60", isHrViewingAdmin);
+        el.classList.toggle("cursor-not-allowed", isHrViewingAdmin);
+      }
+    });
+
+    if (isHrViewingAdmin) {
+      submitBtn.classList.add("hidden");
+      _showError("Administrator accounts are protected. HR accounts cannot modify Administrator details, credentials, or permissions.");
+    } else {
+      submitBtn.classList.remove("hidden");
+      _hideError();
+    }
+    // --- END: RESTRICT HR FROM MODIFYING ADMINISTRATOR ACCOUNTS ---
+
     drawerEl.classList.remove("hidden");
     drawerEl.setAttribute("aria-hidden", "false");
     overlay.classList.remove("hidden");
@@ -991,6 +1019,15 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     if (!payload.office_id) return _showError("Please select an office.");
     if (!payload.role_id) return _showError("Please select a role.");
 
+    const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
+    const isCallerHr = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
+    if (currentEditId && isCallerHr) {
+      const target = allImplementors.find((s) => Number(s.id) === Number(currentEditId));
+      if (target && (Number(target.role_id) === 1 || String(target.role).toUpperCase() === "ADMIN")) {
+        return _showError("HR cannot modify Administrator details, credentials, or permissions.");
+      }
+    }
+
     _setLoading(true);
     await _loadApis();
     
@@ -1034,6 +1071,8 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   const closeBtn = document.getElementById("btn-close-batch-form-drawer");
   const submitBtn = document.getElementById("btn-save-batch-form");
   const batchNameInput = document.getElementById("batch-form-name");
+  const deleteSection = document.getElementById("batch-delete-section");
+  const deleteBtn = document.getElementById("btn-delete-batch-permanent");
 
   if (!drawerEl || !overlay || !form) {
     const missing = [
@@ -1064,11 +1103,15 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   let openVerificationTimer = null;
   let _addBatch;
   let _updateBatch;
+  let _deleteBatchPermanently;
+  let _archiveBeneficiariesByBatch;
   const _loadApis = async () => {
-    if (_addBatch && _updateBatch) return;
+    if (_addBatch && _updateBatch && _deleteBatchPermanently && _archiveBeneficiariesByBatch) return;
     const mod = await import("../../../../backend/api/beneficiary.js");
     _addBatch = mod.addBatch;
     _updateBatch = mod.updateBatch;
+    _deleteBatchPermanently = mod.deleteBatchPermanently;
+    _archiveBeneficiariesByBatch = mod.archiveBeneficiariesByBatch;
   };
 
   const _showError = (msg) => {
@@ -1244,6 +1287,27 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     }
     if (batchNameInput) batchNameInput.value = batch?.batchName ?? "";
 
+    drawerEl.classList.remove("pointer-events-none", "opacity-60");
+
+    // Show DELETE BATCH only in edit mode (currentEditId !== null) and only for Admin or HR
+    if (deleteSection) {
+      const sessionRaw = localStorage.getItem("spes_session");
+      let isAdminOrHr = false;
+      try {
+        if (sessionRaw) {
+          const s = JSON.parse(sessionRaw);
+          const role = String(s?.role || "").toLowerCase();
+          isAdminOrHr = role === "admin" || role === "hr" || Number(s?.role_id) === 1;
+        }
+      } catch {}
+
+      if (currentEditId && isAdminOrHr) {
+        deleteSection.classList.remove("hidden");
+      } else {
+        deleteSection.classList.add("hidden");
+      }
+    }
+
     drawerEl.classList.remove("hidden");
     drawerEl.setAttribute("aria-hidden", "false");
     drawerEl.inert = false;
@@ -1283,6 +1347,7 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     }
     drawerEl.setAttribute("aria-hidden", "true");
     drawerEl.inert = true;
+    drawerEl.classList.remove("pointer-events-none", "opacity-60");
     _setDrawerVisualState(false);
     overlay.classList.remove("opacity-100");
     overlay.classList.add("opacity-0");
@@ -1380,6 +1445,72 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       );
     });
     if (typeof onSuccess === "function") onSuccess(result.data, { mode: completedMode });
+  });
+
+  // Wire DELETE BATCH permanent with 5-second Undo Toast
+  deleteBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (!currentEditId) return;
+
+    const targetBatchId = currentEditId;
+    const batchName = batchNameInput?.value.trim() || `ID #${targetBatchId}`;
+    const cachedBatch = {
+      id: targetBatchId,
+      batchId: targetBatchId,
+      batchName: batchNameInput?.value.trim() || ""
+    };
+
+    // 1. Temporarily close off-canvas drawer so underlying cards and undo toast are completely visible
+    _hideError();
+    closeDrawer();
+
+    // 2. Trigger Flowbite Success Toast first
+    const { modals } = await import("./modals.js");
+    let isUndone = false;
+
+    const successToast = modals.flowbiteToast(
+      "Batch Deleted",
+      `Batch "${batchName}" has been removed from view.`,
+      "success"
+    );
+
+    // 3. Sequentially show Undo Toast in the front card (~350ms later)
+    setTimeout(() => {
+      if (isUndone) return;
+      modals.undoToast({
+        message: `Batch "${batchName}" has been deleted.`,
+        durationMs: 5000,
+        onUndo: () => {
+          isUndone = true;
+          successToast?.close?.({ immediate: true });
+          openDrawer(cachedBatch);
+          modals.flowbiteToast("Delete Undone", `Batch "${batchName}" was restored.`, "success");
+        },
+        onExpire: async () => {
+          if (isUndone) return;
+          try {
+            await _loadApis();
+            await _archiveBeneficiariesByBatch(targetBatchId);
+            const delRes = await _deleteBatchPermanently(targetBatchId);
+
+            if (!delRes.success) {
+              openDrawer(cachedBatch);
+              _showError(delRes.error || "Failed to delete batch.");
+              modals.error("Delete Failed", delRes.error || "Could not delete batch.");
+              return;
+            }
+
+            if (typeof onSuccess === "function") {
+              onSuccess({ id: targetBatchId }, { mode: "deleted" });
+            }
+          } catch (err) {
+            openDrawer(cachedBatch);
+            console.error("[SPES Batch Delete] Expire error:", err);
+            modals.error("Delete Error", "An error occurred while deleting the batch.");
+          }
+        }
+      });
+    }, 350);
   });
 
   return {

@@ -34,3 +34,5 @@ src/backend/.env
 
 # Supabase
 supabase/
+supabase/migrations/
+supabase/migrations/*

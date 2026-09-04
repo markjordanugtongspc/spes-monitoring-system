@@ -131,6 +131,8 @@ function spesVercelApiDev(env) {
     "/api/session": () => import("./api/session.js"),
     "/api/offices": () => import("./api/offices.js"),
     "/api/permissions": () => import("./api/permissions.js"),
+    "/api/batch": () => import("./api/batch.js"),
+    "/api/beacon": () => import("./api/beacon.js"),
     "/sso/callback": () => import("./api/sso/callback.js"),
   };
 
