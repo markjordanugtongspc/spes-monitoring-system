@@ -32,7 +32,12 @@ src/backend/.env
 # /src/frontend/services/
 .vercel
 
-# Supabase
+# Supabase — keep entire folder private (SQL schema + project config)
 supabase/
-supabase/migrations/
-supabase/migrations/*
+
+# Test artifacts (keep tests/ source, exclude generated output)
+coverage/
+tests/__snapshots__/
+*.snap
+junit.xml
+test-results/

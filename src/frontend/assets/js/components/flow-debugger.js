@@ -35,7 +35,8 @@ export function setFlowDebugEnabled(enabled) {
 }
 
 function describeElement(element) {
-  if (!(element instanceof Element)) return { element: "unknown" };
+  if (typeof Element !== "undefined" && !(element instanceof Element)) return { element: "unknown" };
+  if (!element || typeof element.getAttribute !== "function") return { element: "unknown" };
 
   const label = (
     element.getAttribute("aria-label") ||
@@ -131,6 +132,7 @@ function snapshotOutcome(target) {
 }
 
 export function initFlowDebugger() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
   if (initialized) return;
   initialized = true;
   if (!isFlowDebugEnabled()) return;

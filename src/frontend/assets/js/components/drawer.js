@@ -2,7 +2,7 @@ import { Drawer, Datepicker, initDatepickers } from "flowbite";
 import {
   animateMobileSplashVisibility,
   applyDrawerAnimationClasses
-} from "./animations";
+} from "./animations.js";
 import { modals } from "./modals.js";
 import { flowDebug, flowDebugError, flowDebugSuccess } from "./flow-debugger.js";
 

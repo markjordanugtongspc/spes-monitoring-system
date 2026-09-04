@@ -29,7 +29,7 @@ The **DOLE SPES Portal (Special Program for Employment of Students)** is a state
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) & [Flowbite](https://flowbite.com/) | Modern CSS classes & premium component UI library |
 | **Database & Auth** | [Supabase SDK](https://supabase.com/) | Live PostgreSQL database, user management, and security RLS |
 | **Data Visualization**| [ApexCharts](https://apexcharts.com/) | High-fidelity interactive chart and graph rendering |
-| **Pop-ups & Feedback**| [SweetAlert2](https://sweetalert2.github.io/) | Beautiful, theme-adaptive custom alerts and dialogs |
+| **Pop-ups & Feedback**| [Flowbite](https://flowbite.com/) | Off-canvas drawers, toast notifications, and modal dialogs |
 
 ---
 
@@ -40,13 +40,13 @@ SPES/
 ├── .gemini/                 # AI Assistant workspace configurations
 ├── electron/                # Main & Preload scripts for Electron desktop build
 │   └── main.cjs             # Desktop entry point
-├── scripts/                 # Utility scripts (icon generation, assets configuration)
+├── scripts/                 # Utility scripts (version bumping, asset sync)
 ├── src/
 │   ├── backend/             # Database and Auth services
 │   │   ├── api/
 │   │   │   ├── auth.js      # Backend staff auth and operations logic
 │   │   │   └── supabase.js  # Supabase client instantiation
-│   │   ├── .env             # Database credentials configuration
+│   │   ├── .env             # Database credentials (gitignored — never committed)
 │   │   └── .env.example     # Template for backend configuration
 │   └── frontend/            # Web assets, styles, components, and pages
 │       ├── assets/          # Static files (images, icons, styles, vanilla components)
@@ -54,7 +54,10 @@ SPES/
 │       │   └── styles/      # Global styling sheet & Tailwind configs
 │       ├── components/      # Reusable HTML snippets (Sidebar, header templates)
 │       ├── login/           # Authentication portal page
-│       └── pages/           # Internal views (Dashboard, Implementors, Roles, Beneficiaries)
+│       └── pages/           # Internal views (Dashboard, Implementors, Roles, Beneficiaries, Payroll)
+├── tests/                   # Unit test suite (Node built-in test runner)
+│   ├── payroll.test.mjs             # Payroll calculation & logic tests
+│   └── payroll_dom_and_ui.test.mjs  # Payroll DOM structure & UI element tests
 ├── package.json             # Scripts, metadata, and dependencies
 └── README.md                # General project documentation (This file)
 ```
@@ -122,6 +125,25 @@ Follow these steps to run, develop, or package the SPES application locally.
     ```bash
     npm run dist
     ```
+
+### 🧪 Running Unit Tests
+
+The project ships with a unit test suite covering payroll business logic and DOM structure validation. Tests run using Node's built-in `node:test` runner — **no extra dependencies required**.
+
+```bash
+npm test
+```
+
+This executes all `*.test.mjs` files inside the `tests/` directory:
+
+| File | Coverage |
+| :--- | :--- |
+| `payroll.test.mjs` | Payroll computation, PAID/PENDING calculations, global vs. office budget logic, executive summary cards |
+| `payroll_dom_and_ui.test.mjs` | DOM element presence, stat card IDs, toast/modal elements, role-based UI visibility |
+
+> **Note**: The `supabase/` folder and `.env` files are intentionally excluded from this repository. Tests that require live database access must be run with a valid `.env` configured locally.
+
+> **Test artifacts** such as coverage reports (`coverage/`) and snapshots are also gitignored — only the source test files are committed.
 
 ---
 
