@@ -66,16 +66,29 @@ const _cfg = {
 const session = requireAuth();
 if (session) _boot(session);
 
+// --- START: EXPORTS BOOT - Initializes Exports & Reports page, heals session role, and enforces access scope ---
 async function _boot(user) {
-  // Session healer: if role_id is missing or inaccurate, sync it dynamically from role string
-  if (user && user.role) {
-    const r = String(user.role).trim().toLowerCase();
-    if (r === "admin") user.role_id = 1;
-    else if (r === "hr") user.role_id = 2;
-    else if (r === "officer") user.role_id = 3;
+  // Session healer: if role_id or role is missing or inaccurate, sync bidirectionally
+  if (user) {
+    const r = String(user.role || "").trim().toLowerCase();
+    const rid = Number(user.role_id);
+    if (rid === 1 || r === "admin") {
+      user.role_id = 1;
+      user.role = "admin";
+      user.role_label = "Admin";
+    } else if (rid === 2 || r === "hr") {
+      user.role_id = 2;
+      user.role = "hr";
+      user.role_label = "HR";
+    } else if (rid === 3 || r === "officer") {
+      user.role_id = 3;
+      user.role = "officer";
+      user.role_label = "Officer";
+    }
+    try { localStorage.setItem("spes_session", JSON.stringify(user)); } catch {}
   }
 
-  // Refresh permissions + approved status/office info in parallel (independent queries)
+  // Refresh permissions + approved status/office/role info in parallel (independent queries)
   const [permsRes, staffRes] = await Promise.all([
     user?.id
       ? import("../../../backend/api/permissions.js")
@@ -85,7 +98,7 @@ async function _boot(user) {
     user?.id
       ? supabase
           .from("staffs")
-          .select("approved, office_id, offices(name, location)")
+          .select("approved, office_id, role_id, roles!role_id(id, name), offices(name, location)")
           .eq("id", user.id)
           .single()
           .then(r => r, () => null)
@@ -99,6 +112,20 @@ async function _boot(user) {
     user.office_id       = d.office_id ?? user.office_id;
     user.office_name     = d.offices?.name ?? user.office_name ?? null;
     user.office_location = d.offices?.location ?? user.office_location ?? null;
+    if (d.role_id != null) {
+      user.role_id = Number(d.role_id);
+      const rName = String(d.roles?.name || "").trim().toLowerCase();
+      if (user.role_id === 1 || rName === "admin") {
+        user.role = "admin";
+        user.role_label = "Admin";
+      } else if (user.role_id === 2 || rName === "hr") {
+        user.role = "hr";
+        user.role_label = "HR";
+      } else {
+        user.role = "officer";
+        user.role_label = "Officer";
+      }
+    }
   }
   if (permsRes?.data || staffRes?.data) localStorage.setItem("spes_session", JSON.stringify(user));
 
@@ -146,6 +173,7 @@ async function _boot(user) {
   _initDrawer(user);
   _wireButtons();
 }
+// --- END: EXPORTS BOOT ---
 
 // ── Data loading ──────────────────────────────────────────────
 async function _loadData(user) {

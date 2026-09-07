@@ -297,8 +297,11 @@ export function highlightSidebarActiveLink(navId) {
 }
 
 /**
- * Get stored session from localStorage.
- * @returns {{ id, role, role_id, full_name, email, permissions } | null}
+// --- START: GET SESSION HELPER - Reads and bidirectionally synchronizes session role and role_id ---
+/**
+ * Get stored session from localStorage / sessionStorage.
+ * Bidirectionally synchronizes role and role_id (Admin: 1, HR: 2, Officer: 3).
+ * @returns {{ id, role, role_label, role_id, full_name, email, permissions } | null}
  */
 export function getSession() {
   try {
@@ -306,31 +309,42 @@ export function getSession() {
     const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
     if (!raw) return null;
     const session = JSON.parse(raw);
-    if (session && session.role) {
-      const role = String(session.role).trim().toLowerCase();
-      // Enforce correct role_id mapping (Admin: 1, HR: 2, Officer: 3)
-      if (role === "admin" && session.role_id !== 1) {
+    if (session) {
+      const roleId = Number(session.role_id);
+      const role = String(session.role || "").trim().toLowerCase();
+
+      // Enforce correct bidirectional role_id & role mapping (Admin: 1, HR: 2, Officer: 3)
+      if (roleId === 1 || role === "admin") {
         session.role_id = 1;
-        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
-      } else if (role === "hr" && session.role_id !== 2) {
+        session.role = "admin";
+        session.role_label = session.role_label && session.role_label !== "Unknown" ? session.role_label : "Admin";
+      } else if (roleId === 2 || role === "hr") {
         session.role_id = 2;
-        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
-      } else if (role === "officer" && session.role_id !== 3) {
+        session.role = "hr";
+        session.role_label = session.role_label && session.role_label !== "Unknown" ? session.role_label : "HR";
+      } else if (roleId === 3 || role === "officer") {
         session.role_id = 3;
-        try { localStorage.setItem("spes_session", JSON.stringify(session)); } catch {}
+        session.role = "officer";
+        session.role_label = session.role_label && session.role_label !== "Unknown" ? session.role_label : "Officer";
       }
+
+      try {
+        localStorage.setItem("spes_session", JSON.stringify(session));
+      } catch {}
     }
     return session;
   } catch {
     return null;
   }
 }
+// --- END: GET SESSION HELPER ---
 
 let _permChannel = null;
 let _isInitializingPerms = false;
 
+// --- START: INIT STAFF PERMISSIONS REALTIME - Subscribes to permission and staff profile updates ---
 /**
- * Subscribe to realtime permission updates for the current staff session.
+ * Subscribe to realtime permission and staff role updates for the current session.
  */
 export function initStaffPermissionsRealtime(staffId) {
   if (!staffId || _permChannel || _isInitializingPerms) return;
@@ -412,6 +426,46 @@ export function initStaffPermissionsRealtime(staffId) {
             }
           }
         )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "staffs",
+            filter: `id=eq.${staffId}`,
+          },
+          async (payload) => {
+            if (payload.new) {
+              const session = getSession();
+              if (session) {
+                if (payload.new.approved !== undefined) {
+                  session.approved = payload.new.approved;
+                }
+                if (payload.new.office_id !== undefined) {
+                  session.office_id = payload.new.office_id;
+                }
+                if (payload.new.role_id !== undefined) {
+                  session.role_id = Number(payload.new.role_id);
+                  if (session.role_id === 1) {
+                    session.role = "admin";
+                    session.role_label = "Admin";
+                  } else if (session.role_id === 2) {
+                    session.role = "hr";
+                    session.role_label = "HR";
+                  } else {
+                    session.role = "officer";
+                    session.role_label = "Officer";
+                  }
+                }
+                try {
+                  localStorage.setItem("spes_session", JSON.stringify(session));
+                  sessionStorage.setItem("spes_session", JSON.stringify(session));
+                } catch {}
+                await applyPermissions(session.role);
+              }
+            }
+          }
+        )
         .subscribe();
     } catch (err) {
       if (import.meta.env.DEV) console.warn("[SPES Realtime] Perm channel init error:", err);
@@ -423,6 +477,7 @@ export function initStaffPermissionsRealtime(staffId) {
     _isInitializingPerms = false;
   });
 }
+// --- END: INIT STAFF PERMISSIONS REALTIME ---
 
 /**
  * Redirect to login if no valid session exists.

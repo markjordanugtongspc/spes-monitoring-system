@@ -167,13 +167,26 @@ async function loadComponent(id, url) {
   }
 }
 
+// --- START: DASHBOARD INITIALIZER - Bootstraps dashboard, heals session role, and syncs permissions ---
 async function init(user) {
-  // Session healer: if role_id is missing or inaccurate, sync it dynamically from role string
-  if (user && user.role) {
-    const r = String(user.role).trim().toLowerCase();
-    if (r === "admin") user.role_id = 1;
-    else if (r === "hr") user.role_id = 2;
-    else if (r === "officer") user.role_id = 3;
+  // Session healer: if role_id or role is missing or inaccurate, sync bidirectionally
+  if (user) {
+    const r = String(user.role || "").trim().toLowerCase();
+    const rid = Number(user.role_id);
+    if (rid === 1 || r === "admin") {
+      user.role_id = 1;
+      user.role = "admin";
+      user.role_label = "Admin";
+    } else if (rid === 2 || r === "hr") {
+      user.role_id = 2;
+      user.role = "hr";
+      user.role_label = "HR";
+    } else if (rid === 3 || r === "officer") {
+      user.role_id = 3;
+      user.role = "officer";
+      user.role_label = "Officer";
+    }
+    localStorage.setItem("spes_session", JSON.stringify(user));
   }
 
   // Fetch this staff account's current individual permissions without requiring relog.
@@ -189,14 +202,36 @@ async function init(user) {
     }
   }
 
-  // Refresh approved status
+  // Refresh approved status, office_id, and role from DB
   if (user && user.id) {
     try {
       const { supabase } = await import("../../../backend/api/supabase.js");
-      const { data: staffData } = await supabase.from("staffs").select("approved").eq("id", user.id).maybeSingle();
+      const { data: staffData } = await supabase
+        .from("staffs")
+        .select("approved, role_id, office_id, roles!role_id(id, name)")
+        .eq("id", user.id)
+        .maybeSingle();
       if (staffData) {
         user.approved = staffData.approved;
+        if (staffData.role_id != null) {
+          user.role_id = Number(staffData.role_id);
+          const rName = String(staffData.roles?.name || "").trim().toLowerCase();
+          if (user.role_id === 1 || rName === "admin") {
+            user.role = "admin";
+            user.role_label = "Admin";
+          } else if (user.role_id === 2 || rName === "hr") {
+            user.role = "hr";
+            user.role_label = "HR";
+          } else {
+            user.role = "officer";
+            user.role_label = "Officer";
+          }
+        }
+        if (staffData.office_id != null) {
+          user.office_id = staffData.office_id;
+        }
         localStorage.setItem("spes_session", JSON.stringify(user));
+        sessionStorage.setItem("spes_session", JSON.stringify(user));
       }
     } catch (e) {}
   }
@@ -335,6 +370,7 @@ async function init(user) {
   document.getElementById("staff-checkbox-all")?.addEventListener("change", onSelectAll);
   initSidebarState();
 }
+// --- END: DASHBOARD INITIALIZER ---
 
 // --- START: SIDEBAR STATE INITIALIZER ---
 function initSidebarState() {

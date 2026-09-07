@@ -37,16 +37,29 @@ async function loadComponent(id, url) {
   }
 }
 
+// --- START: SETTINGS BOOT - Initializes settings page, heals session role, and applies RBAC ---
 async function boot() {
   const user = getSession();
   if (!user) return;
 
-  // Session healer: if role_id is missing or inaccurate, sync it dynamically from role string
-  if (user && user.role) {
-    const r = String(user.role).trim().toLowerCase();
-    if (r === "admin") user.role_id = 1;
-    else if (r === "hr") user.role_id = 2;
-    else if (r === "officer") user.role_id = 3;
+  // Session healer: if role_id or role is missing or inaccurate, sync bidirectionally
+  if (user) {
+    const r = String(user.role || "").trim().toLowerCase();
+    const rid = Number(user.role_id);
+    if (rid === 1 || r === "admin") {
+      user.role_id = 1;
+      user.role = "admin";
+      user.role_label = "Admin";
+    } else if (rid === 2 || r === "hr") {
+      user.role_id = 2;
+      user.role = "hr";
+      user.role_label = "HR";
+    } else if (rid === 3 || r === "officer") {
+      user.role_id = 3;
+      user.role = "officer";
+      user.role_label = "Officer";
+    }
+    try { localStorage.setItem("spes_session", JSON.stringify(user)); } catch {}
   }
 
   _populateSidebar(user);
@@ -72,6 +85,7 @@ async function boot() {
   _initSidebarDropdown();
   await initSettings();
 }
+// --- END: SETTINGS BOOT ---
 
 // ── Sidebar / chrome helpers (shared shape with dashboard.js) ──
 function _populateSidebar(user) {

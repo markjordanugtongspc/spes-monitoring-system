@@ -65,26 +65,39 @@ export default async function handler(req, res) {
     const sp = Array.isArray(staff.staff_permissions)
       ? (staff.staff_permissions[0] ?? {})
       : (staff.staff_permissions ?? {});
+    const roleId = Number(staff.role_id);
+    const roleName = String(staff.roles?.name || "").trim().toLowerCase();
+    let resolvedRole = 'officer';
+    let resolvedLabel = 'Officer';
+    if (roleId === 1 || roleName === 'admin') {
+      resolvedRole = 'admin';
+      resolvedLabel = 'Admin';
+    } else if (roleId === 2 || roleName === 'hr') {
+      resolvedRole = 'hr';
+      resolvedLabel = 'HR';
+    }
+
+    const isHrOrAdmin = resolvedRole === 'admin' || resolvedRole === 'hr';
     const displaySession = {
       id: Number(staff.id),
       username: staff.username,
       email: staff.email || '',
       full_name: staff.full_name || staff.username,
-      role: Number(staff.role_id) === 1 ? 'admin' : 'officer',
-      role_label: staff.roles?.name || (Number(staff.role_id) === 1 ? 'Administrator' : 'Officer'),
-      role_id: Number(staff.role_id),
+      role: resolvedRole,
+      role_label: staff.roles?.name || resolvedLabel,
+      role_id: roleId,
       office_id: staff.office_id ?? null,
       status: 'ONLINE',
       approved: true,
       permissions: {
-        view_users: Boolean(sp.view_users),
-        create_users: Boolean(sp.create_users),
-        edit_users: Boolean(sp.edit_users),
-        delete_users: Boolean(sp.delete_users),
-        export_reports: Boolean(sp.export_reports),
-        view_other_offices: Boolean(sp.view_other_offices),
-        view_global_stats: Boolean(sp.view_global_stats),
-        view_payroll: Boolean(sp.view_payroll),
+        view_users: isHrOrAdmin || Boolean(sp.view_users),
+        create_users: isHrOrAdmin || Boolean(sp.create_users),
+        edit_users: isHrOrAdmin || Boolean(sp.edit_users),
+        delete_users: isHrOrAdmin || Boolean(sp.delete_users),
+        export_reports: isHrOrAdmin || Boolean(sp.export_reports),
+        view_other_offices: isHrOrAdmin || Boolean(sp.view_other_offices),
+        view_global_stats: isHrOrAdmin || Boolean(sp.view_global_stats),
+        view_payroll: isHrOrAdmin || Boolean(sp.view_payroll),
       },
       portal_url: getPortalRedirectUrl(staff)
     };

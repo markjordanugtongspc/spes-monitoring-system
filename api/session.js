@@ -52,6 +52,39 @@ export default async function handler(req, res) {
       });
     }
 
+    // --- START: AUTHORITATIVE STAFF DATA FETCH - Fetches fresh profile, role, and deployment metadata ---
+    const { data: staffRecord } = await supabase
+      .from("staffs")
+      .select(`
+        id, full_name, username, email, phone, status, approved,
+        started_at, ended_at, office_id, role_id,
+        roles!role_id ( id, name )
+      `)
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (staffRecord) {
+      data.user.role_id = Number(staffRecord.role_id) || Number(staffRecord.roles?.id) || 3;
+      const dbRoleName = String(staffRecord.roles?.name || "").trim().toLowerCase();
+      if (data.user.role_id === 1 || dbRoleName === "admin") {
+        data.user.role = "admin";
+        data.user.role_label = "Admin";
+      } else if (data.user.role_id === 2 || dbRoleName === "hr") {
+        data.user.role = "hr";
+        data.user.role_label = "HR";
+      } else {
+        data.user.role = "officer";
+        data.user.role_label = "Officer";
+      }
+      data.user.office_id = staffRecord.office_id ?? data.user.office_id ?? null;
+      data.user.approved = staffRecord.approved ?? data.user.approved ?? false;
+      if (staffRecord.started_at) data.user.started_at = staffRecord.started_at;
+      if (staffRecord.ended_at) data.user.ended_at = staffRecord.ended_at;
+      if (staffRecord.full_name) data.user.full_name = staffRecord.full_name;
+      if (staffRecord.email) data.user.email = staffRecord.email;
+    }
+    // --- END: AUTHORITATIVE STAFF DATA FETCH ---
+
     // --- START: FETCH PERMISSIONS with fallback & auto-grant for Admin/HR ---
     const isAdmin = Number(data.user.role_id) === 1 || String(data.user.role || "").toLowerCase() === "admin";
     const isHr = Number(data.user.role_id) === 2 || String(data.user.role || "").toLowerCase() === "hr";
@@ -80,21 +113,6 @@ export default async function handler(req, res) {
       data.user.permissions = normalizeStaffPermissions(permRow || {});
     }
     // --- END: FETCH PERMISSIONS ---
-
-    // --- START: SUPPLEMENT DEPLOYMENT DATES & OFFICE SCOPE ---
-    // Supplement started_at, ended_at, office_id, and role_id from staffs table
-    const { data: staffMeta } = await supabase
-      .from("staffs")
-      .select("started_at, ended_at, office_id, role_id")
-      .eq("id", data.user.id)
-      .maybeSingle();
-    if (staffMeta) {
-      if (staffMeta.started_at && !data.user.started_at) data.user.started_at = staffMeta.started_at;
-      if (staffMeta.ended_at && !data.user.ended_at) data.user.ended_at = staffMeta.ended_at;
-      if (staffMeta.office_id != null && data.user.office_id == null) data.user.office_id = staffMeta.office_id;
-      if (staffMeta.role_id != null && data.user.role_id == null) data.user.role_id = staffMeta.role_id;
-    }
-    // --- END: SUPPLEMENT DEPLOYMENT DATES & OFFICE SCOPE ---
 
     res.setHeader("Set-Cookie", createSessionCookie(data.user));
     return res.status(200).json({ success: true, user: data.user });

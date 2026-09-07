@@ -1051,6 +1051,24 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
     if (!result.success) return _showError(result.error ?? (currentEditId ? "Failed to update implementor." : "Failed to add implementor."));
 
+    if (currentEditId && Number(currentEditId) === Number(session.id) && payload.role_id) {
+      session.role_id = Number(payload.role_id);
+      if (session.role_id === 1) {
+        session.role = "admin";
+        session.role_label = "Admin";
+      } else if (session.role_id === 2) {
+        session.role = "hr";
+        session.role_label = "HR";
+      } else {
+        session.role = "officer";
+        session.role_label = "Officer";
+      }
+      try {
+        localStorage.setItem("spes_session", JSON.stringify(session));
+        sessionStorage.setItem("spes_session", JSON.stringify(session));
+      } catch {}
+    }
+
     closeDrawer();
     if (typeof onSuccess === "function") onSuccess(result.data);
   });

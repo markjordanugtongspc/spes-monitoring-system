@@ -37,6 +37,7 @@ export function invalidateImplementorCache() {
 }
 
 // ── Login ──────────────────────────────────────────────────────
+// --- START: LOGIN IMPLEMENTOR - Authenticates staff, resolves role and permissions, and establishes session ---
 /**
  * Authenticate a staff member by username + password.
  * The `login_staff` RPC function handles bcrypt on the DB side.
@@ -62,21 +63,22 @@ export async function loginImplementor(username, password) {
     }
 
     const implementor = data.user;
-    const roleName = _mapToRbacRole(implementor.role_label ?? implementor.role);
-
-    const resolvedRoleId = implementor.role_id ?? implementor.role;
+    const resolvedRoleId = Number(implementor.role_id) || (typeof implementor.role === "number" ? implementor.role : null);
+    const roleName = _mapToRbacRole(implementor.role_label ?? implementor.role ?? resolvedRoleId);
+    const finalRoleId = resolvedRoleId || (roleName === "admin" ? 1 : (roleName === "hr" ? 2 : 3));
 
     // The secure session endpoint resolves permissions for this individual
     // staff account. Optional grants no longer inherit from the shared role.
+    const isHrOrAdminUser = roleName === "admin" || roleName === "hr" || finalRoleId === 1 || finalRoleId === 2;
     const dbPermissions = implementor.permissions || {
-      view_users: false,
-      create_users: false,
-      edit_users: false,
-      delete_users: false,
-      export_reports: false,
-      view_other_offices: false,
-      view_global_stats: false,
-      view_payroll: false,
+      view_users: isHrOrAdminUser,
+      create_users: isHrOrAdminUser,
+      edit_users: isHrOrAdminUser,
+      delete_users: isHrOrAdminUser,
+      export_reports: isHrOrAdminUser,
+      view_other_offices: isHrOrAdminUser,
+      view_global_stats: isHrOrAdminUser,
+      view_payroll: isHrOrAdminUser,
     };
 
     const session = {
@@ -85,22 +87,32 @@ export async function loginImplementor(username, password) {
       email:       implementor.email || "",
       full_name:   implementor.full_name || implementor.username,
       role:        roleName,
-      role_label:  implementor.role_label || "Unknown",
-      role_id:     resolvedRoleId || null,
+      role_label:  implementor.role_label || (roleName === "admin" ? "Admin" : (roleName === "hr" ? "HR" : "Officer")),
+      role_id:     finalRoleId,
       office_id:   implementor.office_id || null,
       status:      "ONLINE",
       started_at:  implementor.started_at || null,
       ended_at:    implementor.ended_at || null,
       permissions: dbPermissions,
-      portal_url:  getPortalDashboardUrl({ role: roleName, role_id: resolvedRoleId })
+      portal_url:  getPortalDashboardUrl({ role: roleName, role_id: finalRoleId })
     };
 
-    // Update status to ONLINE in Supabase and fetch approved status and office_id
+    // Update status to ONLINE in Supabase and fetch approved status, office_id, and latest role
     if (implementor.id) {
-      const { data: updatedStaff } = await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", implementor.id).select("approved, office_id").single();
-      session.approved = updatedStaff?.approved || false;
+      const { data: updatedStaff } = await supabase
+        .from("staffs")
+        .update({ status: "ONLINE" })
+        .eq("id", implementor.id)
+        .select("approved, office_id, role_id, roles!role_id(id, name)")
+        .single();
+      session.approved = updatedStaff?.approved ?? session.approved ?? false;
       if (updatedStaff?.office_id != null && !session.office_id) {
         session.office_id = updatedStaff.office_id;
+      }
+      if (updatedStaff?.role_id != null) {
+        session.role_id = Number(updatedStaff.role_id);
+        session.role = _mapToRbacRole(updatedStaff.roles?.name || session.role_id);
+        session.role_label = updatedStaff.roles?.name || (session.role_id === 1 ? "Admin" : (session.role_id === 2 ? "HR" : "Officer"));
       }
       invalidateImplementorCache();
     }
@@ -116,6 +128,7 @@ export async function loginImplementor(username, password) {
     return { success: false, error: "An unexpected error occurred." };
   }
 }
+// --- END: LOGIN IMPLEMENTOR ---
 
 // ── Update Password ─────────────────────────────────────────────
 /**
@@ -150,6 +163,7 @@ export async function updateImplementorPassword(staffId, newPassword) {
 }
 
 // ── Registration ────────────────────────────────────────────────
+// --- START: REGISTER IMPLEMENTOR - Creates new staff account with default Officer role (role_id: 3) ---
 /**
  * Register a new staff member (Implementor).
  * Posts directly to the `staffs` table. Password hashing is 
@@ -173,7 +187,7 @@ export async function registerImplementor(staffData) {
           religion: staffData.religion || null,
           language: staffData.language || null,
           status: "OFFLINE", // Default status
-          role_id: 2, // 2 = Officer role by default
+          role_id: 3, // 3 = Officer role by default (1 = Admin, 2 = HR, 3 = Officer)
           approved: false, // New accounts must be explicitly approved
         }
       ])
@@ -202,6 +216,7 @@ export async function registerImplementor(staffData) {
     return { success: false, error: "An unexpected error occurred during registration." };
   }
 }
+// --- END: REGISTER IMPLEMENTOR ---
 
 // ── Implementor list (for dashboard tables) ────────────────────
 /**
@@ -335,26 +350,31 @@ export async function logoutImplementor() {
   window.location.href = "/src/frontend/login/";
 }
 
-// ── Role mapping ───────────────────────────────────────────────
+// --- START: MAP TO RBAC ROLE - Converts DB role id or label to standard RBAC key (admin, hr, officer) ---
 /**
  * Map DB role label/id → RBAC role key used throughout the portal.
- * Extend this if you add new roles to the `roles` table.
+ * Admin: 1 -> "admin"
+ * HR: 2 -> "hr"
+ * Officer: 3 -> "officer"
  */
-function _mapToRbacRole(role) {
+export function _mapToRbacRole(role) {
   if (!role) return "officer";
 
-  if (typeof role === "number" || (typeof role === "string" && !isNaN(role))) {
+  if (typeof role === "number" || (typeof role === "string" && !isNaN(role) && String(role).trim() !== "")) {
     const id = parseInt(role, 10);
     if (id === 1) return "admin";
-    if (id === 2) return "officer";
+    if (id === 2) return "hr";
+    if (id === 3) return "officer";
     return "officer";
   }
 
-  const lower = String(role).toLowerCase();
-  if (lower.includes("admin"))   return "admin";
+  const lower = String(role).toLowerCase().trim();
+  if (lower.includes("admin")) return "admin";
+  if (lower === "hr" || lower.includes("human resource") || lower.includes("hr")) return "hr";
   if (lower.includes("officer")) return "officer";
   return "officer";
 }
+// --- END: MAP TO RBAC ROLE ---
 
 // --- START: ADMIN ACCESS VALIDATOR ---
 /**
