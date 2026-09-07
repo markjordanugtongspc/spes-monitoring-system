@@ -464,19 +464,30 @@
                   </div>
                 </div>
               </div>
-              <!-- Started field (replaces Address) -->
-              <div class="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 dark:border-white/5">
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Started</span>
-                <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
-                  id="drawer-impl-started">N/A</span>
-              </div>
-              <!-- Ended field -->
-              <div class="flex items-start justify-between gap-4 border-b border-gray-100 pb-2 dark:border-white/5">
-                <span
-                  class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Ended</span>
-                <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px]"
-                  id="drawer-impl-ended">N/A</span>
+              <!-- Batch Deployment Selector & Dates Container -->
+              <div id="drawer-impl-batch-container" class="space-y-3 border-b border-gray-100 pb-3 dark:border-white/5">
+                <!-- Dynamic Batch Switcher Buttons (Hidden if only 1 batch) -->
+                <div id="drawer-impl-batch-switcher-wrapper" class="hidden flex items-center justify-between gap-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Batch</span>
+                  <div id="drawer-impl-batch-switcher" class="flex flex-wrap items-center justify-end gap-1.5 max-w-[240px]">
+                    <!-- Injected dynamically by drawer.js -->
+                  </div>
+                </div>
+
+                <!-- Started field -->
+                <div class="flex items-start justify-between gap-4">
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Started</span>
+                  <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px] font-medium"
+                    id="drawer-impl-started">N/A</span>
+                </div>
+                <!-- Ended field -->
+                <div class="flex items-start justify-between gap-4">
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/60 shrink-0">Ended</span>
+                  <span class="text-sm text-right text-spes-black dark:text-spes-white whitespace-normal max-w-[240px] font-medium"
+                    id="drawer-impl-ended">N/A</span>
+                </div>
               </div>
               <div class="flex items-center justify-between border-b border-gray-100 pb-2 dark:border-white/5">
                 <span
@@ -763,45 +774,25 @@
           </div>
         </div>
 
-        <!-- Row: Deployment Dates (Started At / Ended At) -->
-        <div>
-          <label class="mb-1.5 block text-sm font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
-            Deployment Period
-          </label>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div class="relative flex-1">
-              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-started-at')?.focus()">
-                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z" />
-                </svg>
-              </div>
-              <input id="aif-started-at" name="started_at" type="text" autocomplete="off"
-                datepicker
-                datepicker-autohide
-                datepicker-buttons
-                datepicker-orientation="bottom left"
-                datepicker-format="mm/dd/yyyy"
-                class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent ps-9 pe-3 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
-                placeholder="Select start date" />
-            </div>
-            <span class="self-center text-xs font-bold uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 sm:mx-1">to</span>
-            <div class="relative flex-1">
-              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-ended-at')?.focus()">
-                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z" />
-                </svg>
-              </div>
-              <input id="aif-ended-at" name="ended_at" type="text" autocomplete="off"
-                datepicker
-                datepicker-autohide
-                datepicker-buttons
-                datepicker-orientation="bottom right"
-                datepicker-format="mm/dd/yyyy"
-                class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent ps-9 pe-3 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
-                placeholder="Select end date" />
-            </div>
+        <!-- Row: Deployment Dates (Dynamic by Batches & Office) -->
+        <div id="aif-deployments-wrapper" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="block text-sm font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              Deployment Period
+            </label>
+            <button type="button" id="btn-aif-add-batch-period"
+              class="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow hover:bg-spes-blue/10 dark:hover:bg-white/5 border border-spes-blue/20 dark:border-spes-yellow/30 transition-all active:scale-95">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add Batch</span>
+            </button>
           </div>
 
+          <!-- Dynamic Container for Batch Deployment Rows -->
+          <div id="aif-batch-deployments-list" class="space-y-3">
+            <!-- Rendered dynamically via drawer.js -->
+          </div>
         </div>
 
         <!-- Row: Phone -->

@@ -20,7 +20,8 @@ export function setupSortFiltration({
   initialSort = "none",
   sortComparator,
   onSortChange,
-  onFilterChange
+  onFilterChange,
+  storageKey = null
 }) {
   let activeSort = initialSort;
   // Merge caller-supplied defaults (e.g. { archiveStatus: "active" } for implementors,
@@ -30,6 +31,23 @@ export function setupSortFiltration({
     ...(getDefaultFilters?.() || {}),
   });
   let activeFilters = resolveDefaultFilters();
+
+  // Restore client-side saved preferences if available
+  const savedPrefs = storageKey ? preferenceStorage.getSortFilterPreferences(storageKey) : null;
+  if (savedPrefs) {
+    if (savedPrefs.sort) activeSort = savedPrefs.sort;
+    if (savedPrefs.filters && typeof savedPrefs.filters === "object") {
+      activeFilters = { ...resolveDefaultFilters(), ...savedPrefs.filters };
+    }
+  }
+
+  const _persistPreferences = () => {
+    if (!storageKey) return;
+    preferenceStorage.saveSortFilterPreferences(storageKey, {
+      sort: activeSort,
+      filters: activeFilters,
+    });
+  };
 
   const btnSort        = document.getElementById(btnSortId);
   const dropdownSort   = document.getElementById(dropdownSortId);
@@ -41,12 +59,16 @@ export function setupSortFiltration({
 
   if (!btnFilter || !dropdownFilter) return;
 
-  // ── Highlight default filter options on first load ──────────
+  // ── Highlight active filter & sort options on load ──────────
   Object.keys(activeFilters).forEach(key => {
     const val   = activeFilters[key];
     const match = dropdownFilter.querySelector(`[data-filter-key="${key}"][data-filter-val="${val}"]`);
     if (match) match.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
   });
+  if (dropdownSort && activeSort !== "none") {
+    dropdownSort.querySelectorAll("[data-sort-val]").forEach(o => o.classList.remove("text-spes-blue", "font-bold", "dark:text-spes-yellow"));
+    dropdownSort.querySelector(`[data-sort-val="${activeSort}"]`)?.classList.add("text-spes-blue", "font-bold", "dark:text-spes-yellow");
+  }
 
   // ── Tab switching (shared-panel mode) ───────────────────────
   const _tabActive   = ["bg-white", "text-spes-blue", "shadow-sm", "dark:bg-white/10", "dark:text-spes-yellow"];
@@ -258,6 +280,9 @@ export function setupSortFiltration({
   const clearAllButton = panel?.querySelector("#sf-clear-all");
   clearAllButton?.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (storageKey) {
+      preferenceStorage.clearSortFilterPreferences(storageKey);
+    }
     activeFilters = resolveDefaultFilters();
     onFilterChange?.("status", activeFilters.status || "active");
     activeSort = initialSort;
@@ -278,6 +303,7 @@ export function setupSortFiltration({
   });
 
   function applySortAndFilter() {
+    _persistPreferences();
     let processed = [...originalData];
 
     // 1. Apply Filtering

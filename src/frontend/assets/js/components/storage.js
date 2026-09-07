@@ -229,6 +229,74 @@ class PreferenceStorage {
     }
   }
   // --- FUNCTION: READ CUSTOM OFFICE BUDGET OVERRIDES (END) ---
+
+  // --- FUNCTION: SAVE SORT FILTER PREFERENCES (START) - Saves client sort and filter state to localStorage ---
+  saveSortFilterPreferences(storageKey, prefs) {
+    if (!storageKey || !prefs) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        ...prefs,
+        updatedAt: Date.now(),
+      }));
+    } catch (e) {
+      console.warn("[SPES Storage] Failed to save sort/filter preferences:", e);
+    }
+  }
+  // --- FUNCTION: SAVE SORT FILTER PREFERENCES (END) ---
+
+  // --- FUNCTION: GET SORT FILTER PREFERENCES (START) - Retrieves client sort and filter state from localStorage ---
+  getSortFilterPreferences(storageKey) {
+    if (!storageKey) return null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  // --- FUNCTION: GET SORT FILTER PREFERENCES (END) ---
+
+  // --- FUNCTION: CLEAR SORT FILTER PREFERENCES (START) - Destroys client sort and filter state from localStorage ---
+  clearSortFilterPreferences(storageKey) {
+    if (!storageKey) return;
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (e) {
+      console.warn("[SPES Storage] Failed to clear sort/filter preferences:", e);
+    }
+  }
+  // --- FUNCTION: CLEAR SORT FILTER PREFERENCES (END) ---
+
+  // --- FUNCTION: SAVE IMPLEMENTOR BATCH DEPLOYMENTS (START) - Saves multi-batch deployment periods per implementor ---
+  saveImplementorDeployments(staffId, deployments) {
+    if (!staffId || !Array.isArray(deployments)) return;
+    try {
+      const storageKey = "spes_implementor_deployments";
+      const raw = localStorage.getItem(storageKey);
+      const data = raw ? JSON.parse(raw) : {};
+      data[String(staffId)] = deployments;
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    } catch (e) {
+      console.warn("[SPES Storage] Failed to save implementor deployments:", e);
+    }
+  }
+  // --- FUNCTION: SAVE IMPLEMENTOR BATCH DEPLOYMENTS (END) ---
+
+  // --- FUNCTION: GET IMPLEMENTOR BATCH DEPLOYMENTS (START) - Retrieves multi-batch deployment periods per implementor ---
+  getImplementorDeployments(staffId) {
+    if (!staffId) return null;
+    try {
+      const raw = localStorage.getItem("spes_implementor_deployments");
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return Array.isArray(data[String(staffId)]) ? data[String(staffId)] : null;
+    } catch {
+      return null;
+    }
+  }
+  // --- FUNCTION: GET IMPLEMENTOR BATCH DEPLOYMENTS (END) ---
 }
 
 export const preferenceStorage = new PreferenceStorage();

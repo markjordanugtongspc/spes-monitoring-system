@@ -5,6 +5,7 @@ import {
 } from "./animations.js";
 import { modals } from "./modals.js";
 import { flowDebug, flowDebugError, flowDebugSuccess } from "./flow-debugger.js";
+import { preferenceStorage } from "./storage.js";
 
 // --- FUNCTION: MOBILE SPLASH + FLOWBITE DRAWER BRIDGE (START) ---
 export function initMobileSplashDrawer() {
@@ -244,36 +245,110 @@ export function initImplementorsDrawer() {
     document.getElementById("drawer-impl-office-location").textContent = implementorData.office_location || "—";
     document.getElementById("drawer-impl-email").textContent = implementorData.email || "---";
 
-    // --- START: POPULATE USERNAME, STARTED (replaces address/blood_type) ---
+    // --- START: POPULATE USERNAME, STARTED, ENDED WITH DYNAMIC BATCH SWITCHER ---
     const usernameEl = document.getElementById("drawer-impl-username");
     if (usernameEl) usernameEl.textContent = implementorData.username || "---";
-    // Format started_at as readable date-time or "N/A"
+
     const startedEl = document.getElementById("drawer-impl-started");
-    if (startedEl) {
-      if (implementorData.started_at) {
-        const d = new Date(implementorData.started_at);
-        startedEl.textContent = d.toLocaleString("en-PH", {
-          month: "short", day: "numeric", year: "numeric",
-          hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila"
+    const endedEl = document.getElementById("drawer-impl-ended");
+    const batchSwitcherWrapper = document.getElementById("drawer-impl-batch-switcher-wrapper");
+    const batchSwitcher = document.getElementById("drawer-impl-batch-switcher");
+
+    const _fmtDateReadable = (iso) => {
+      if (!iso) return "N/A";
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? "N/A" : d.toLocaleString("en-PH", {
+        month: "short", day: "numeric", year: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila"
+      });
+    };
+
+    const savedDeployments = implementorData?.id ? preferenceStorage.getImplementorDeployments(implementorData.id) : null;
+    const deployments = (Array.isArray(implementorData?.batch_deployments) && implementorData.batch_deployments.length > 0)
+      ? implementorData.batch_deployments
+      : (Array.isArray(savedDeployments) && savedDeployments.length > 0)
+        ? savedDeployments
+        : ((implementorData.started_at || implementorData.ended_at)
+            ? [{ batch_id: 1, batch_name: "BATCH 1", started_at: implementorData.started_at, ended_at: implementorData.ended_at }]
+            : [{ batch_id: 1, batch_name: "BATCH 1", started_at: null, ended_at: null }]);
+
+    let selectedBatchIndex = 0;
+
+    const _updateSelectedBatchDates = (idx) => {
+      selectedBatchIndex = idx;
+      const targetBatch = deployments[idx] || deployments[0];
+      if (startedEl) startedEl.textContent = _fmtDateReadable(targetBatch?.started_at);
+      if (endedEl) endedEl.textContent = _fmtDateReadable(targetBatch?.ended_at);
+
+      if (batchSwitcher) {
+        // Update button tab highlights if in button mode
+        batchSwitcher.querySelectorAll(".btn-impl-drawer-batch-tab").forEach((btn, bIdx) => {
+          const isActive = bIdx === idx;
+          btn.className = `btn-impl-drawer-batch-tab cursor-pointer rounded-none px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-all border ${
+            isActive
+              ? "bg-spes-blue text-white border-spes-blue dark:bg-spes-yellow dark:text-spes-dark-blue dark:border-spes-yellow shadow-xs"
+              : "bg-spes-blue/5 text-spes-blue border-spes-blue/20 hover:bg-spes-blue/10 dark:bg-white/5 dark:text-spes-white/70 dark:border-white/10 dark:hover:bg-white/10"
+          }`;
+        });
+        // Update select value if in dropdown mode
+        const selectEl = batchSwitcher.querySelector("#drawer-impl-batch-select");
+        if (selectEl && Number(selectEl.value) !== idx) {
+          selectEl.value = String(idx);
+        }
+      }
+    };
+
+    if (batchSwitcher && batchSwitcherWrapper) {
+      if (deployments.length === 2) {
+        // 2 Batches: Clean Dual Button Switcher
+        batchSwitcherWrapper.classList.remove("hidden");
+        batchSwitcherWrapper.classList.add("flex");
+        batchSwitcher.innerHTML = deployments.map((dep, dIdx) => {
+          const bNum = dep.batch_id || (dIdx + 1);
+          const bLabel = dep.batch_name || `BATCH ${bNum}`;
+          return `
+            <button type="button" data-batch-idx="${dIdx}" class="btn-impl-drawer-batch-tab cursor-pointer rounded-none px-2.5 py-1 text-[10px] font-black uppercase tracking-wider transition-all border">
+              ${bLabel}
+            </button>
+          `;
+        }).join("");
+
+        batchSwitcher.querySelectorAll(".btn-impl-drawer-batch-tab").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const idx = Number(btn.dataset.batchIdx);
+            _updateSelectedBatchDates(idx);
+          });
+        });
+      } else if (deployments.length >= 3) {
+        // 3+ Batches: Clean Dropdown Selector to avoid layout overflow/redundancy
+        batchSwitcherWrapper.classList.remove("hidden");
+        batchSwitcherWrapper.classList.add("flex");
+        batchSwitcher.innerHTML = `
+          <div class="relative inline-block min-w-[130px]">
+            <select id="drawer-impl-batch-select" class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-white dark:bg-spes-dark-primary py-1 pe-7 ps-2.5 text-[10px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow focus:border-spes-blue focus:outline-none focus:ring-1 focus:ring-spes-blue/20 dark:border-white/15 dark:focus:border-spes-yellow transition">
+              ${deployments.map((dep, dIdx) => {
+                const bNum = dep.batch_id || (dIdx + 1);
+                const bLabel = dep.batch_name || `BATCH ${bNum}`;
+                return `<option value="${dIdx}" class="bg-white text-spes-black dark:bg-spes-dark-primary dark:text-spes-white font-bold py-1">${bLabel}</option>`;
+              }).join("")}
+            </select>
+          </div>
+        `;
+
+        const selectEl = batchSwitcher.querySelector("#drawer-impl-batch-select");
+        selectEl?.addEventListener("change", (e) => {
+          const idx = Number(e.target.value);
+          _updateSelectedBatchDates(idx);
         });
       } else {
-        startedEl.textContent = "N/A";
+        batchSwitcherWrapper.classList.add("hidden");
+        batchSwitcherWrapper.classList.remove("flex");
+        batchSwitcher.innerHTML = "";
       }
     }
 
-    // Format ended_at as readable date-time or "N/A"
-    const endedEl = document.getElementById("drawer-impl-ended");
-    if (endedEl) {
-      if (implementorData.ended_at) {
-        const d = new Date(implementorData.ended_at);
-        endedEl.textContent = d.toLocaleString("en-PH", {
-          month: "short", day: "numeric", year: "numeric",
-          hour: "2-digit", minute: "2-digit", timeZone: "Asia/Manila"
-        });
-      } else {
-        endedEl.textContent = "N/A";
-      }
-    }
+    _updateSelectedBatchDates(0);
+    // --- END: POPULATE USERNAME, STARTED, ENDED WITH DYNAMIC BATCH SWITCHER ---
     // Wire copy buttons
     const btnCopyUsername = document.getElementById("btn-copy-username");
     const btnCopyEmail = document.getElementById("btn-copy-email");
@@ -577,6 +652,24 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
         if (officeMeta) officeMeta.textContent = office?.location ? `(${office.location})` : "No office location is stored.";
         officeDropdown.classList.add("hidden");
         officeNotFound?.classList.add("hidden");
+
+        // Automatically detect active batches for this office if creating new implementor
+        if (!currentEditId && _fetchOfficeBatches) {
+          _fetchOfficeBatches(btn.dataset.id).then(res => {
+            const batchIds = res?.data || [1];
+            const currentInputs = _collectBatchDeploymentInputs();
+            const hasDates = currentInputs.some(r => r.started_at || r.ended_at);
+            if (!hasDates) {
+              const detectedRows = batchIds.map(bId => ({
+                batch_id: bId,
+                batch_name: `BATCH ${bId}`,
+                started_at: null,
+                ended_at: null,
+              }));
+              renderBatchDeploymentRows(detectedRows);
+            }
+          });
+        }
       }
     });
 
@@ -643,6 +736,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   let currentEditData = null;
   let _updateStaff;
   let _addOffice;
+  let _fetchOfficeBatches;
 
   const _loadApis = async () => {
     if (_addStaff) return;
@@ -652,6 +746,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     _fetchOffices = mod.fetchOffices;
     _fetchRoles = mod.fetchRoles;
     _addOffice = mod.addOffice;
+    _fetchOfficeBatches = mod.fetchOfficeBatches;
   };
 
   const _showError = (msg) => {
@@ -692,6 +787,194 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       roleSelect.appendChild(opt);
     });
   };
+
+  // --- START: DYNAMIC BATCH DEPLOYMENT ROWS LOGIC ---
+  const batchDeploymentsList = document.getElementById("aif-batch-deployments-list");
+  const btnAddBatchPeriod = document.getElementById("btn-aif-add-batch-period");
+  let activeBatchDatepickers = [];
+
+  const _fmtDateInput = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "" : `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
+  };
+
+  const _parseDate = (strVal) => {
+    if (!strVal) return null;
+    const d = new Date(strVal);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  };
+
+  const _destroyAllBatchDatepickers = () => {
+    activeBatchDatepickers.forEach(({ inp, handler, dp }) => {
+      if (inp && handler) {
+        inp.removeEventListener("focus", handler);
+        inp.removeEventListener("click", handler);
+      }
+      if (dp) {
+        try {
+          dp.hide();
+          dp.destroy?.();
+        } catch {}
+      }
+    });
+    activeBatchDatepickers = [];
+    document.querySelectorAll(".datepicker").forEach(dp => {
+      dp.classList.add("hidden");
+      dp.classList.remove("active");
+      dp.style.display = "none";
+    });
+  };
+
+  const _collectBatchDeploymentInputs = () => {
+    if (!batchDeploymentsList) return [];
+    const rows = batchDeploymentsList.querySelectorAll(".aif-batch-deployment-row");
+    return Array.from(rows).map((row, idx) => {
+      const batchIdInput = row.querySelector(".aif-row-batch-id");
+      const batchNameInput = row.querySelector(".aif-row-batch-name");
+      const startInp = row.querySelector(".aif-batch-start");
+      const endInp = row.querySelector(".aif-batch-end");
+      const batchId = batchIdInput ? Number(batchIdInput.value) : (idx + 1);
+      const batchName = batchNameInput?.value || `BATCH ${batchId}`;
+      return {
+        batch_id: batchId,
+        batch_name: batchName,
+        started_at: startInp?.value ? _parseDate(startInp.value) : null,
+        ended_at: endInp?.value ? _parseDate(endInp.value) : null,
+      };
+    });
+  };
+
+  const _initBatchRowDatepickers = () => {
+    if (!batchDeploymentsList) return;
+    const rows = batchDeploymentsList.querySelectorAll(".aif-batch-deployment-row");
+    rows.forEach(row => {
+      const startInp = row.querySelector(".aif-batch-start");
+      const endInp = row.querySelector(".aif-batch-end");
+      if (!startInp || !endInp) return;
+
+      const initInput = (inp, otherInp, label) => {
+        try {
+          if (inp._flowbiteDatepicker) {
+            inp._flowbiteDatepicker.destroy?.();
+            inp._flowbiteDatepicker = null;
+          }
+          const dp = new Datepicker(inp, {
+            autohide: true,
+            todayBtn: true,
+            clearBtn: true,
+            format: "mm/dd/yyyy",
+          });
+          inp._flowbiteDatepicker = dp;
+
+          const onFocus = () => {
+            if (otherInp?._flowbiteDatepicker) {
+              try { otherInp._flowbiteDatepicker.hide(); } catch {}
+            }
+            document.querySelectorAll(".datepicker").forEach(dEl => {
+              if (otherInp && dEl.parentElement === otherInp.parentElement) {
+                dEl.classList.add("hidden");
+                dEl.classList.remove("active");
+                dEl.style.display = "none";
+              }
+            });
+          };
+          inp.addEventListener("focus", onFocus);
+          inp.addEventListener("click", onFocus);
+          activeBatchDatepickers.push({ inp, handler: onFocus, dp });
+        } catch (err) {
+          flowDebugError(`Failed to init dynamic ${label} datepicker`, err);
+        }
+      };
+
+      initInput(startInp, endInp, "start");
+      initInput(endInp, startInp, "end");
+    });
+  };
+
+  const renderBatchDeploymentRows = (deployments = []) => {
+    if (!batchDeploymentsList) return;
+    _destroyAllBatchDatepickers();
+
+    let items = Array.isArray(deployments) && deployments.length > 0
+      ? deployments
+      : [{ batch_id: 1, batch_name: "BATCH 1", started_at: null, ended_at: null }];
+
+    let html = "";
+    items.forEach((item, index) => {
+      const bId = item.batch_id || (index + 1);
+      const bName = item.batch_name || `BATCH ${bId}`;
+      const startVal = _fmtDateInput(item.started_at);
+      const endVal = _fmtDateInput(item.ended_at);
+
+      html += `
+        <div class="aif-batch-deployment-row border border-spes-blue/15 bg-spes-blue/5 p-3 dark:border-white/10 dark:bg-white/5 space-y-2.5" data-batch-index="${index}">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center rounded-none bg-spes-blue text-white dark:bg-spes-yellow dark:text-spes-dark-blue px-2.5 py-0.5 text-xs font-black uppercase tracking-wider">
+                ${bName}
+              </span>
+              <input type="hidden" class="aif-row-batch-id" value="${bId}" />
+              <input type="hidden" class="aif-row-batch-name" value="${bName}" />
+            </div>
+            ${index > 0 ? `
+            <button type="button" class="btn-remove-batch-row cursor-pointer text-xs font-bold text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 inline-flex items-center gap-1 transition-colors" data-remove-index="${index}">
+              <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              Remove
+            </button>` : ''}
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <div class="relative flex-1">
+              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-batch-start-${index}')?.focus()">
+                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z"/></svg>
+              </div>
+              <input id="aif-batch-start-${index}" type="text" autocomplete="off"
+                datepicker datepicker-autohide datepicker-buttons datepicker-orientation="bottom left" datepicker-format="mm/dd/yyyy"
+                class="aif-batch-start cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-white dark:bg-transparent ps-9 pe-3 py-2 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                placeholder="Select start date" value="${startVal}" />
+            </div>
+            <span class="self-center text-xs font-bold uppercase tracking-wider text-spes-black/40 dark:text-spes-white/40 sm:mx-1">to</span>
+            <div class="relative flex-1">
+              <div class="cursor-pointer absolute inset-y-0 start-0 flex items-center ps-3 z-10" onclick="document.getElementById('aif-batch-end-${index}')?.focus()">
+                <svg class="h-4 w-4 text-spes-blue/50 dark:text-spes-yellow/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 10h16m-8-3V4M7 7V4m10 3V4M5 20h14a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Zm3-7h.01v.01H8V13Zm4 0h.01v.01H12V13Zm4 0h.01v.01H16V13Zm-8 4h.01v.01H8V17Zm4 0h.01v.01H12V17Zm4 0h.01v.01H16V17Z"/></svg>
+              </div>
+              <input id="aif-batch-end-${index}" type="text" autocomplete="off"
+                datepicker datepicker-autohide datepicker-buttons datepicker-orientation="bottom right" datepicker-format="mm/dd/yyyy"
+                class="aif-batch-end cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-white dark:bg-transparent ps-9 pe-3 py-2 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+                placeholder="Select end date" value="${endVal}" />
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    batchDeploymentsList.innerHTML = html;
+    _initBatchRowDatepickers();
+  };
+
+  // Wire Add Batch Period button
+  btnAddBatchPeriod?.addEventListener("click", () => {
+    const current = _collectBatchDeploymentInputs();
+    const nextId = current.length + 1;
+    current.push({
+      batch_id: nextId,
+      batch_name: `BATCH ${nextId}`,
+      started_at: null,
+      ended_at: null,
+    });
+    renderBatchDeploymentRows(current);
+  });
+
+  // Wire Remove Batch Row event delegation
+  batchDeploymentsList?.addEventListener("click", (e) => {
+    const removeBtn = e.target.closest(".btn-remove-batch-row");
+    if (!removeBtn) return;
+    const removeIndex = Number(removeBtn.dataset.removeIndex);
+    const current = _collectBatchDeploymentInputs();
+    current.splice(removeIndex, 1);
+    renderBatchDeploymentRows(current);
+  });
+  // --- END: DYNAMIC BATCH DEPLOYMENT ROWS LOGIC ---
 
   const _isMobile = () => window.innerWidth < 640;
 
@@ -746,17 +1029,17 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       document.getElementById("aif-language").value = staffData.language || "";
       document.getElementById("aif-phone").value = staffData.phone || "";
 
-      // --- START: POPULATE DEPLOYMENT DATES (started_at / ended_at) ---
-      const _fmtDateInput = (iso) => {
-        if (!iso) return "";
-        const d = new Date(iso);
-        return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
-      };
-      const startedInput = document.getElementById("aif-started-at");
-      const endedInput = document.getElementById("aif-ended-at");
-      if (startedInput) startedInput.value = _fmtDateInput(staffData.started_at);
-      if (endedInput) endedInput.value = _fmtDateInput(staffData.ended_at);
-      // --- END: POPULATE DEPLOYMENT DATES ---
+      // --- START: POPULATE BATCH DEPLOYMENTS (render dynamic batch deployment rows) ---
+      const savedDeployments = preferenceStorage.getImplementorDeployments(staffData.id);
+      const deployments = (Array.isArray(staffData.batch_deployments) && staffData.batch_deployments.length > 0)
+        ? staffData.batch_deployments
+        : (Array.isArray(savedDeployments) && savedDeployments.length > 0)
+          ? savedDeployments
+          : ((staffData.started_at || staffData.ended_at)
+              ? [{ batch_id: 1, batch_name: "BATCH 1", started_at: staffData.started_at, ended_at: staffData.ended_at }]
+              : [{ batch_id: 1, batch_name: "BATCH 1", started_at: null, ended_at: null }]);
+      renderBatchDeploymentRows(deployments);
+      // --- END: POPULATE BATCH DEPLOYMENTS ---
       
       setApprovalStatusUI(Boolean(staffData.approved));
     } else {
@@ -778,6 +1061,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       setTabActive("public");
       const notFound = document.getElementById("aif-office-not-found");
       if(notFound) notFound.classList.add("hidden");
+
+      // --- START: INIT BATCH DEPLOYMENTS FOR ADD MODE ---
+      renderBatchDeploymentRows([{ batch_id: 1, batch_name: "BATCH 1", started_at: null, ended_at: null }]);
+      // --- END: INIT BATCH DEPLOYMENTS FOR ADD MODE ---
     }
 
     // --- START: RESTRICT HR FROM MODIFYING ADMINISTRATOR ACCOUNTS ---
@@ -788,8 +1075,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
     [
       "aif-full-name", "aif-username", "aif-email", "aif-office", "aif-office-search",
-      "aif-role", "aif-religion", "aif-language", "aif-phone", "aif-started-at",
-      "aif-ended-at", "aif-password", "aif-confirm-password", "aif-approved"
+      "aif-role", "aif-religion", "aif-language", "aif-phone",
+      "aif-password", "aif-confirm-password", "aif-approved"
     ].forEach((id) => {
       const el = document.getElementById(id);
       if (el) {
@@ -798,6 +1085,19 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
         el.classList.toggle("cursor-not-allowed", isHrViewingAdmin);
       }
     });
+
+    if (btnAddBatchPeriod) {
+      btnAddBatchPeriod.disabled = isHrViewingAdmin;
+      btnAddBatchPeriod.classList.toggle("opacity-60", isHrViewingAdmin);
+      btnAddBatchPeriod.classList.toggle("cursor-not-allowed", isHrViewingAdmin);
+    }
+    if (batchDeploymentsList) {
+      batchDeploymentsList.querySelectorAll("input, button").forEach(el => {
+        el.disabled = isHrViewingAdmin;
+        el.classList.toggle("opacity-60", isHrViewingAdmin);
+        el.classList.toggle("cursor-not-allowed", isHrViewingAdmin);
+      });
+    }
 
     if (isHrViewingAdmin) {
       submitBtn.classList.add("hidden");
@@ -813,7 +1113,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     overlay.classList.remove("hidden");
     drawerEl.offsetHeight;
     requestAnimationFrame(() => {
-      overlay.classList.remove("opacity-0");
+      overlay.classList.remove("opacity-100");
       overlay.classList.add("opacity-100");
       if (_isMobile()) {
         drawerEl.classList.remove("translate-y-full");
@@ -823,9 +1123,6 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
         drawerEl.classList.add("sm:translate-x-0");
       }
       try {
-        const startInput = document.getElementById("aif-started-at");
-        const endInput = document.getElementById("aif-ended-at");
-
         // START: _hideAllDatepickers - Force close all datepicker dropdowns
         const _hideAllDatepickers = () => {
           document.querySelectorAll(".datepicker").forEach(dp => {
@@ -834,43 +1131,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
             dp.style.display = "none";
           });
         };
+        drawerEl._hideAllDatepickers = _hideAllDatepickers;
         // END: _hideAllDatepickers
-
-        // START: _initSingleDatepicker - Initialize Flowbite Datepicker with mutual exclusion
-        const _initSingleDatepicker = (inp, otherInp, label) => {
-          if (!inp || inp._flowbiteDatepicker) return;
-          try {
-            inp._flowbiteDatepicker = new Datepicker(inp, {
-              autohide: true,
-              todayBtn: true,
-              clearBtn: true,
-              format: "mm/dd/yyyy",
-            });
-
-            // Mutual exclusion: when this input is focused/clicked, hide the other datepicker
-            const _onFocus = () => {
-              if (otherInp?._flowbiteDatepicker) {
-                try { otherInp._flowbiteDatepicker.hide(); } catch {}
-              }
-              document.querySelectorAll(".datepicker").forEach(dp => {
-                if (otherInp && dp.parentElement === otherInp.parentElement) {
-                  dp.classList.add("hidden");
-                  dp.classList.remove("active");
-                  dp.style.display = "none";
-                }
-              });
-            };
-            inp.addEventListener("focus", _onFocus);
-            inp.addEventListener("click", _onFocus);
-            inp._dpMutualHandler = _onFocus;
-          } catch (initErr) {
-            flowDebugError(`Failed to init ${label} datepicker`, initErr);
-          }
-        };
-        // END: _initSingleDatepicker
-
-        _initSingleDatepicker(startInput, endInput, "start");
-        _initSingleDatepicker(endInput, startInput, "end");
 
         // START: datepicker-scroll-autohide - Automatically hide datepicker dropdowns when user scrolls the drawer
         const drawerScrollEl = drawerEl.querySelector(".overflow-y-auto") || drawerEl;
@@ -888,24 +1150,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
             drawerEl._dpScrollEl = null;
             drawerEl._dpScrollHandler = null;
           }
-          [startInput, endInput].forEach(inp => {
-            if (inp?._dpMutualHandler) {
-              inp.removeEventListener("focus", inp._dpMutualHandler);
-              inp.removeEventListener("click", inp._dpMutualHandler);
-              inp._dpMutualHandler = null;
-            }
-            if (inp?._flowbiteDatepicker) {
-              try {
-                inp._flowbiteDatepicker.hide();
-                inp._flowbiteDatepicker.destroy?.();
-              } catch {}
-              inp._flowbiteDatepicker = null;
-            }
-          });
-          _hideAllDatepickers();
+          _destroyAllBatchDatepickers();
         };
 
-        flowDebugSuccess("Datepickers initialized with mutual exclusion and solid theme");
+        flowDebugSuccess("Batch deployment datepickers initialized with mutual exclusion");
 
       } catch (err) {
         flowDebugError("Failed to init datepickers", err);
@@ -924,6 +1172,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     });
 
     // START: closeDrawer-datepicker-cleanup - Hide open datepickers, destroy instances, and remove document listeners
+    _destroyAllBatchDatepickers();
     if (drawerEl._hideAllDatepickers) {
       try { drawerEl._hideAllDatepickers(); } catch {}
     }
@@ -976,12 +1225,10 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     if (!currentEditId && !pwd) return _showError("Password is required.");
     if (pwd && pwd !== confirmPwd) return _showError("Passwords do not match.");
 
-    // --- START: BUILD EDIT/CREATE PAYLOAD ---
-    const _parseDate = (strVal) => {
-      if (!strVal) return null;
-      const d = new Date(strVal);
-      return isNaN(d.getTime()) ? null : d.toISOString();
-    };
+    // --- START: BUILD EDIT/CREATE PAYLOAD (Collect batch deployments) ---
+    const batchDeployments = _collectBatchDeploymentInputs();
+    const primaryBatch = batchDeployments[0] || null;
+
     const payload = {
       full_name:  document.getElementById("aif-full-name").value.trim(),
       username:   document.getElementById("aif-username").value.trim(),
@@ -991,8 +1238,9 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       religion:   document.getElementById("aif-religion").value.trim() || null,
       language:   document.getElementById("aif-language").value.trim() || null,
       phone:      document.getElementById("aif-phone").value.trim() || null,
-      started_at: _parseDate(document.getElementById("aif-started-at")?.value),
-      ended_at:   _parseDate(document.getElementById("aif-ended-at")?.value),
+      started_at: primaryBatch?.started_at || null,
+      ended_at:   primaryBatch?.ended_at || null,
+      batch_deployments: batchDeployments,
       approved:   document.getElementById("aif-approved")?.checked || false,
     };
     // --- END: BUILD EDIT/CREATE PAYLOAD ---

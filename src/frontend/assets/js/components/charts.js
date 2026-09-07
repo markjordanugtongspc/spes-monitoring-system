@@ -399,39 +399,66 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
   }
 
   (staffs || []).forEach(s => {
-    const rawStart = s.started_at || s.created_at;
-    if (!rawStart) return;
-    const dStart = new Date(rawStart);
-    if (isNaN(dStart.getTime())) return;
+    // Support multi-batch deployments or fallback to started_at / ended_at
+    const deployments = (Array.isArray(s.batch_deployments) && s.batch_deployments.length > 0)
+      ? s.batch_deployments
+      : [{ batch_id: 1, batch_name: "BATCH 1", started_at: s.started_at || s.created_at, ended_at: s.ended_at }];
 
-    const dEnd = s.ended_at ? new Date(s.ended_at) : new Date(dStart.getTime() + 20 * 24 * 60 * 60 * 1000);
+    deployments.forEach((dep, idx) => {
+      const rawStart = dep.started_at || s.started_at || s.created_at;
+      if (!rawStart) return;
+      const dStart = new Date(rawStart);
+      if (isNaN(dStart.getTime())) return;
 
-    if (!earliestDate || dStart < earliestDate) earliestDate = dStart;
-    if (!latestDate || dEnd > latestDate) latestDate = dEnd;
+      const dEnd = dep.ended_at ? new Date(dep.ended_at) : (s.ended_at ? new Date(s.ended_at) : new Date(dStart.getTime() + 20 * 24 * 60 * 60 * 1000));
 
-    const monthKey = `${MONTH_NAMES[dStart.getMonth()]} '${String(dStart.getFullYear()).slice(-2)}`;
-    const sortVal = dStart.getFullYear() * 100 + dStart.getMonth();
+      if (!earliestDate || dStart < earliestDate) earliestDate = dStart;
+      if (!latestDate || dEnd > latestDate) latestDate = dEnd;
 
-    if (!monthMap[monthKey]) {
-      monthMap[monthKey] = { count: 0, sortVal };
-      monthOffices[monthKey] = {};
-    }
-    monthMap[monthKey].count += 1;
+      const monthKey = `${MONTH_NAMES[dStart.getMonth()]} '${String(dStart.getFullYear()).slice(-2)}`;
+      const sortVal = dStart.getFullYear() * 100 + dStart.getMonth();
 
-    let officeName = s.offices?.name || (s.office_id ? `Office #${s.office_id}` : "Unknown Office");
-    if (officeName.includes("CITY GOVERNMENT OF ILIGAN (LGU)")) {
-      officeName = "LGU - ILIGAN";
-    }
+      if (!monthMap[monthKey]) {
+        monthMap[monthKey] = { count: 0, sortVal };
+        monthOffices[monthKey] = {};
+      }
+      monthMap[monthKey].count += 1;
 
-    if (!monthOffices[monthKey][officeName]) {
-      monthOffices[monthKey][officeName] = {
-        officeName,
-        dateRange: _fmtNoticeOfCommence(dStart, dEnd),
-        implementors: []
-      };
-    }
+      let officeName = s.offices?.name || (s.office_id ? `Office #${s.office_id}` : "Unknown Office");
+      if (officeName.includes("CITY GOVERNMENT OF ILIGAN (LGU)")) {
+        officeName = "LGU - ILIGAN";
+      }
 
-    monthOffices[monthKey][officeName].implementors.push(s.full_name || s.username || "Implementor");
+      if (!monthOffices[monthKey][officeName]) {
+        monthOffices[monthKey][officeName] = {
+          officeName,
+          dateRange: _fmtNoticeOfCommence(dStart, dEnd),
+          batches: [],
+          implementors: []
+        };
+      }
+
+      const bName = dep.batch_name || `BATCH ${dep.batch_id || (idx + 1)}`;
+      const bRange = _fmtNoticeOfCommence(dStart, dEnd);
+      const existingBatch = monthOffices[monthKey][officeName].batches.find(b => b.batchName === bName);
+      if (!existingBatch) {
+        monthOffices[monthKey][officeName].batches.push({
+          batchName: bName,
+          dateRange: bRange,
+        });
+      }
+
+      const implName = s.full_name || s.username || "Implementor";
+      const existingImpl = monthOffices[monthKey][officeName].implementors.find(i => i.name === implName);
+      if (!existingImpl) {
+        monthOffices[monthKey][officeName].implementors.push({
+          name: implName,
+          batches: [bName],
+        });
+      } else if (!existingImpl.batches.includes(bName)) {
+        existingImpl.batches.push(bName);
+      }
+    });
   });
 
   const sortedEntries = Object.entries(monthMap).sort((a, b) => a[1].sortVal - b[1].sortVal);
@@ -439,23 +466,6 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
   const values = sortedEntries.map(([, v]) => v.count);
 
   if (!values.length) return _showNoData(el, "No deployment history available");
-
-  // Expose toggle helper on window so tooltip/card HTML can interactively expand/collapse implementors list
-  if (!window._spesToggleChartOfficeImpl) {
-    window._spesToggleChartOfficeImpl = function(btn) {
-      if (!btn) return;
-      const parent = btn.closest(".spes-chart-office-card");
-      if (!parent) return;
-      const target = parent.querySelector(".spes-chart-impl-collapse");
-      const icon = parent.querySelector(".spes-chart-impl-icon");
-      if (!target) return;
-      const isHidden = target.classList.contains("hidden");
-      target.classList.toggle("hidden", !isHidden);
-      if (icon) {
-        icon.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
-      }
-    };
-  }
 
   // Ensure interactive floating card container exists in chart wrapper
   const chartWrapper = el.closest("#deployment-chart-wrapper") || el.parentElement;
@@ -468,6 +478,15 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
     chartWrapper.appendChild(detailsCard);
   }
 
+  // Ensure global floating cursor tooltip for office implementors hover exists
+  let implHoverTooltip = document.getElementById("spes-chart-impl-hover-tooltip");
+  if (!implHoverTooltip) {
+    implHoverTooltip = document.createElement("div");
+    implHoverTooltip.id = "spes-chart-impl-hover-tooltip";
+    implHoverTooltip.className = "fixed z-50 pointer-events-none hidden select-none transition-opacity duration-150";
+    document.body.appendChild(implHoverTooltip);
+  }
+
   let _activeCardIndex = null;
   let _isCardPinned = false;
   let _hideTimeout = null;
@@ -477,6 +496,9 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
     _activeCardIndex = null;
     if (detailsCard) {
       detailsCard.classList.add("hidden");
+    }
+    if (implHoverTooltip) {
+      implHoverTooltip.classList.add("hidden");
     }
   };
 
@@ -490,45 +512,46 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
 
     const renderedOffices = officeList.map(item => {
       const implCount = item.implementors.length;
-      const implBadges = item.implementors.map(name => `
-        <span class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold ${isDark ? 'bg-white/10 text-white/90 border border-white/10' : 'bg-white text-slate-700 border border-slate-200'} shadow-xs">
-          <svg class="h-2.5 w-2.5 text-spes-blue dark:text-spes-yellow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-          <span>${esc(name)}</span>
-        </span>
-      `).join("");
+      const batchBadges = (item.batches && item.batches.length > 0)
+        ? item.batches.map(b => `
+            <span class="inline-flex shrink-0 items-center gap-1 rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow border border-spes-yellow/30' : 'bg-amber-100 text-amber-900 border border-amber-300/80'}">
+              ${item.batches.length > 1 ? `<span class="opacity-70">${esc(b.batchName)}:</span>` : ''}
+              <span>${esc(b.dateRange)}</span>
+            </span>
+          `).join("")
+        : `<span class="inline-flex shrink-0 items-center rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow border border-spes-yellow/30' : 'bg-amber-100 text-amber-900 border border-amber-300/80'}">${esc(item.dateRange)}</span>`;
 
       return `
-        <div class="spes-chart-office-card rounded-lg p-2 border space-y-1.5 transition-all ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50/95 border-slate-200'}">
+        <div class="spes-chart-office-card group rounded-none p-2 border space-y-1.5 transition-all cursor-pointer relative ${isDark ? 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-spes-yellow/40' : 'bg-slate-50/95 border-slate-200 hover:bg-slate-100 hover:border-spes-blue/40'}" data-implementors="${esc(JSON.stringify(item.implementors))}" data-batches="${esc(JSON.stringify(item.batches || []))}" data-office="${esc(item.officeName)}">
           <div class="flex items-center justify-between gap-2">
-            <span class="font-extrabold text-[11px] truncate max-w-[130px] ${isDark ? 'text-white' : 'text-slate-900'}" title="${esc(item.officeName)}">${esc(item.officeName)}</span>
-            <span class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono ${isDark ? 'bg-spes-yellow/15 text-spes-yellow' : 'bg-amber-100 text-amber-900 border border-amber-300/60'}">${esc(item.dateRange)}</span>
+            <span class="font-black text-[11px] truncate max-w-[130px] uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}" title="${esc(item.officeName)}">${esc(item.officeName)}</span>
+            <div class="flex flex-col items-end gap-0.5 shrink-0">
+              ${batchBadges}
+            </div>
           </div>
-          <button type="button" onclick="window._spesToggleChartOfficeImpl(this)" class="cursor-pointer w-full flex items-center justify-between gap-1 text-[10px] font-bold rounded px-1.5 py-1 transition-colors ${isDark ? 'bg-white/5 hover:bg-white/10 text-spes-yellow' : 'bg-blue-50/80 hover:bg-blue-100 text-spes-blue'}">
+          <div class="flex items-center justify-between gap-1 pt-0.5 text-[10px] font-bold ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">
             <span class="flex items-center gap-1">
               <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-              <span>Implementors (${implCount})</span>
+              <span>${implCount} Implementor${implCount !== 1 ? 's' : ''}</span>
             </span>
-            <svg class="spes-chart-impl-icon h-3 w-3 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          <div class="spes-chart-impl-collapse hidden flex flex-wrap gap-1 pt-1 border-t ${isDark ? 'border-white/10' : 'border-slate-200/80'}">
-            ${implBadges}
+            <span class="text-[8px] font-semibold opacity-60 dark:text-white/50 text-slate-500 italic">Hover to view</span>
           </div>
         </div>`;
     }).join("");
 
     return `
-      <div class="${_tooltipClass()} w-[280px] max-w-[calc(100vw-2rem)] pointer-events-auto select-none ring-1 ring-black/10 transition-all">
+      <div class="${_tooltipClass()} w-[290px] max-w-[calc(100vw-2rem)] pointer-events-auto select-none rounded-none ring-1 ring-black/10 transition-all">
         <div class="flex items-center justify-between mb-1.5">
           <div>
-            <div class="font-extrabold text-[11px] leading-tight ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">${esc(aggregateRange)}</div>
+            <div class="font-black text-[11px] leading-tight uppercase tracking-wider ${isDark ? 'text-spes-yellow' : 'text-spes-blue'}">${esc(aggregateRange)}</div>
             <div class="flex items-center gap-1.5 text-[9px] font-bold mt-0.5 ${isDark ? 'text-white/60' : 'text-slate-500'}">
               <span>${officeList.length} office${officeList.length !== 1 ? 's' : ''}</span>
               <span class="opacity-40">·</span>
-              <span>${val} implementor${val !== 1 ? 's' : ''}</span>
+              <span>${val} deployment${val !== 1 ? 's' : ''}</span>
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0 ms-2">
-            ${isPinned ? `<span class="inline-flex items-center rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[8px] font-bold">📌 Pinned</span>` : `<span class="text-[8px] ${isDark ? 'text-white/30' : 'text-slate-400'}">click bar to pin</span>`}
+            ${isPinned ? `<span class="inline-flex items-center rounded-none bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[8px] font-bold">📌 Pinned</span>` : `<span class="text-[8px] ${isDark ? 'text-white/30' : 'text-slate-400'}">click bar to pin</span>`}
             <button type="button" onclick="window._spesCloseDeploymentCard()" class="cursor-pointer ms-1 ${isDark ? 'text-white/40 hover:text-rose-400' : 'text-slate-400 hover:text-rose-500'} text-sm font-bold leading-none transition-colors" title="Close">✕</button>
           </div>
         </div>
@@ -536,6 +559,129 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
           ${renderedOffices}
         </div>
       </div>`;
+  };
+
+  // Attach hover listener to each office rectangle card for top-right cursor tooltip
+  const _attachOfficeCardHoverListeners = () => {
+    if (!detailsCard) return;
+    const cards = detailsCard.querySelectorAll(".spes-chart-office-card");
+    cards.forEach(card => {
+      const office = card.dataset.office || "Office";
+      let impls = [];
+      let batches = [];
+      try { impls = JSON.parse(card.dataset.implementors || "[]"); } catch { impls = []; }
+      try { batches = JSON.parse(card.dataset.batches || "[]"); } catch { batches = []; }
+      const isDark = document.documentElement.classList.contains("dark");
+
+      const onMouseMove = (e) => {
+        if (!implHoverTooltip) return;
+
+        const batchSummaryBadges = batches.map((b, idx) => {
+          // Palette for alternating batch badge highlights:
+          // Batch 1: Emerald/Teal highlight
+          // Batch 2: Amber/Yellow highlight
+          // Batch 3+: Violet/Indigo highlight
+          const bNum = Number((b.batchName || "").replace(/\D/g, "")) || (idx + 1);
+          let badgeThemeLight = "bg-emerald-50 text-emerald-900 border-emerald-300 decoration-emerald-500";
+          let badgeThemeDark = "dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30 dark:decoration-emerald-400";
+          if (bNum === 2) {
+            badgeThemeLight = "bg-amber-50 text-amber-900 border-amber-300 decoration-amber-500";
+            badgeThemeDark = "dark:bg-spes-yellow/15 dark:text-spes-yellow dark:border-spes-yellow/30 dark:decoration-spes-yellow";
+          } else if (bNum >= 3) {
+            badgeThemeLight = "bg-indigo-50 text-indigo-900 border-indigo-300 decoration-indigo-500";
+            badgeThemeDark = "dark:bg-indigo-500/15 dark:text-indigo-300 dark:border-indigo-500/30 dark:decoration-indigo-400";
+          }
+
+          return `
+            <div class="flex items-center justify-between gap-1.5 text-[9px] px-2 py-1 rounded-none font-mono border ${badgeThemeLight} ${badgeThemeDark} shadow-2xs">
+              <span class="font-black uppercase underline decoration-2 underline-offset-2">${esc(b.batchName || 'BATCH')}</span>
+              <span class="text-[8.5px] font-semibold opacity-90">${esc(b.dateRange || '')}</span>
+            </div>
+          `;
+        }).join("");
+
+        const implPills = impls.map(implItem => {
+          const name = typeof implItem === "string" ? implItem : (implItem.name || "Implementor");
+          const implBatches = (typeof implItem === "object" && Array.isArray(implItem.batches) && implItem.batches.length > 0)
+            ? implItem.batches
+            : [];
+
+          const batchTags = implBatches.map((b, idx) => {
+            const bNum = Number((b || "").replace(/\D/g, "")) || (idx + 1);
+            let tagColorLight = "bg-emerald-100 text-emerald-900 border-emerald-300 decoration-emerald-600";
+            let tagColorDark = "dark:bg-emerald-400/20 dark:text-emerald-300 dark:border-emerald-400/40 dark:decoration-emerald-400";
+            if (bNum === 2) {
+              tagColorLight = "bg-amber-100 text-amber-900 border-amber-300 decoration-amber-600";
+              tagColorDark = "dark:bg-spes-yellow/20 dark:text-spes-yellow dark:border-spes-yellow/40 dark:decoration-spes-yellow";
+            } else if (bNum >= 3) {
+              tagColorLight = "bg-indigo-100 text-indigo-900 border-indigo-300 decoration-indigo-600";
+              tagColorDark = "dark:bg-indigo-400/20 dark:text-indigo-300 dark:border-indigo-400/40 dark:decoration-indigo-400";
+            }
+
+            return `
+              <span class="inline-flex rounded-none px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider font-mono border ${tagColorLight} ${tagColorDark} underline decoration-1.5 underline-offset-2">
+                ${esc(b)}
+              </span>
+            `;
+          }).join(" ");
+
+          return `
+            <div class="flex items-center justify-between gap-2 rounded-none px-2 py-1.5 text-[9.5px] font-bold ${isDark ? 'bg-white/10 text-white border border-white/15' : 'bg-slate-50 text-slate-800 border border-slate-200'} shadow-xs">
+              <div class="flex items-center gap-1.5 truncate">
+                <svg class="h-2.5 w-2.5 text-spes-blue dark:text-spes-yellow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <span class="truncate">${esc(name)}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                ${batchTags}
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        implHoverTooltip.innerHTML = `
+          <div class="rounded-none border shadow-2xl p-2.5 min-w-[220px] max-w-[320px] ${isDark ? 'bg-slate-900/95 border-white/20 text-white backdrop-blur-md' : 'bg-white/95 border-slate-300 text-slate-900 shadow-slate-900/10 backdrop-blur-md'}">
+            <div class="flex items-center justify-between gap-2 mb-1.5 pb-1 border-b ${isDark ? 'border-white/10' : 'border-slate-100'}">
+              <div class="flex items-center gap-1.5 truncate">
+                <svg class="h-3.5 w-3.5 text-spes-blue dark:text-spes-yellow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <span class="text-[10px] font-black uppercase tracking-wider text-spes-blue dark:text-spes-yellow truncate">${esc(office)}</span>
+              </div>
+              <span class="text-[8px] font-bold px-1.5 py-0.5 rounded-none ${isDark ? 'bg-white/10 text-white/80' : 'bg-slate-100 text-slate-600'}">${impls.length} Implementor${impls.length !== 1 ? 's' : ''}</span>
+            </div>
+            ${batches.length > 0 ? `
+            <div class="space-y-1 mb-2">
+              ${batchSummaryBadges}
+            </div>` : ''}
+            <div class="flex flex-col gap-1">
+              ${implPills}
+            </div>
+          </div>
+        `;
+        implHoverTooltip.classList.remove("hidden");
+
+        const offset = 14;
+        const tipRect = implHoverTooltip.getBoundingClientRect();
+        let left = e.clientX + offset;
+        let top = e.clientY - tipRect.height - offset;
+
+        // Boundary checks to ensure tooltip stays on screen:
+        if (top < 10) {
+          top = e.clientY + offset; // Flip below if off top
+        }
+        if (left + tipRect.width > window.innerWidth - 10) {
+          left = e.clientX - tipRect.width - offset; // Flip left if off right
+        }
+
+        implHoverTooltip.style.left = `${Math.round(left)}px`;
+        implHoverTooltip.style.top = `${Math.round(top)}px`;
+      };
+
+      const onMouseLeave = () => {
+        if (implHoverTooltip) implHoverTooltip.classList.add("hidden");
+      };
+
+      card.addEventListener("mousemove", onMouseMove);
+      card.addEventListener("mouseleave", onMouseLeave);
+    });
   };
 
   // START: _showCard - Show/pin the deployment details card with expandable height and 3-zone bar positioning
@@ -550,6 +696,7 @@ export function renderDeploymentColumnChart(elOrId, staffs = _cachedStaffs) {
     if (!detailsCard) return;
 
     detailsCard.innerHTML = _renderDetailsCardHTML(index, _isCardPinned);
+    _attachOfficeCardHoverListeners();
     detailsCard.classList.remove("hidden");
 
     // START: smart-bar-aware-positioning

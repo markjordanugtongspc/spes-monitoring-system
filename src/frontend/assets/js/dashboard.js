@@ -601,6 +601,7 @@ async function loadImplementorTable(userRole) {
     dropdownFilterId:"dropdown-filter-staff",
     originalData:    defaultStaffData,
     defaultFilters:  { archiveStatus: "active" },
+    storageKey:      isRolesPage ? "spes_roles_filter_prefs" : "spes_implementors_filter_prefs",
     initialSort: isRolesPage ? "name-asc" : "none",
     sortComparator: (a, b, sort) => {
       if (!sort || sort === "none") return 0;

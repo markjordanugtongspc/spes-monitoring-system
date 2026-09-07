@@ -8,6 +8,7 @@
 import { supabase } from "./supabase.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 import { initPresence, destroyPresence } from "../../frontend/assets/js/components/presence.js";
+import { preferenceStorage } from "../../frontend/assets/js/components/storage.js";
 
 const IMPL_CACHE_KEY = "spes_implementors_v1";
 const IMPL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -277,6 +278,13 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       const isHr = Number(s.role_id) === 2 || String(s.roles?.name || "").toUpperCase() === "HR";
       const autoAllTrue = isAdmin || (isHr && s.approved === true);
 
+      const savedDeployments = preferenceStorage.getImplementorDeployments(s.id);
+      const batchDeployments = (savedDeployments && savedDeployments.length > 0)
+        ? savedDeployments
+        : ((s.started_at || s.ended_at)
+            ? [{ batch_id: 1, batch_name: "BATCH 1", started_at: s.started_at, ended_at: s.ended_at }]
+            : []);
+
       return {
         id:              s.id,
         created_at:      s.created_at,
@@ -292,6 +300,7 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         archive_at:      s.archive_at,
         started_at:      s.started_at || null,
         ended_at:        s.ended_at || null,
+        batch_deployments: batchDeployments,
         phone:           s.phone || "",
         religion:        s.religion || "",
         language:        s.language || "",

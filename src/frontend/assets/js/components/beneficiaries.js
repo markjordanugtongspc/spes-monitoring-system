@@ -665,8 +665,10 @@ export function initBeneficiaries() {
   }
 
 
+  // --- START: LOAD OFFICER ASSIGNED OFFICE INFO ---
+  // Loads assigned office banner for single-branch officers while hiding it for directory viewers (Admin/HR)
   const loadOfficerOffice = async () => {
-    if (isAdmin) {
+    if (isAdmin || isDirectoryViewer) {
       document.getElementById("officer-assigned-office-info-desktop")?.classList.add("hidden");
       document.getElementById("officer-assigned-office-info-desktop")?.classList.remove("sm:block");
       document.getElementById("officer-assigned-office-info-bottom")?.classList.add("hidden");
@@ -674,7 +676,7 @@ export function initBeneficiaries() {
       return;
     }
 
-    if (session && session.role !== "admin" && session.office_id) {
+    if (!isDirectoryViewer && session && session.office_id) {
       try {
         const { data: offices, error } = await fetchOffices({ forceRefresh: false });
         const data = Array.isArray(offices)
@@ -704,6 +706,7 @@ export function initBeneficiaries() {
       }
     }
   };
+  // --- END: LOAD OFFICER ASSIGNED OFFICE INFO ---
 
   // ── Office Sort Panel (admin only) ──────────────────────────
   const officeSortPanel = initOfficeSortPanel((officeId) => {
@@ -2731,7 +2734,8 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
   wireBeneficiarySelectAll();
   // --- END: BENEFICIARY SELECT-ALL FUNCTION ---
 
-  // ── Sort / filter ────────────────────────────────────────────
+  // --- START: SETUP BENEFICIARY SORT AND FILTRATION ---
+  // Configures and initializes sort, filter, and pagination with localStorage persistence
   function setupSortFilter(data) {
     if (sortFilterInstance) {
       sortFilterInstance.updateData(data);
@@ -2744,6 +2748,7 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
         panelId: "dropdown-sortfilter-beneficiary",
         tabSortId: "sf-tab-sort",
         tabFilterId: "sf-tab-filter",
+        storageKey: "spes_beneficiaries_filter_prefs",
         originalData: data,
         getDefaultFilters: () => viewMode === "beneficiaries"
           ? { status: "active", return_status: activeStatusMode }
@@ -2769,8 +2774,10 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
       });
     }
   }
+  // --- END: SETUP BENEFICIARY SORT AND FILTRATION ---
 
-  // ── Data loading ─────────────────────────────────────────────
+  // --- START: BENEFICIARIES DATA LOADING ---
+  // Loads beneficiary records with proper directory viewer (Admin/HR) and office scoping
   async function loadData(forceRefresh = false) {
     if (isDirectoryViewer && viewMode === "implementors") {
       await switchToImplementorsView();
@@ -2787,15 +2794,26 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
     }
 
     let filteredData = data;
-    if (session && session.role !== "admin" && officerOffice && officerOffice.location) {
-      // Officer's data is already filtered by API
+    if (!isDirectoryViewer && officerOffice && officerOffice.location) {
+      // Regular officer's data is already filtered by API
       filteredData = data;
     } else if (isDirectoryViewer && currentOfficeId && currentOfficeId !== "ALL") {
-      filteredData = data.filter(b => b.staffs?.office_id == currentOfficeId);
+      filteredData = data.filter(b => String(b.staffs?.office_id) === String(currentOfficeId));
     }
 
     allBeneficiaries = filteredData;
-    renderOverallSpesSummary(filteredData);
+
+    if (currentOfficeId === "ALL") {
+      await refreshGlobalSpesSummary(filteredData);
+    } else {
+      renderOverallSpesSummary(filteredData, { isGlobal: false });
+    }
+
+    // Keep summary hidden when viewing a specific batch table
+    if (selectedBatchId !== null) {
+      document.getElementById("global-spes-total-summary")?.classList.add("hidden");
+    }
+
     // Show controls container
     document.getElementById("table-controls-container")?.classList.remove("hidden");
 
@@ -2805,6 +2823,7 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
     // Admin lands on the implementors list first (handled in the view switchers).
     if (!isDirectoryViewer) _showStatusSwitch(true);
   }
+  // --- END: BENEFICIARIES DATA LOADING ---
 
   // ── Add / Edit drawer ────────────────────────────────────────
   const bdfOverlay = document.getElementById("drawer-bene-form-overlay");

@@ -71,7 +71,11 @@ export function initPresence(staffId) {
           status: "ONLINE",
           online_at: new Date().toISOString(),
         });
-        if (import.meta.env.DEV) console.debug("[SPES Presence] Tracked as ONLINE", _staffId);
+        // Ensure DB status is also kept as ONLINE
+        try {
+          await supabase.from("staffs").update({ status: "ONLINE" }).eq("id", _staffId);
+        } catch {}
+        if (import.meta.env.DEV) console.debug("[SPES Presence] Tracked as ONLINE in Realtime & DB", _staffId);
       }
     });
 
@@ -90,9 +94,12 @@ export function initPresence(staffId) {
     document.addEventListener(evt, _activityHandler, { passive: true, capture: true });
   });
 
-  // 3. Browser close / navigate away detection
-  _beforeUnloadHandler = () => {
-    _setOfflineBeacon();
+  // 3. Browser close detection (skip beacon during internal SPA/page navigation)
+  _beforeUnloadHandler = (e) => {
+    // Only fire beacon if the document is being permanently unloaded/hidden without local session
+    if (!localStorage.getItem("spes_session")) {
+      _setOfflineBeacon();
+    }
   };
   window.addEventListener("beforeunload", _beforeUnloadHandler);
   window.addEventListener("pagehide", _beforeUnloadHandler);

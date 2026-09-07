@@ -6,6 +6,7 @@
  */
 import { supabase } from "./supabase.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
+import { preferenceStorage } from "../../frontend/assets/js/components/storage.js";
 
 const STAFF_CACHE_KEY = "spes_staffs_v1";
 const OFFICES_CACHE_KEY = "spes_offices_v1";
@@ -32,6 +33,13 @@ export function invalidateStaffCache() {
   try {
     sessionStorage.removeItem(STAFF_CACHE_KEY);
     localStorage.removeItem("spes_staffs_v1");
+    // Also clear implementor cache keys in auth
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith("spes_implementors")) {
+        sessionStorage.removeItem(k);
+      }
+    }
   } catch {}
 }
 
@@ -143,6 +151,9 @@ export async function addStaff(payload) {
     if (!clean[f]) return { success: false, error: `${f.replace("_", " ")} is required.` };
   }
 
+  const deployments = clean._batch_deployments;
+  delete clean._batch_deployments;
+
   const { data, error } = await supabase
     .from("staffs")
     .insert([clean])
@@ -155,6 +166,11 @@ export async function addStaff(payload) {
       return { success: false, error: "Username or email is already taken." };
     }
     return { success: false, error: "Failed to add implementor. Please try again." };
+  }
+
+  if (data?.id && Array.isArray(deployments) && deployments.length > 0) {
+    preferenceStorage.saveImplementorDeployments(data.id, deployments);
+    data.batch_deployments = deployments;
   }
 
   invalidateStaffCache();
@@ -177,6 +193,9 @@ export async function updateStaff(id, payload) {
     clean.office_id = Number(authorization.access.ownOfficeId);
   }
 
+  const deployments = clean._batch_deployments;
+  delete clean._batch_deployments;
+
   // Only send password if the admin explicitly supplied a new one
   if (!clean.password) delete clean.password;
 
@@ -194,6 +213,11 @@ export async function updateStaff(id, payload) {
       return { success: false, error: "Username or email is already taken by another account." };
     }
     return { success: false, error: "Failed to update implementor. Please try again." };
+  }
+
+  if (Array.isArray(deployments)) {
+    preferenceStorage.saveImplementorDeployments(id, deployments);
+    if (data) data.batch_deployments = deployments;
   }
 
   invalidateStaffCache();
@@ -269,21 +293,40 @@ export async function updateStaffApprovalBulk(ids, approved) {
 // --- START: STAFF INPUT SANITISER ---
 function _sanitize(p) {
   const str = (v) => String(v ?? "").trim() || null;
+  let deployments = [];
+  if (Array.isArray(p.batch_deployments) && p.batch_deployments.length > 0) {
+    deployments = p.batch_deployments.map((d, i) => ({
+      batch_id: d.batch_id ? Number(d.batch_id) : (i + 1),
+      batch_name: d.batch_name ? String(d.batch_name).trim() : `BATCH ${i + 1}`,
+      started_at: d.started_at ? new Date(d.started_at).toISOString() : null,
+      ended_at: d.ended_at ? new Date(d.ended_at).toISOString() : null,
+    }));
+  }
+
+  const firstBatch = deployments[0];
+  const startedAt = p.started_at
+    ? new Date(p.started_at).toISOString()
+    : (firstBatch?.started_at ?? null);
+  const endedAt = p.ended_at
+    ? new Date(p.ended_at).toISOString()
+    : (firstBatch?.ended_at ?? null);
+
   return {
-    full_name:      String(p.full_name ?? "").trim(),
-    username:       String(p.username ?? "").trim().toLowerCase(),
-    email:          String(p.email ?? "").trim().toLowerCase(),
-    password:       String(p.password ?? "").trim(),
-    phone:          str(p.phone),
-    religion:       str(p.religion),
-    language:       str(p.language),
-    started_at:     p.started_at ? new Date(p.started_at).toISOString() : null,
-    ended_at:       p.ended_at   ? new Date(p.ended_at).toISOString()   : null,
-    role_id:        p.role_id    ? parseInt(p.role_id, 10)    : null,
-    office_id:      p.office_id  ? parseInt(p.office_id, 10)  : null,
-    beneficiary_id: p.beneficiary_id ? parseInt(p.beneficiary_id, 10) : null,
-    status:         str(p.status) ?? "OFFLINE",
-    approved:       Boolean(p.approved),
+    full_name:          String(p.full_name ?? "").trim(),
+    username:           String(p.username ?? "").trim().toLowerCase(),
+    email:              String(p.email ?? "").trim().toLowerCase(),
+    password:           String(p.password ?? "").trim(),
+    phone:              str(p.phone),
+    religion:           str(p.religion),
+    language:           str(p.language),
+    started_at:         startedAt,
+    ended_at:           endedAt,
+    role_id:            p.role_id    ? parseInt(p.role_id, 10)    : null,
+    office_id:          p.office_id  ? parseInt(p.office_id, 10)  : null,
+    beneficiary_id:     p.beneficiary_id ? parseInt(p.beneficiary_id, 10) : null,
+    ...(p.status !== undefined ? { status: str(p.status) ?? "OFFLINE" } : {}),
+    approved:           Boolean(p.approved),
+    _batch_deployments: deployments,
   };
 }
 // --- END: STAFF INPUT SANITISER ---
@@ -311,7 +354,18 @@ export async function fetchGlobalStaffMetricRoster() {
     return { data: [], error: "Could not load the global implementor metric." };
   }
 
-  return { data: data ?? [] };
+  const enriched = (data ?? []).map(staff => {
+    const saved = preferenceStorage.getImplementorDeployments(staff.id);
+    if (saved && saved.length > 0) {
+      return { ...staff, batch_deployments: saved };
+    }
+    const defaultBatch = (staff.started_at || staff.ended_at)
+      ? [{ batch_id: 1, batch_name: "BATCH 1", started_at: staff.started_at, ended_at: staff.ended_at }]
+      : [];
+    return { ...staff, batch_deployments: defaultBatch };
+  });
+
+  return { data: enriched };
 }
 
 function _getStoredSession() {
@@ -376,6 +430,43 @@ export async function fetchStaffs(options = {}) {
     return { data: [], error: "Could not load implementors." };
   }
 
-  return { data: data ?? [] };
+  const enriched = (data ?? []).map(staff => {
+    const saved = preferenceStorage.getImplementorDeployments(staff.id);
+    if (saved && saved.length > 0) {
+      return { ...staff, batch_deployments: saved };
+    }
+    const defaultBatch = (staff.started_at || staff.ended_at)
+      ? [{ batch_id: 1, batch_name: "BATCH 1", started_at: staff.started_at, ended_at: staff.ended_at }]
+      : [];
+    return { ...staff, batch_deployments: defaultBatch };
+  });
+
+  return { data: enriched };
 }
 // --- END: FETCH STAFFS ---
+
+// --- START: FETCH OFFICE BATCHES - detects which batches are active for an office based on beneficiary records ---
+export async function fetchOfficeBatches(officeId) {
+  if (!officeId) return { data: [1] };
+  try {
+    const { data, error } = await supabase
+      .from("beneficiary")
+      .select("batch_id, staffs!staff_id!inner(office_id)")
+      .eq("staffs.office_id", officeId)
+      .is("archived_at", null);
+
+    if (error || !Array.isArray(data)) {
+      return { data: [1] };
+    }
+
+    const uniqueBatchIds = Array.from(new Set(
+      data.map(b => Number(b.batch_id)).filter(id => Number.isInteger(id) && id > 0)
+    )).sort((a, b) => a - b);
+
+    return { data: uniqueBatchIds.length > 0 ? uniqueBatchIds : [1] };
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn("[SPES Staff] fetchOfficeBatches error:", err);
+    return { data: [1] };
+  }
+}
+// --- END: FETCH OFFICE BATCHES ---
