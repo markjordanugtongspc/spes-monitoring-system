@@ -51,8 +51,8 @@ const DB_PERM_MAP = {
   "offices:view-other":   (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_other_offices)),
   "analytics:view-global":(p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_global_stats)),
 
-  // Roles & Permissions: STRICTLY ADMIN ONLY (No Officer, No HR)
-  "roles:manage":        (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
+  // Roles & Permissions: Accessible to Admin and HR
+  "roles:manage":        (p, session) => session?.approved === true && isHrOrAdmin(session),
 
   // Approved users may export their own office.
   "reports:export":      (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.export_reports)),
@@ -62,6 +62,7 @@ const DB_PERM_MAP = {
   "services:manage":     (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
 };
 
+// --- START: CHECK DB PERMISSION - checks DB permission mapping against session permissions ---
 /**
  * Check whether the session's DB permissions cover a given permission string.
  * Returns `null` if the permission isn't mapped to a DB column (fall back to RBAC).
@@ -70,7 +71,9 @@ function _checkDbPermission(dbPerms, permission, session) {
   if (!dbPerms || !(permission in DB_PERM_MAP)) return null;
   return Boolean(DB_PERM_MAP[permission](dbPerms, session));
 }
+// --- END: CHECK DB PERMISSION ---
 
+// --- START: HAS PERMISSION RESOLVER - determines if current user session has specific permission ---
 /**
  * Resolve whether the current user has a given permission.
  * Admins and HR always win via static RBAC (all true).
@@ -79,8 +82,8 @@ function _checkDbPermission(dbPerms, permission, session) {
 async function _hasPermission(userRole, permission, session) {
   const isAdmin = String(session?.role || userRole || "").toLowerCase() === "admin" || Number(session?.role_id) === 1;
 
-  // Strict Admin-only permissions (Auto Import Tool & Roles & Permissions)
-  if (permission === "roles:manage" || permission === "services:manage") {
+  // Strict Admin-only permissions (Auto Import Tool)
+  if (permission === "services:manage") {
     return isAdmin && session?.approved === true;
   }
 
@@ -100,6 +103,7 @@ async function _hasPermission(userRole, permission, session) {
   // Fallback to static RBAC config
   return canDo(userRole, permission);
 }
+// --- END: HAS PERMISSION RESOLVER ---
 
 /**
  * Apply RBAC permissions to the DOM.

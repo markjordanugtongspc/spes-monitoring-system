@@ -106,25 +106,25 @@ describe("3. Sidebar Navigation & Guard Permissions Matrix", () => {
     }
   };
 
-  test("HR can access all baseline operational features in sidebar", () => {
+  test("HR can access all baseline operational features and Roles & Permissions in sidebar", () => {
     assert.equal(isHrOrAdmin(hrSession), true);
     assert.equal(Boolean(hrSession.approved), true);
     assert.equal(Boolean(hrSession.permissions.view_payroll), true);
     assert.equal(Boolean(hrSession.permissions.view_users), true);
     assert.equal(Boolean(hrSession.permissions.export_reports), true);
+
+    // "roles:manage" (Roles & Permissions) is accessible to HR and Admin
+    const canManageRoles = isHrOrAdmin(hrSession) && hrSession.approved === true;
+    assert.equal(canManageRoles, true, "Roles & Permissions must be accessible to HR");
   });
 
-  test("HR is strictly barred from Admin-only tools (Auto Import & Roles)", () => {
+  test("HR is strictly barred from Admin-only Auto Import Tool", () => {
     const isHrAdmin = String(hrSession.role).toLowerCase() === "admin" || Number(hrSession.role_id) === 1;
     assert.equal(isHrAdmin, false, "HR must not have admin flag");
 
     // "services:manage" (Auto Import Tool) is strictly Admin only
     const canAccessAutoImport = isHrAdmin && hrSession.approved === true;
     assert.equal(canAccessAutoImport, false, "Auto Import must be inaccessible to HR");
-
-    // "roles:manage" (Roles & Permissions) is strictly Admin only
-    const canManageRoles = isHrAdmin && hrSession.approved === true;
-    assert.equal(canManageRoles, false, "Roles management must be inaccessible to HR");
   });
 
   test("Admin has full access to Auto Import and Roles", () => {

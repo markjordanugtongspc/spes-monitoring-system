@@ -106,7 +106,7 @@ export async function fetchRoles(options = {}) {
   return { data: data ?? [] };
 }
 
-// ── Create ─────────────────────────────────────────────────────
+// --- START: ADD STAFF - creates a new staff record in the staffs table ---
 /**
  * Insert a new staff member.
  * Password is stored as plain text here — the DB trigger
@@ -119,7 +119,7 @@ export async function addStaff(payload) {
   if (!_hasStaffMutationPermission(session, "create_users")) {
     return { success: false, error: "You do not have permission to create implementors." };
   }
-  if (!access.isAdmin) {
+  if (!access.isAdmin && !access.isHr) {
     if (access.ownOfficeId == null) {
       return { success: false, error: "Your account has no assigned office." };
     }
@@ -160,8 +160,9 @@ export async function addStaff(payload) {
   invalidateStaffCache();
   return { success: true, data };
 }
+// --- END: ADD STAFF ---
 
-// ── Update ─────────────────────────────────────────────────────
+// --- START: UPDATE STAFF - updates an existing staff member in the staffs table ---
 /**
  * Update an existing staff member.
  * If `payload.password` is empty or omitted, the password is left unchanged.
@@ -172,7 +173,7 @@ export async function updateStaff(id, payload) {
     return { success: false, error: authorization.error };
   }
   const clean = _sanitize(payload);
-  if (!authorization.access.isAdmin) {
+  if (!authorization.access.isAdmin && !authorization.access.isHr) {
     clean.office_id = Number(authorization.access.ownOfficeId);
   }
 
@@ -198,8 +199,9 @@ export async function updateStaff(id, payload) {
   invalidateStaffCache();
   return { success: true, data };
 }
+// --- END: UPDATE STAFF ---
 
-// ── Archive (soft delete) ──────────────────────────────────────
+// --- START: ARCHIVE STAFF - soft deletes a staff member by setting archive_at ---
 export async function archiveStaff(id) {
   const authorization = await _authorizeStaffMutation(id, "delete_users");
   if (!authorization.allowed) {
@@ -218,8 +220,9 @@ export async function archiveStaff(id) {
   invalidateStaffCache();
   return { success: true };
 }
+// --- END: ARCHIVE STAFF ---
 
-// ── Unarchive (restore) ────────────────────────────────────────
+// --- START: UNARCHIVE STAFF - restores an archived staff member ---
 export async function unarchiveStaff(id) {
   const authorization = await _authorizeStaffMutation(id, "edit_users");
   if (!authorization.allowed) {
@@ -238,8 +241,9 @@ export async function unarchiveStaff(id) {
   invalidateStaffCache();
   return { success: true };
 }
+// --- END: UNARCHIVE STAFF ---
 
-// ── Bulk approval / disapproval ──────────────────────────────────
+// --- START: UPDATE STAFF APPROVAL BULK - updates approval status for an array of staff ids ---
 export async function updateStaffApprovalBulk(ids, approved) {
   if (!ids || ids.length === 0) return { success: true };
   const authorization = await _authorizeStaffMutation(ids, "edit_users");
@@ -260,6 +264,7 @@ export async function updateStaffApprovalBulk(ids, approved) {
   invalidateStaffCache();
   return { success: true, data };
 }
+// --- END: UPDATE STAFF APPROVAL BULK ---
 
 // --- START: STAFF INPUT SANITISER ---
 function _sanitize(p) {
@@ -317,21 +322,24 @@ function _getStoredSession() {
   }
 }
 
+// --- START: HAS STAFF MUTATION PERMISSION - checks if session has permission to mutate staff records ---
 function _hasStaffMutationPermission(session, permissionColumn) {
   const access = getOfficeAccessScope(session);
-  return access.isAdmin || (
+  return access.isAdmin || access.isHr || (
     session.approved === true &&
     Boolean(session.permissions?.[permissionColumn])
   );
 }
+// --- END: HAS STAFF MUTATION PERMISSION ---
 
+// --- START: AUTHORIZE STAFF MUTATION - validates session permissions and office scope for mutating staff records ---
 async function _authorizeStaffMutation(ids, permissionColumn) {
   const session = _getStoredSession();
   const access = getOfficeAccessScope(session);
   if (!_hasStaffMutationPermission(session, permissionColumn)) {
     return { allowed: false, error: "You do not have permission to manage implementors." };
   }
-  if (access.isAdmin) return { allowed: true, session, access };
+  if (access.isAdmin || access.isHr) return { allowed: true, session, access };
 
   const safeIds = (Array.isArray(ids) ? ids : [ids]).filter((id) => id != null);
   const { data, error } = await supabase
@@ -346,6 +354,7 @@ async function _authorizeStaffMutation(ids, permissionColumn) {
   }
   return { allowed: true, session, access };
 }
+// --- END: AUTHORIZE STAFF MUTATION ---
 
 // --- START: FETCH STAFFS with office and role join ---
 export async function fetchStaffs(options = {}) {

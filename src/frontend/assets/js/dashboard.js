@@ -266,9 +266,9 @@ async function init(user) {
   }
 
   if (path.includes("/roles/")) {
-    // Roles & Permissions is strictly reserved for Administrators
-    if (!isAdmin) {
-      modals.error("Access Denied", "Only Administrators have permission to view or manage roles and permissions.").then(() => {
+    // Roles & Permissions is accessible to Administrators and HR
+    if (!isAdmin && !isHr) {
+      modals.error("Access Denied", "Only Administrators and HR have permission to view or manage roles and permissions.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
       });
       return;
@@ -1324,13 +1324,18 @@ function renderTableRows(implementors, userRole) {
   tbody.innerHTML = implementors.map(s => {
     const dataStr   = encodeURIComponent(JSON.stringify(s));
     const isArchived = Boolean(s.archive_at);
+    const isTargetAdmin = s.role === "admin" || s.role === "ADMIN" || Number(s.role_id) === 1;
+    const isCallerAdmin = session.role === "admin" || Number(session.role_id) === 1;
+    const isCallerHr = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
     const canEdit = (
-      isAdminSession ||
-      (Boolean(session.permissions?.edit_users) && access.canManageOffice(s.office_id))
+      isCallerAdmin ||
+      (isCallerHr && !isTargetAdmin) ||
+      (Boolean(session.permissions?.edit_users) && access.canManageOffice(s.office_id) && !isTargetAdmin)
     );
     const canDelete = (
-      isAdminSession ||
-      (Boolean(session.permissions?.delete_users) && access.canManageOffice(s.office_id))
+      isCallerAdmin ||
+      (isCallerHr && !isTargetAdmin) ||
+      (Boolean(session.permissions?.delete_users) && access.canManageOffice(s.office_id) && !isTargetAdmin)
     );
     const isTarget = new URLSearchParams(window.location.search).get("id") === String(s.id);
     const rowBg     = isTarget

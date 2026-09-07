@@ -35,6 +35,7 @@ const roles = {
   },
   hr: {
     can: [
+      "roles:manage",
       "users:create",
       "users:edit",
       "users:delete",
@@ -53,7 +54,6 @@ const roles = {
   },
   admin: {
     can: [
-      "roles:manage",
       "services:manage",
       "services:access",
       "system:*"

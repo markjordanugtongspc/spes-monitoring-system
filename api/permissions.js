@@ -1,5 +1,5 @@
 import { createSupabaseAdmin } from "./_lib/supabase-admin.js";
-import { requireAdmin } from "./_lib/session.js";
+import { requireAdminOrAuthorized } from "./_lib/session.js";
 
 const ALLOWED_FIELDS = [
   "view_users",
@@ -61,7 +61,7 @@ export default async function handler(req, res) {
 
   try {
     const supabase = createSupabaseAdmin();
-    const caller = await requireAdmin(req, res, supabase);
+    const caller = await requireAdminOrAuthorized(req, res, supabase, "edit_users");
     if (!caller) return;
 
     const requestedIds = Array.isArray(req.body?.staffIds)
