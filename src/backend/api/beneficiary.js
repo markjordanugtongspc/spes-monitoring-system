@@ -408,29 +408,31 @@ export async function fetchBeneficiaryDuplicateGroups({ forceRefresh = true, inc
   return { data, scanned: result.data?.length ?? 0 };
 }
 // --- END: SYSTEM BENEFICIARY DUPLICATE API ---
+// --- START: FETCH RECENT BENEFICIARIES - fetches recent beneficiary rows respecting global/office scope ---
 export async function fetchRecentBeneficiaries({ limit = 4 } = {}) {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
-  const isAdmin = String(session.role || "").toLowerCase() === "admin";
+  const access = getOfficeAccessScope(session);
+  const isGlobal = access.isAdmin || access.isHr || access.canViewOtherOffices;
   const officeId = session.office_id;
-  const isApproved = isAdmin || String(session.approved).toLowerCase() === "true";
+  const isApproved = access.isAdmin || access.isHr || String(session.approved).toLowerCase() === "true" || session.approved === true;
   const safeLimit = Math.max(1, Math.min(20, Number.parseInt(limit, 10) || 4));
 
   if (!isApproved) {
     return { data: [], error: "Account Not Approved. List is hidden." };
   }
-  if (!isAdmin && !officeId) {
+  if (!isGlobal && !officeId) {
     return { data: [], error: "No office is assigned to this account." };
   }
 
   let selectStr = "id, full_name, address, month_period, year_period, contact_number, created_at";
-  if (!isAdmin) selectStr += ", staffs!staff_id!inner(office_id)";
+  if (!isGlobal) selectStr += ", staffs!staff_id!inner(office_id)";
 
   let query = supabase
     .from("beneficiary")
     .select(selectStr);
 
-  if (!isAdmin) query = query.eq("staffs.office_id", officeId);
+  if (!isGlobal) query = query.eq("staffs.office_id", officeId);
   query = query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
@@ -444,6 +446,7 @@ export async function fetchRecentBeneficiaries({ limit = 4 } = {}) {
 
   return { data: data ?? [] };
 }
+// --- END: FETCH RECENT BENEFICIARIES ---
 export async function addBeneficiary(payload) {
   const clean = _sanitize(payload);
   const authorization = await _authorizeBeneficiaryStaffTarget(clean.staff_id);

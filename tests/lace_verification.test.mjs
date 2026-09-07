@@ -45,10 +45,13 @@ describe("Lace Torregosa Arellano HR Role & Permissions Verification", () => {
     const isUsersAllowed = laceSession.approved === true && (isHrOrAdmin(laceSession) || Boolean(laceSession.permissions.view_users));
     const isReportsAllowed = laceSession.approved === true && (isHrOrAdmin(laceSession) || Boolean(laceSession.permissions.export_reports));
 
+    const isDashboardGlobalAllowed = isHrOrAdmin(laceSession) && laceSession.approved === true;
+
     assert.equal(isAutoImportAllowed, false, "Auto Import Tool must be inaccessible to Lace as HR");
     assert.equal(isRolesManageAllowed, true, "Roles & Permissions must be accessible to Lace as HR");
     assert.equal(isPayrollAllowed, true, "SPES Payroll must be accessible to Lace as HR");
     assert.equal(isUsersAllowed, true, "Implementor Directory must be accessible to Lace as HR");
     assert.equal(isReportsAllowed, true, "Exports & Reports must be accessible to Lace as HR");
+    assert.equal(isDashboardGlobalAllowed, true, "Dashboard global chart analytics must be accessible to Lace as HR");
   });
 });

@@ -640,6 +640,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
   let _addStaff, _fetchOffices, _fetchRoles;
   let currentEditId = null;
+  let currentEditData = null;
   let _updateStaff;
   let _addOffice;
 
@@ -713,6 +714,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
     const pwdInput = document.getElementById("aif-password");
     const confirmPwdInput = document.getElementById("aif-confirm-password");
 
+    currentEditData = staffData || null;
     if (staffData) {
       currentEditId = staffData.id;
       titleEl.textContent = "Edit Implementor";
@@ -759,6 +761,7 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       setApprovalStatusUI(Boolean(staffData.approved));
     } else {
       currentEditId = null;
+      currentEditData = null;
       titleEl.textContent = "Add Implementor";
       descEl.textContent = "Fill in the details to create a new staff account.";
       submitBtn.innerHTML = `<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> Save Implementor`;
@@ -963,22 +966,6 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
   closeBtn?.addEventListener("click", closeDrawer);
   overlay.addEventListener("click", closeDrawer);
 
-  // --- START: AUTO-CALCULATE END DATE (+20 DAYS) ---
-  const _startedInput = document.getElementById("aif-started-at");
-  const _endedInput = document.getElementById("aif-ended-at");
-  const _autoComputeEndDate = () => {
-    if (!_startedInput || !_endedInput || !_startedInput.value) return;
-    const startVal = new Date(_startedInput.value);
-    if (isNaN(startVal.getTime())) return;
-    const endVal = new Date(startVal);
-    endVal.setDate(endVal.getDate() + 20);
-    _endedInput.value = `${String(endVal.getMonth() + 1).padStart(2, "0")}/${String(endVal.getDate()).padStart(2, "0")}/${endVal.getFullYear()}`;
-  };
-  _startedInput?.addEventListener("change", _autoComputeEndDate);
-  _startedInput?.addEventListener("input", _autoComputeEndDate);
-  _startedInput?.addEventListener("changeDate", _autoComputeEndDate);
-  // --- END: AUTO-CALCULATE END DATE (+20 DAYS) ---
-
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     _hideError();
@@ -1021,9 +1008,8 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
     const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
     const isCallerHr = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
-    if (currentEditId && isCallerHr) {
-      const target = allImplementors.find((s) => Number(s.id) === Number(currentEditId));
-      if (target && (Number(target.role_id) === 1 || String(target.role).toUpperCase() === "ADMIN")) {
+    if (currentEditId && isCallerHr && currentEditData) {
+      if (Number(currentEditData.role_id) === 1 || String(currentEditData.role || "").toUpperCase() === "ADMIN") {
         return _showError("HR cannot modify Administrator details, credentials, or permissions.");
       }
     }

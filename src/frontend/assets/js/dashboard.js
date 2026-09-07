@@ -321,12 +321,13 @@ async function init(user) {
   }
 
   if (path.includes("/dashboard/")) {
+    const isExecutive = isAdmin || isHr;
     const viewAllLink = document.getElementById("dashboard-view-all-link");
     if (viewAllLink) {
       if (!isApproved) {
         viewAllLink.classList.add("hidden");
       } else {
-        viewAllLink.textContent = user.role === "admin" ? "View All" : "View Yours";
+        viewAllLink.textContent = isExecutive ? "View All" : "View Yours";
       }
     }
     try {
@@ -337,7 +338,7 @@ async function init(user) {
       flowDebugSuccess("Dashboard metrics loaded", {
         totalImplementors: chartMetrics?.totalImplementors ?? 0,
         implementorScope: "global",
-        remainingDashboardScope: isAdmin ? "global" : "assigned office",
+        remainingDashboardScope: isExecutive ? "global" : "assigned office",
       });
     } catch (error) {
       flowDebugError("Dashboard metrics failed to load", error);
@@ -2112,14 +2113,15 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
   renderOptions();
 }
 
-// ── Recent Beneficiaries Loader ─────────────────────────────────
+// --- START: LOAD RECENT BENEFICIARIES - populates the dashboard recent beneficiaries preview table ---
 async function loadRecentBeneficiaries() {
   const tbody = document.getElementById("dashboard-beneficiary-table-body");
   if (!tbody) return;
 
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  const isAdmin = String(session.role || "").toLowerCase() === "admin";
-  const isApproved = isAdmin || session.approved;
+  const isAdmin = String(session.role || "").toLowerCase() === "admin" || Number(session.role_id) === 1;
+  const isHr = String(session.role || "").toLowerCase() === "hr" || Number(session.role_id) === 2;
+  const isApproved = isAdmin || isHr || session.approved;
 
   if (!isApproved) {
     tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-sm text-spes-red/80 dark:text-red-400/80 font-extrabold uppercase tracking-wider">Account Not Approved. List is hidden.</td></tr>`;
@@ -2156,6 +2158,7 @@ async function loadRecentBeneficiaries() {
     if (import.meta.env.DEV) console.error("[SPES] loadRecentBeneficiaries error:", err);
   }
 }
+// --- END: LOAD RECENT BENEFICIARIES ---
 
 // ── Swapping Tables Toggle Logic ────────────────────────────────
 function setupDashboardListToggle(user) {

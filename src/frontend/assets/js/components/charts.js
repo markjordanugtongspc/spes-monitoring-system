@@ -140,13 +140,15 @@ async function _fetchAllBeneficiaryChartRows({ isGlobal, officeId, minimal = fal
 
   return { data: rows, error: null };
 }
+// --- START: INIT DASHBOARD CHARTS - initializes and renders all dashboard charts with role and scope resolution ---
 export async function initDashboardCharts() {
   const sessionStr = localStorage.getItem("spes_session");
   const session = sessionStr ? JSON.parse(sessionStr) : {};
   const access = getOfficeAccessScope(session);
   const officeId = session.office_id;
-  const isApproved = access.isAdmin || session.approved === true;
-  const hasRequiredOffice = access.isAdmin || officeId != null;
+  const isExecutive = access.isAdmin || access.isHr;
+  const isApproved = isExecutive || session.approved === true;
+  const hasRequiredOffice = isExecutive || officeId != null;
 
   if (!isApproved || !hasRequiredOffice) {
     const unavailableMessage = !isApproved
@@ -168,13 +170,15 @@ export async function initDashboardCharts() {
     return { totalImplementors: 0, beneficiaries: [], periods: { years: [], months: [], monthsByYear: {} } };
   }
 
+  const isGlobalStats = isExecutive || access.canViewGlobalStats;
+
   const [staffResult, beneficiaryResult, topOfficeResult] = await Promise.all([
     fetchGlobalStaffMetricRoster(),
     _fetchAllBeneficiaryChartRows({
-      isGlobal: access.canViewGlobalStats,
-      officeId,
+      isGlobal: isGlobalStats,
+      officeId: isExecutive ? null : officeId,
     }),
-    access.canViewGlobalStats
+    isGlobalStats
       ? Promise.resolve(null)
       : _fetchAllBeneficiaryChartRows({ isGlobal: true, officeId: null, minimal: true }),
   ]);
@@ -195,7 +199,7 @@ export async function initDashboardCharts() {
   // `view_global_stats` permission only expands beneficiary analytics; it
   // must not narrow this roster card back to the viewer's assigned office.
   const chartStaffs = globalStaffs;
-  const ownOfficeBeneficiaries = access.canViewGlobalStats && officeId != null
+  const ownOfficeBeneficiaries = (access.canViewGlobalStats && !isExecutive && officeId != null)
     ? beneficiaries.filter((beneficiary) => {
         const staff = globalStaffs.find((item) => String(item.id) === String(beneficiary.staff_id));
         return String(staff?.office_id) === String(officeId);
@@ -206,9 +210,8 @@ export async function initDashboardCharts() {
   _deriveReturnStatus(beneficiaries);
   _dashboardDataset = {
     beneficiaries,
-    // Admin sees all gender records; every other role's gender card remains
-    // limited to its own office even when global analytics is permitted.
-    genderBeneficiaries: access.isAdmin ? beneficiaries : ownOfficeBeneficiaries,
+    // Admin and HR see all gender records globally; officers with view_global_stats have own office for gender
+    genderBeneficiaries: isExecutive ? beneficiaries : ownOfficeBeneficiaries,
     topOfficeBeneficiaries,
     globalStaffs,
   };
@@ -226,6 +229,7 @@ export async function initDashboardCharts() {
     periods: _getDashboardPeriodOptions(beneficiaries),
   };
 }
+// --- END: INIT DASHBOARD CHARTS ---
 
 // NEW / SPES BABY toggle on the "Added SPES per Year" card (default NEW)
 function _setupYearStatusSwitcher() {
