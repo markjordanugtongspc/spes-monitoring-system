@@ -8,15 +8,16 @@ import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initFlowbite } from "flowbite";
 import { fetchOffices } from "../../../backend/api/staff.js";
+import { fetchBatches } from "../../../backend/api/beneficiary.js";
 import { initExportButtonTilt } from "./components/animations.js";
+import { notepad } from "./components/notepad.js";
 
 // ── Column definitions ────────────────────────────────────────
-// Beneficiary schema: id, full_name, age, gender_id, address, contact_number,
-//   relationship, year_period, month_period, birthday, designated, batch_id,
-//   education_id → education(name). NO office_id, NO archive column.
 const BENEF_COLUMNS = [
   { key: "id_display",     label: "ID No.",          default: true  },
   { key: "full_name",      label: "Name",             default: true  },
+  { key: "batch",          label: "Batch",            default: true  },
+  { key: "office",         label: "Office",           default: false },
   { key: "age",            label: "Age",              default: true  },
   { key: "gender",         label: "Gender",           default: true  },
   { key: "education",      label: "Education Level",  default: true  },
@@ -34,6 +35,8 @@ const IMPL_COLUMNS = [
   { key: "office",     label: "Office",      default: true  },
   { key: "role",       label: "Designation", default: true  },
   { key: "status",     label: "Status",      default: true  },
+  { key: "start_date", label: "Start Date",  default: false },
+  { key: "end_date",   label: "End Date",    default: false },
   { key: "phone",      label: "Phone",       default: false },
   { key: "email",      label: "Email",       default: false },
   { key: "address",    label: "Address",     default: false },
@@ -43,6 +46,7 @@ const IMPL_COLUMNS = [
 let _allBeneficiaries = [];
 let _allImplementors  = [];
 let _allOffices       = [];
+let _allBatches       = [];
 let _filteredData     = [];
 let _appVersion       = "0.2.0";
 const EXPORT_PAGE_SIZE = 1000;
@@ -54,6 +58,7 @@ const _cfg = {
   genderFilter: "all",
   statusFilter: "active",
   yearFilter:   "all",
+  batchFilter:  "all",
   ageMin:       "",
   ageMax:       "",
   searchQuery:  "",
@@ -134,6 +139,7 @@ async function _boot(user) {
   initAutoYear();
   initFlowbite();
   _initClock();
+  notepad();
   _setActiveSidebarLink("exports");
 
   const nameEl = document.getElementById("header-user-name");
@@ -175,7 +181,7 @@ async function _boot(user) {
 }
 // --- END: EXPORTS BOOT ---
 
-// ── Data loading ──────────────────────────────────────────────
+// --- START: LOAD DATA - Fetches offices, beneficiaries, implementors, and batches respecting access scope ---
 async function _loadData(user) {
   const access = getOfficeAccessScope(user);
   const isAdmin = access.isAdmin;
@@ -188,13 +194,13 @@ async function _loadData(user) {
 
   // Build beneficiary select — for officers scope via staffs!staff_id inner join
   // so only beneficiaries whose assigned staff belongs to the officer's office are returned.
-  let benefSelectStr = "id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name)";
+  let benefSelectStr = "id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name), batch:batch_id(id, batch_name)";
   if (!isAdmin && scopeToOwnOffice && user.office_id) {
     // Inner join: excludes beneficiaries with no staff or staff in a different office
-    benefSelectStr += ", staffs!staff_id!inner(office_id, full_name)";
+    benefSelectStr += ", staffs!staff_id!inner(office_id, full_name, offices!office_id(id, name, location))";
   } else {
     // Outer join: admin or officer with cross-office view gets all, with office info attached
-    benefSelectStr += ", staffs!staff_id(office_id, full_name)";
+    benefSelectStr += ", staffs!staff_id(office_id, full_name, offices!office_id(id, name, location))";
   }
 
   // All three datasets are independent; fetch them in parallel. Each query
@@ -217,7 +223,7 @@ async function _loadData(user) {
   const fetchImplementorPage = (from, to) => {
     let query = supabase
       .from("staffs")
-      .select("id, full_name, email, phone, address, status, role_id, office_id, approved, archive_at, offices(name), roles(name)")
+      .select("*, offices(name), roles(name)")
       .order("id", { ascending: true })
       .range(from, to);
 
@@ -228,17 +234,17 @@ async function _loadData(user) {
     return query;
   };
 
-  const [officesRes, benefRes, staffsRes] = await Promise.all([
+  const [officesRes, benefRes, staffsRes, batchesRes] = await Promise.all([
     fetchOffices(),
     _fetchAllExportRows(fetchBeneficiaryPage),
     _fetchAllExportRows(fetchImplementorPage),
+    fetchBatches().catch(() => ({ data: [] })),
   ]);
 
   _allOffices = officesRes.data ?? [];
+  _allBatches = batchesRes.data ?? [];
 
   // ── Beneficiaries ──
-  // Beneficiary rows are already server-side filtered by office_id (for officers)
-  // via the staffs!staff_id join in the query above. Admins get all records.
   {
     const { data, error } = benefRes;
     if (import.meta.env.DEV && error) console.warn("[SPES Exports] beneficiary fetch:", error.message ?? error);
@@ -246,21 +252,26 @@ async function _loadData(user) {
     const rows = data ?? [];
 
     _allBeneficiaries = rows.map(b => {
-      // Resolve the office name from the joined staffs row (if present)
-      const officeName = b.staffs?.offices?.name ?? b.staffs?.[0]?.offices?.name ?? null;
+      // Resolve the office name and id from the joined staffs row (if present)
+      const officeName = b.staffs?.offices?.name ?? (Array.isArray(b.staffs) ? b.staffs[0]?.offices?.name : null) ?? "Unassigned";
+      const officeId = b.staffs?.office_id ?? (Array.isArray(b.staffs) ? b.staffs[0]?.office_id : null) ?? null;
+      const batchLabel = b.batch?.batch_name ?? (b.batch_id ? `Batch ${b.batch_id}` : "N/A");
+
       return {
         ...b,
         id_display: `ROX-RD-ESIG-${String(b.year_period ?? new Date().getFullYear()).slice(-4)}-${String(b.id).padStart(4, "0")}`,
         gender:     b.gender_id === 1 ? "Male" : b.gender_id === 2 ? "Female" : "N/A",
         education:  b.education?.name ?? _eduLabel(b.educ_id),
+        batch:      batchLabel,
+        office:     officeName,
         period:     [b.month_period, b.year_period].filter(Boolean).join(" ") || "N/A",
         birthday:   b.birthday
                       ? new Date(b.birthday).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
                       : "N/A",
         // group_key: group by year period (primary) for the preview table
         _group:     b.year_period ? `Year ${b.year_period}` : "Period N/A",
-        // Keep resolved office for possible filtering extension
         _office:    officeName,
+        _office_id: officeId,
       };
     });
   }
@@ -282,11 +293,39 @@ async function _loadData(user) {
       office:     s.offices?.name ?? "N/A",
       role:       s.roles?.name ?? "N/A",
       status:     s.archive_at ? "Archived" : (s.status ?? "Offline"),
+      start_date: _formatDateVal(s.started_at || s.start_date),
+      end_date:   _formatDateVal(s.ended_at || s.end_date),
       _group:     s.offices?.name ?? "Unknown",
     }));
   }
-}
 
+  // Populate batch filter options in configure drawer
+  const batchSelect = document.getElementById("cfg-batch");
+  if (batchSelect) {
+    const existingValues = new Set();
+    const batchOptions = [`<option value="all">All Batches</option>`];
+
+    _allBatches.forEach(batch => {
+      const val = String(batch.id);
+      const name = batch.batch_name || `Batch ${batch.id}`;
+      existingValues.add(val);
+      batchOptions.push(`<option value="${_esc(val)}">${_esc(name)}</option>`);
+    });
+
+    // Add any batches from beneficiaries that might not be in the batch table
+    _allBeneficiaries.forEach(b => {
+      if (b.batch_id && !existingValues.has(String(b.batch_id))) {
+        existingValues.add(String(b.batch_id));
+        batchOptions.push(`<option value="${_esc(String(b.batch_id))}">Batch ${b.batch_id}</option>`);
+      }
+    });
+
+    batchSelect.innerHTML = batchOptions.join("");
+  }
+}
+// --- END: LOAD DATA ---
+
+// --- START: FETCH ALL EXPORT ROWS - Paginates until full table dataset is retrieved ---
 async function _fetchAllExportRows(buildQuery) {
   const rows = [];
 
@@ -302,19 +341,35 @@ async function _fetchAllExportRows(buildQuery) {
 
   return { data: rows, error: null };
 }
+// --- END: FETCH ALL EXPORT ROWS ---
 
+// --- START: EDU LABEL - Maps education ID to descriptive name ---
 function _eduLabel(id) {
   return { 1: "Senior High", 2: "College Graduate", 3: "College Level", 4: "High School" }[id] ?? "N/A";
 }
+// --- END: EDU LABEL ---
 
-// ── Filter engine ─────────────────────────────────────────────
+// --- START: FORMAT DATE VAL - Formats date values safely ---
+function _formatDateVal(val) {
+  if (!val) return "N/A";
+  try {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+  } catch {
+    return String(val);
+  }
+}
+// --- END: FORMAT DATE VAL ---
+
+// --- START: APPLY FILTERS - Filters active dataset based on configured criteria ---
 function _applyFilters() {
   const isBenef = _cfg.reportType === "beneficiaries";
   let data = [...(isBenef ? _allBeneficiaries : _allImplementors)];
 
-  // Office filter — implementors only (beneficiary table has no office_id)
-  if (!isBenef && _cfg.officeFilter.length > 0)
-    data = data.filter(r => _cfg.officeFilter.includes(r.office));
+  // Office filter — applies to both beneficiaries (via resolved staff office) and implementors
+  if (_cfg.officeFilter.length > 0) {
+    data = data.filter(r => _cfg.officeFilter.includes(r.office || r._office));
+  }
 
   if (isBenef && _cfg.genderFilter !== "all")
     data = data.filter(r => (r.gender ?? "").toLowerCase() === _cfg.genderFilter);
@@ -327,6 +382,11 @@ function _applyFilters() {
 
   if (isBenef && _cfg.yearFilter !== "all")
     data = data.filter(r => String(r.year_period) === _cfg.yearFilter);
+
+  // Batch filter — beneficiaries only
+  if (isBenef && _cfg.batchFilter !== "all") {
+    data = data.filter(r => String(r.batch_id) === String(_cfg.batchFilter) || String(r.batch).toLowerCase() === String(_cfg.batchFilter).toLowerCase());
+  }
 
   if (_cfg.ageMin) data = data.filter(r => Number(r.age) >= Number(_cfg.ageMin));
   if (_cfg.ageMax) data = data.filter(r => Number(r.age) <= Number(_cfg.ageMax));
@@ -350,12 +410,18 @@ function _applyFilters() {
   if (summary) {
     const parts = [];
     const isBenef = _cfg.reportType === "beneficiaries";
-    if (!isBenef) {
-      parts.push(_cfg.officeFilter.length > 0 ? _cfg.officeFilter.join(", ") : "ALL OFFICES");
-      if (_cfg.statusFilter !== "all") parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
+    if (_cfg.officeFilter.length > 0) {
+      parts.push(_cfg.officeFilter.join(", "));
+    }
+    if (!isBenef && _cfg.statusFilter !== "all") {
+      parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
     }
     if (_cfg.genderFilter !== "all") parts.push(`GENDER: ${_cfg.genderFilter.toUpperCase()}`);
     if (_cfg.yearFilter !== "all")   parts.push(`YEAR: ${_cfg.yearFilter}`);
+    if (isBenef && _cfg.batchFilter !== "all") {
+      const matchBatch = _allBatches.find(b => String(b.id) === String(_cfg.batchFilter));
+      parts.push(`BATCH: ${(matchBatch?.batch_name || `Batch ${_cfg.batchFilter}`).toUpperCase()}`);
+    }
     summary.textContent = parts.join(" · ") || (isBenef ? "ALL SPES BENEFICIARIES" : "ALL OFFICES");
   }
 
@@ -366,22 +432,27 @@ function _applyFilters() {
     dateEl.textContent = `Generated: ${now.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })} ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })}`;
   }
 }
+// --- END: APPLY FILTERS ---
 
-// ── Preview table renderer ────────────────────────────────────
+// --- START: GET CONFIGURED EXPORT COLUMNS - Retrieves active column definitions ---
 function _getConfiguredExportColumns() {
   const definitions = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
   return _cfg.columns
     .map(key => definitions.find(column => column.key === key))
     .filter(Boolean);
 }
+// --- END: GET CONFIGURED EXPORT COLUMNS ---
 
+// --- START: IS BLANK EXPORT VALUE - Checks if value represents empty or missing data ---
 function _isBlankExportValue(value) {
   if (value === null || value === undefined) return true;
   const normalized = String(value).trim().toLowerCase();
   return normalized === "" || normalized === "n/a" || normalized === "na"
     || normalized === "none" || normalized === "-" || normalized === "—";
 }
+// --- END: IS BLANK EXPORT VALUE ---
 
+// --- START: SPLIT EXPORT ROWS - Segregates complete and incomplete records ---
 function _splitExportRows(rows, cols) {
   const completeRows = [];
   const incompleteRows = [];
@@ -394,7 +465,9 @@ function _splitExportRows(rows, cols) {
 
   return { completeRows, incompleteRows };
 }
+// --- END: SPLIT EXPORT ROWS ---
 
+// --- START: GET EXPORT GROUPS - Groups data rows by primary categorization header ---
 function _getExportGroups(rows) {
   const groups = {};
   rows.forEach(row => {
@@ -404,7 +477,9 @@ function _getExportGroups(rows) {
   });
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
 }
+// --- END: GET EXPORT GROUPS ---
 
+// --- START: RENDER PREVIEW TABLE - Renders live preview table in portal UI ---
 function _renderPreviewTable() {
   const cols = _getConfiguredExportColumns();
   const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
@@ -451,7 +526,9 @@ function _renderPreviewTable() {
     }).join("");
   _renderIncompletePreview(incompleteRows, cols);
 }
+// --- END: RENDER PREVIEW TABLE ---
 
+// --- START: RENDER INCOMPLETE PREVIEW - Renders incomplete data side section ---
 function _renderIncompletePreview(rows, cols) {
   const shell = document.getElementById("preview-incomplete-shell");
   const thead = document.getElementById("preview-incomplete-thead");
@@ -481,7 +558,9 @@ function _renderIncompletePreview(rows, cols) {
     return group + data;
   }).join('');
 }
+// --- END: RENDER INCOMPLETE PREVIEW ---
 
+// --- START: CELL HTML - Formats cell output with styled HTML based on column type ---
 function _cellHtml(row, key) {
   const raw = row[key];
   if (raw === null || raw === undefined || raw === "") return `<span class="text-gray-300 dark:text-white/20">—</span>`;
@@ -496,12 +575,16 @@ function _cellHtml(row, key) {
     const isMale = val.toLowerCase() === "male";
     return `<span class="font-black ${isMale ? "text-sky-600 dark:text-sky-400" : "text-pink-600 dark:text-pink-400"}">${_esc(val)}</span>`;
   }
+  if (key === "batch") {
+    return `<span class="inline-flex rounded px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider bg-blue-50 text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${_esc(val)}</span>`;
+  }
   if (key === "id_display") return `<span class="font-bold tabular-nums text-spes-blue dark:text-spes-yellow">${_esc(val)}</span>`;
   if (key === "full_name") return `<span class="font-extrabold text-spes-black dark:text-spes-white">${_esc(val.toUpperCase())}</span>`;
   return `<span class="text-spes-black/80 dark:text-spes-white/80">${_esc(val)}</span>`;
 }
+// --- END: CELL HTML ---
 
-// ── Configure Drawer ──────────────────────────────────────────
+// --- START: INIT DRAWER - Initializes Configure Reports drawer and office checkboxes ---
 function _initDrawer(user) {
   const access = getOfficeAccessScope(user);
   const isAdmin = access.isAdmin;
@@ -531,12 +614,12 @@ function _initDrawer(user) {
     officeList.innerHTML = `<p class="px-3 py-3 text-center text-[10px] text-gray-400 dark:text-white/30 italic">No offices available.</p>`;
   }
 
-  // Beneficiaries tab is the default — office/status sections irrelevant for that schema
-  officeSection?.classList.add("hidden");
+  // Beneficiaries tab is the default — status is implementors only, office section is available
+  officeSection?.classList.remove("hidden");
   document.getElementById("cfg-status-wrapper")?.classList.add("hidden");
 
   if (!canViewOtherOffices) {
-    // ── Restricted officer: pre-set their office so implementors tab is auto-scoped ──
+    // ── Restricted officer: pre-set their office so all reports are auto-scoped ──
     const officeName = user.office_name ?? null;
     const officeId   = user.office_id   ?? null;
 
@@ -547,12 +630,13 @@ function _initDrawer(user) {
       );
       if (cb) cb.checked = true;
     }
-    // officeSection stays hidden for restricted officers even on implementors tab
   }
 
   _renderColumnCheckboxes();
 }
+// --- END: INIT DRAWER ---
 
+// --- START: RENDER COLUMN CHECKBOXES - Generates column selection checkboxes ---
 function _renderColumnCheckboxes() {
   const colDefs = _cfg.reportType === "beneficiaries" ? BENEF_COLUMNS : IMPL_COLUMNS;
   const container = document.getElementById("cfg-columns-list");
@@ -564,8 +648,9 @@ function _renderColumnCheckboxes() {
       ${c.default ? `<span class="ml-auto text-[8px] font-black uppercase tracking-wider text-spes-blue/50 dark:text-spes-yellow/40">Default</span>` : ""}
     </label>`).join("");
 }
+// --- END: RENDER COLUMN CHECKBOXES ---
 
-// ── Button wiring ─────────────────────────────────────────────
+// --- START: WIRE BUTTONS - Connects event listeners for buttons and filter inputs ---
 function _wireButtons() {
   const drawer  = document.getElementById("configure-drawer");
   const overlay = document.getElementById("configure-drawer-overlay");
@@ -600,12 +685,14 @@ function _wireButtons() {
     _updateTabUI();
 
     const isBenef = type === "beneficiaries";
-    // Gender + year + age filters — beneficiaries only
+    // Gender + year + batch + age filters — beneficiaries only
     document.getElementById("cfg-gender-wrapper")?.classList.toggle("hidden", !isBenef);
     document.getElementById("cfg-year-wrapper")?.classList.toggle("hidden", !isBenef);
+    document.getElementById("cfg-batch-wrapper")?.classList.toggle("hidden", !isBenef);
     document.getElementById("cfg-age-wrapper")?.classList.toggle("hidden", !isBenef);
-    // Office + status filters — implementors only (beneficiary table has no office/archive)
-    document.getElementById("cfg-office-section")?.classList.toggle("hidden", isBenef);
+    // Office filter — available for both Beneficiaries and Implementors
+    document.getElementById("cfg-office-section")?.classList.remove("hidden");
+    // Status filter — implementors only (beneficiary table has no archive column)
     document.getElementById("cfg-status-wrapper")?.classList.toggle("hidden", isBenef);
   };
 
@@ -626,6 +713,7 @@ function _wireButtons() {
     _cfg.genderFilter = "all";
     _cfg.statusFilter = "active";
     _cfg.yearFilter   = "all";
+    _cfg.batchFilter  = "all";
     _cfg.ageMin       = "";
     _cfg.ageMax       = "";
     _cfg.searchQuery  = "";
@@ -709,11 +797,12 @@ function _wireButtons() {
   });
 
   // Live: select/radio inputs
-  ["cfg-gender", "cfg-status", "cfg-year"].forEach(id => {
+  ["cfg-gender", "cfg-status", "cfg-year", "cfg-batch"].forEach(id => {
     document.getElementById(id)?.addEventListener("change", e => {
       if (id === "cfg-gender") _cfg.genderFilter = e.target.value;
       if (id === "cfg-status") _cfg.statusFilter = e.target.value;
       if (id === "cfg-year")   _cfg.yearFilter   = e.target.value;
+      if (id === "cfg-batch")  _cfg.batchFilter  = e.target.value;
       _applyFilters();
       _renderPreviewTable();
     });
@@ -738,18 +827,23 @@ function _wireButtons() {
   if ("requestIdleCallback" in window) requestIdleCallback(warm, { timeout: 4000 });
   else setTimeout(warm, 2500);
 }
+// --- END: WIRE BUTTONS ---
 
+// --- START: DEBOUNCE - Debounces input callback to reduce re-renders ---
 function _debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
+// --- END: DEBOUNCE ---
 
+// --- START: SYNC FROM DRAWER - Synchronizes configuration values from drawer DOM ---
 function _syncFromDrawer() {
   _cfg.columns      = [...document.querySelectorAll(".cfg-col-check:checked")].map(cb => cb.value);
   _cfg.officeFilter = [...document.querySelectorAll(".cfg-office-check:checked")].map(cb => cb.value);
   const g = document.getElementById("cfg-gender");   if (g) _cfg.genderFilter = g.value;
   const s = document.getElementById("cfg-status");   if (s) _cfg.statusFilter = s.value;
   const y = document.getElementById("cfg-year");     if (y) _cfg.yearFilter   = y.value;
+  const b = document.getElementById("cfg-batch");    if (b) _cfg.batchFilter  = b.value;
   const amin = document.getElementById("cfg-age-min"); if (amin) _cfg.ageMin  = amin.value;
   const amax = document.getElementById("cfg-age-max"); if (amax) _cfg.ageMax  = amax.value;
   const pb = document.getElementById("cfg-prepared-by"); if (pb) _cfg.preparedBy = pb.value;
@@ -757,7 +851,9 @@ function _syncFromDrawer() {
   const lc = document.getElementById("cfg-orientation-landscape");
   if (lc) _cfg.orientation = lc.checked ? "landscape" : "portrait";
 }
+// --- END: SYNC FROM DRAWER ---
 
+// --- START: RESET DRAWER UI - Resets filter UI inputs to default states ---
 function _resetDrawerUI() {
   document.querySelectorAll(".cfg-office-check").forEach(cb => { cb.checked = false; });
   const selAllBtn = document.getElementById("btn-select-all-offices");
@@ -765,6 +861,7 @@ function _resetDrawerUI() {
   const g = document.getElementById("cfg-gender"); if (g) g.value = "all";
   const s = document.getElementById("cfg-status"); if (s) s.value = "active";
   const y = document.getElementById("cfg-year");   if (y) y.value = "all";
+  const b = document.getElementById("cfg-batch");  if (b) b.value = "all";
   const amin = document.getElementById("cfg-age-min"); if (amin) amin.value = "";
   const amax = document.getElementById("cfg-age-max"); if (amax) amax.value = "";
   const lc = document.getElementById("cfg-orientation-landscape"); if (lc) lc.checked = true;
@@ -773,7 +870,9 @@ function _resetDrawerUI() {
   const ab = document.getElementById("cfg-approved-by"); if (ab) ab.value = "";
   const qs = document.getElementById("cfg-search");      if (qs) qs.value = "";
 }
+// --- END: RESET DRAWER UI ---
 
+// --- START: UPDATE TAB UI - Updates styling on report type tabs ---
 function _updateTabUI() {
   const isBenef = _cfg.reportType === "beneficiaries";
   const tabB = document.getElementById("cfg-tab-beneficiaries");
@@ -788,9 +887,9 @@ function _updateTabUI() {
     tabB?.classList.remove(...active); tabB?.classList.add(...inactive);
   }
 }
+// --- END: UPDATE TAB UI ---
 
 // ── Excel export (styled .xlsx via ExcelJS) ───────────────────
-// Brand palette (ARGB — ExcelJS uses 8-digit hex with leading alpha)
 const _XL = {
   blue:       "FF0038A8", // SPES blue — header band
   blueDark:   "FF002878",
@@ -808,6 +907,7 @@ const _XL = {
   active:     "FF059669",
 };
 
+// --- START: WRITE INCOMPLETE EXCEL SIDE PANEL - Writes side panel for incomplete records in spreadsheet ---
 function _writeIncompleteExcelSidePanel(ws, rows, cols, isBenef, lastCol, colLetter, headerMeta = {}) {
   const sideStart = lastCol + 3;
   const sideEnd = sideStart + cols.length - 1;
@@ -917,7 +1017,9 @@ function _writeIncompleteExcelSidePanel(ws, rows, cols, isBenef, lastCol, colLet
 
   return { nextRow: rowIndex, sideEnd, footerRow: rowIndex - 1 };
 }
+// --- END: WRITE INCOMPLETE EXCEL SIDE PANEL ---
 
+// --- START: EXPORT EXCEL - Generates and downloads styled XLSX spreadsheet ---
 async function _exportExcel(btn) {
   const cols = _getConfiguredExportColumns();
   const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
@@ -963,12 +1065,20 @@ async function _exportExcel(btn) {
 
     // ── Filter summary line ──────────────────────────────────────
     const parts = [];
-    if (!isBenef) {
-      parts.push(_cfg.officeFilter.length > 0 ? _cfg.officeFilter.join(", ") : "ALL OFFICES");
-      if (_cfg.statusFilter !== "all") parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
+    if (_cfg.officeFilter.length > 0) {
+      parts.push(_cfg.officeFilter.join(", "));
+    } else {
+      if (!isBenef) parts.push("ALL OFFICES");
+    }
+    if (!isBenef && _cfg.statusFilter !== "all") {
+      parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
     }
     if (_cfg.genderFilter !== "all") parts.push(`GENDER: ${_cfg.genderFilter.toUpperCase()}`);
     if (_cfg.yearFilter   !== "all") parts.push(`YEAR: ${_cfg.yearFilter}`);
+    if (isBenef && _cfg.batchFilter !== "all") {
+      const matchBatch = _allBatches.find(b => String(b.id) === String(_cfg.batchFilter));
+      parts.push(`BATCH: ${(matchBatch?.batch_name || `Batch ${_cfg.batchFilter}`).toUpperCase()}`);
+    }
     if (parts.length === 0) parts.push(isBenef ? "ALL SPES BENEFICIARIES" : "ALL OFFICES");
 
     const dateStr = now.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
@@ -1076,6 +1186,7 @@ async function _exportExcel(btn) {
             if (c.key === "id_display") { color = _XL.blue; bold = true; }
             if (c.key === "gender")     { color = val.toLowerCase() === "male" ? _XL.male : (val === "—" ? _XL.muted : _XL.female); bold = true; }
             if (c.key === "status")     { color = val.toLowerCase() === "archived" ? _XL.archived : _XL.active; bold = true; }
+            if (c.key === "batch")      { color = _XL.blue; bold = true; }
 
             cell.font = { name: "Calibri", size: 10, bold, color: { argb: color } };
             cell.alignment = { vertical: "middle", horizontal: c.key === "full_name" ? "left" : "center", indent: c.key === "full_name" ? 1 : 0 };
@@ -1110,7 +1221,6 @@ async function _exportExcel(btn) {
       });
     }
 
-
     // ── Auto column widths (clamped) ─────────────────────────────
     cols.forEach((c, i) => {
       let max = c.label.length + 2;
@@ -1144,8 +1254,9 @@ async function _exportExcel(btn) {
     }
   }
 }
+// --- END: EXPORT EXCEL ---
 
-// ── Print ─────────────────────────────────────────────────────
+// --- START: PRINT - Prepares print area markup and triggers window.print() ---
 function _print() {
   const cols = _getConfiguredExportColumns();
   const { completeRows, incompleteRows } = _splitExportRows(_filteredData, cols);
@@ -1156,12 +1267,20 @@ function _print() {
   // Filter summary line
   const isBenefPrint = _cfg.reportType === "beneficiaries";
   const parts = [];
-  if (!isBenefPrint) {
-    parts.push(_cfg.officeFilter.length > 0 ? _cfg.officeFilter.join(", ") : "ALL OFFICES");
-    if (_cfg.statusFilter !== "all") parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
+  if (_cfg.officeFilter.length > 0) {
+    parts.push(_cfg.officeFilter.join(", "));
+  } else {
+    if (!isBenefPrint) parts.push("ALL OFFICES");
+  }
+  if (!isBenefPrint && _cfg.statusFilter !== "all") {
+    parts.push(`STATUS: ${_cfg.statusFilter.toUpperCase()}`);
   }
   if (_cfg.genderFilter !== "all") parts.push(`GENDER: ${_cfg.genderFilter.toUpperCase()}`);
   if (_cfg.yearFilter   !== "all") parts.push(`YEAR: ${_cfg.yearFilter}`);
+  if (isBenefPrint && _cfg.batchFilter !== "all") {
+    const matchBatch = _allBatches.find(b => String(b.id) === String(_cfg.batchFilter));
+    parts.push(`BATCH: ${(matchBatch?.batch_name || `Batch ${_cfg.batchFilter}`).toUpperCase()}`);
+  }
   if (parts.length === 0) parts.push(isBenefPrint ? "ALL SPES BENEFICIARIES" : "ALL OFFICES");
   const printSummaryLine = parts.concat([
     "TOTAL OUTPUTS: " + _filteredData.length.toLocaleString(),
@@ -1193,11 +1312,12 @@ function _print() {
             const isStatus = column.key === "status";
             const isGender = column.key === "gender";
             const isId = column.key === "id_display";
+            const isBatch = column.key === "batch";
             let color = isMissing ? "#B45309" : "#111827";
             let weight = isName || isMissing ? "700" : "500";
             if (!isMissing && isStatus) color = value.toLowerCase() === "archived" ? "#B45309" : "#059669";
             if (!isMissing && isGender) color = value.toLowerCase() === "male" ? "#0284C7" : "#DB2777";
-            if (!isMissing && isId) color = "#0038A8";
+            if (!isMissing && (isId || isBatch)) color = "#0038A8";
             const background = missingPanel && isMissing ? "background:#FFF7ED;" : "";
             return `<td style="${background}padding:${missingPanel ? "5px 9px" : "6px 14px"};font-size:${missingPanel ? "8.5px" : "10px"};font-weight:${weight};text-align:${isName ? "left" : "center"};color:${color};white-space:nowrap;">${_esc(value)}</td>`;
           }).join("")}
@@ -1234,10 +1354,6 @@ function _print() {
       </table>
     </div>` : "";
 
-  // NOTE: We use <div> throughout — NOT <header>/<main>/<footer>.
-  // The page's print CSS rule `body > main > *:not(#print-area) { display:none }`
-  // would also match <main> or <header> children inside #print-area via the generic
-  // `main > *` selector, hiding the table. Plain divs are immune to that rule.
   document.getElementById("print-area").innerHTML = `
     <!-- Fixed watermark — repeats on every page -->
     <div style="position:fixed;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;pointer-events:none;overflow:hidden;opacity:0.04;filter:grayscale(1) blur(1.5px);">
@@ -1318,8 +1434,6 @@ function _print() {
     styleEl.id = "spes-print-page-style";
     document.head.appendChild(styleEl);
   }
-  // Landscape: tighter side margins to maximise usable width (~277mm on A4)
-  // Portrait:  slightly more breathing room on the sides
   const margin = _cfg.orientation === "landscape" ? "8mm 10mm" : "10mm 14mm";
   styleEl.textContent = `
     @media print { 
@@ -1330,8 +1444,9 @@ function _print() {
 
   window.print();
 }
+// --- END: PRINT ---
 
-// ── Sidebar helpers ───────────────────────────────────────────
+// --- START: POPULATE SIDEBAR - Fills user profile info into sidebar ---
 function _populateSidebar(user) {
   const nameEl    = document.getElementById("sidebar-user-name");
   const emailEl   = document.getElementById("sidebar-user-email");
@@ -1342,7 +1457,9 @@ function _populateSidebar(user) {
   if (avatarEl)  avatarEl.textContent = (user.full_name || "U").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   if (roleBadge) roleBadge.textContent = user.role_label || user.role;
 }
+// --- END: POPULATE SIDEBAR ---
 
+// --- START: SET ACTIVE SIDEBAR LINK - Sets active highlight on sidebar navigation ---
 function _setActiveSidebarLink(navId) {
   highlightSidebarActiveLink(navId);
   // Keep sidebar dropdown open state
@@ -1386,7 +1503,9 @@ function _setActiveSidebarLink(navId) {
     });
   }
 }
+// --- END: SET ACTIVE SIDEBAR LINK ---
 
+// --- START: INIT CLOCK - Runs real-time clock ticker in enterprise header ---
 function _initClock() {
   const el = document.getElementById("real-time-clock");
   if (!el) return;
@@ -1397,9 +1516,12 @@ function _initClock() {
   setInterval(tick, 1000);
   tick();
 }
+// --- END: INIT CLOCK ---
 
+// --- START: ESC - Escapes text string for safe HTML injection ---
 function _esc(str) {
   const d = document.createElement("div");
   d.textContent = str ?? "";
   return d.innerHTML;
 }
+// --- END: ESC ---

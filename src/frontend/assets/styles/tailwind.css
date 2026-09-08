@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @source "../../services/beneficiary-csv-import-review.html";
 @import "flowbite/src/themes/default";
+@plugin "flowbite-typography";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

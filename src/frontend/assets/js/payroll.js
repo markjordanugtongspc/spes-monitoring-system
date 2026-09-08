@@ -11,6 +11,7 @@ import { applyPermissions, highlightSidebarActiveLink, requirePayrollAccess, sig
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initPayroll } from "./components/payroll.js";
+import { notepad } from "./components/notepad.js";
 
 // --- START: BOOT PAYROLL PAGE ---
 async function bootPayrollPage() {
@@ -20,6 +21,7 @@ async function bootPayrollPage() {
   initThemeToggle();
   initAutoYear();
   initFlowbite();
+  notepad();
 
   // Populate user info in sidebar
   const user = getSession();

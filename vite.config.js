@@ -62,6 +62,7 @@ function spesSitePartials() {
   const headerPath = join(componentsDir, "header.html");
   const footerPath = join(componentsDir, "footer.html");
   const sidebarPath = join(componentsDir, "sidebar.html");
+  const notesPath = join(componentsDir, "notes.html");
 
   return {
     name: "spes-site-partials",
@@ -69,8 +70,9 @@ function spesSitePartials() {
     transformIndexHtml(html, ctx) {
       const hasHeader = html.includes("<!-- SPES:HEADER -->");
       const hasSidebar = html.includes("<!-- SPES:SIDEBAR -->");
+      const hasNotes = html.includes("<!-- SPES:NOTES -->");
 
-      if (!hasHeader && !hasSidebar) return html;
+      if (!hasHeader && !hasSidebar && !hasNotes) return html;
 
       let result = html;
 
@@ -78,6 +80,17 @@ function spesSitePartials() {
       if (hasSidebar) {
         const sidebar = readFileSync(sidebarPath, "utf8");
         result = result.replace("<!-- SPES:SIDEBAR -->", sidebar);
+      }
+
+      // Notes component injection
+      if (existsSync(notesPath)) {
+        const notes = readFileSync(notesPath, "utf8");
+        if (hasNotes) {
+          result = result.replace("<!-- SPES:NOTES -->", notes);
+        } else if (hasSidebar && !result.includes("spes-notepad-floating-container")) {
+          // Auto-inject before </body> in all portal pages with sidebar
+          result = result.replace("</body>", `${notes}\n</body>`);
+        }
       }
 
       // Header + Footer injection

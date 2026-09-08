@@ -60,6 +60,17 @@ function initLogoSwap() {
 
 import { supabase } from "../../../backend/api/supabase.js";
 import Swal from "sweetalert2";
+import { notepad as initNotepadComponent } from "./components/notepad.js";
+
+// --- FUNCTION: NOTEPAD PARENT FUNCTION (START) ---
+/**
+ * Parent orchestrator for the global SPES floating notepad component.
+ * Initializes storage, floating controls, overlay observers, search/filters, and the TipTap WYSIWYG editor.
+ */
+export function notepad() {
+  initNotepadComponent();
+}
+// --- FUNCTION: NOTEPAD PARENT FUNCTION (END) ---
 
 document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
@@ -67,6 +78,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLogoSwap();
   initAutoYear();
   initMobileSplashDrawer();
+  notepad();
   initLoginHandler();
   initRegisterHandler();
   initPasswordVisibilityToggle();

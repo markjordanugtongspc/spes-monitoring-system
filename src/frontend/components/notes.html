@@ -1,0 +1,514 @@
+<!-- SPES NOTEPAD FLOATING COMPONENT (START) -->
+<div id="spes-notepad-floating-container" class="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[60] font-inter select-none transition-all duration-300 ease-in-out">
+  
+  <!-- Floating Toggle Button -->
+  <button id="spes-notepad-toggle-btn"
+          type="button"
+          data-tooltip-target="tooltip-spes-notepad"
+          data-tooltip-placement="left"
+          aria-label="Toggle SPES Notepad"
+          class="cursor-pointer group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white dark:bg-spes-dark-primary text-spes-blue dark:text-spes-yellow shadow-xl border border-spes-blue/20 dark:border-spes-yellow/30 hover:scale-105 active:scale-95 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-spes-blue/30 dark:focus:ring-spes-yellow/30">
+    
+    <!-- STATIC FLOATING SVG ICON (Desktop default, hidden on hover, active, or mobile) -->
+    <span class="spes-notepad-static-icon block group-hover:hidden sm:group-[.is-active]:hidden">
+      <svg class="w-6 h-6 sm:w-6.5 sm:h-6.5 text-slate-800 dark:text-spes-yellow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21.228 18c.978 0 1.772.794 1.772 1.773v.102C23 21.431 21.714 23 18.5 23S14 21.437 14 19.875v-.102c0-.98.793-1.773 1.773-1.773zM16.25 2a.75.75 0 0 1 .75.75V4h.75A2.25 2.25 0 0 1 20 6.25v5.086A3.5 3.5 0 0 0 18.5 11V6.25a.75.75 0 0 0-.75-.75H6.25a.75.75 0 0 0-.75.75v13.5c0 .414.336.75.75.75h6.803a3.66 3.66 0 0 0 .612 1.5H6.25A2.25 2.25 0 0 1 4 19.75V6.25A2.25 2.25 0 0 1 6.25 4H7V2.75a.75.75 0 0 1 1.5 0V4h2.75V2.75a.75.75 0 0 1 1.5 0V4h2.75V2.75a.75.75 0 0 1 .75-.75m-4.923 14.004a.75.75 0 0 1 0 1.492l-.077.004h-3a.75.75 0 0 1 0-1.5h3zM18.5 12a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5m-4.25 0a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1 0-1.5zm1.5-4a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1 0-1.5z"/>
+      </svg>
+    </span>
+
+    <!-- HOVER + ACTIVE + MOBILE SVG ICON -->
+    <span class="spes-notepad-interactive-icon hidden group-hover:block sm:group-[.is-active]:block max-sm:block">
+      <svg class="w-6 h-6 sm:w-6.5 sm:h-6.5 text-spes-blue dark:text-spes-yellow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21.228 18c.978 0 1.772.794 1.772 1.773v.102C23 21.431 21.714 23 18.5 23S14 21.437 14 19.875v-.102c0-.98.793-1.773 1.773-1.773zM16.25 2a.75.75 0 0 1 .75.75V4h.75A2.25 2.25 0 0 1 20 6.25v5.086A3.5 3.5 0 0 0 16.05 17h-.277A2.773 2.773 0 0 0 13 19.773v.102c0 .74.214 1.48.665 2.125H6.25A2.25 2.25 0 0 1 4 19.75V6.25A2.25 2.25 0 0 1 6.25 4H7V2.75a.75.75 0 0 1 1.5 0V4h2.75V2.75a.75.75 0 0 1 1.5 0V4h2.75V2.75a.75.75 0 0 1 .75-.75m-8 14a.75.75 0 0 0 0 1.5h3l.077-.004a.75.75 0 0 0 0-1.492L11.25 16zm10.25-4a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5M8.25 12a.75.75 0 0 0 0 1.5h5a.75.75 0 0 0 0-1.5zm0-4a.75.75 0 0 0 0 1.5h7.5a.75.75 0 0 0 0-1.5z"/>
+      </svg>
+    </span>
+
+    <!-- Counter Badge -->
+    <span id="spes-notepad-badge" class="hidden absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-spes-red text-white text-[9px] font-bold rounded-full items-center justify-center shadow">0</span>
+  </button>
+
+  <!-- Flowbite Tooltip for Toggle -->
+  <div id="tooltip-spes-notepad" role="tooltip" class="absolute z-[70] invisible inline-block px-2.5 py-1 text-[11px] font-semibold text-white bg-slate-900 dark:bg-slate-800 rounded-lg shadow-lg opacity-0 tooltip transition-opacity duration-200">
+    SPES Quick Notes
+    <div class="tooltip-arrow" data-popper-arrow></div>
+  </div>
+
+  <!-- Notepad Floating Card Panel -->
+  <aside id="spes-notepad-panel"
+         aria-label="SPES Notepad Panel"
+         class="hidden absolute bottom-14 sm:bottom-15 right-0 w-[calc(100vw-2rem)] sm:w-[380px] md:w-[410px] max-h-[76vh] sm:max-h-[540px] flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 overflow-hidden transition-all duration-300 origin-bottom-right">
+    
+    <!-- Top Header & Branding -->
+    <header class="relative px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2.5">
+      <!-- Left: Brand / Logo arrangement -->
+      <div class="flex items-center gap-2">
+        <img src="/c_spes.png" alt="SPES Logo" class="w-6 h-6 rounded-full shadow-xs object-contain" />
+        <div class="flex flex-col">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-spes-blue dark:text-spes-yellow leading-tight">SPES Notepad</span>
+          <span class="text-[9.5px] text-slate-500 dark:text-slate-400 leading-tight">Quick Notes &amp; Drafts</span>
+        </div>
+      </div>
+
+      <!-- Right Header Actions: Create Note & Close -->
+      <div class="flex items-center gap-1">
+        <!-- Create New Note Button with Tooltip -->
+        <button id="btn-header-create-note"
+                type="button"
+                data-tooltip-target="tooltip-header-create-note"
+                class="cursor-pointer inline-flex items-center justify-center p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-spes-blue dark:hover:text-spes-yellow hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors focus:outline-none">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          <span class="sr-only">Create new note</span>
+        </button>
+        <div id="tooltip-header-create-note" role="tooltip" class="absolute z-[70] invisible inline-block px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900 dark:bg-slate-800 rounded-md shadow-sm opacity-0 tooltip">
+          Create new note
+          <div class="tooltip-arrow" data-popper-arrow></div>
+        </div>
+
+        <!-- Minimize / Close Panel Button -->
+        <button id="btn-close-notepad"
+                type="button"
+                class="cursor-pointer inline-flex items-center justify-center p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors focus:outline-none">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span class="sr-only">Close Notepad</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEW 1: NOTES LIST & SEARCH VIEW -->
+    <div id="notepad-list-view" class="flex flex-col flex-1 overflow-hidden">
+      
+      <!-- Search & Filters Toolbar -->
+      <div class="p-2.5 border-b border-slate-200/80 dark:border-slate-800 space-y-2 bg-white dark:bg-slate-900">
+        <!-- Search Input -->
+        <div class="relative w-full">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
+            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+          </div>
+          <input type="text"
+                 id="notepad-search-input"
+                 placeholder="Search notes..."
+                 class="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-100/80 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:ring-1 focus:ring-spes-blue dark:focus:ring-spes-yellow focus:outline-none" />
+        </div>
+
+        <!-- Sort & Datepicker Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+          <!-- Sort Toggles -->
+          <div class="inline-flex rounded-lg p-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <button id="btn-sort-newest"
+                    type="button"
+                    class="cursor-pointer px-2 py-0.5 text-[10px] font-semibold rounded-md bg-white dark:bg-slate-700 text-spes-blue dark:text-spes-yellow shadow-xs transition-all">
+              Newest
+            </button>
+            <button id="btn-sort-oldest"
+                    type="button"
+                    class="cursor-pointer px-2 py-0.5 text-[10px] font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+              Oldest
+            </button>
+          </div>
+
+          <!-- Flowbite Datepicker Input (Default "Any date") -->
+          <div class="relative flex items-center gap-1">
+            <div class="relative">
+              <input id="notepad-datepicker-input"
+                     type="text"
+                     placeholder="Any date"
+                     readonly
+                     class="cursor-pointer w-24 sm:w-28 py-0.5 px-2 text-[10px] font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-spes-blue" />
+            </div>
+            <button id="btn-clear-date"
+                    type="button"
+                    title="Clear date filter"
+                    class="cursor-pointer hidden p-0.5 text-slate-400 hover:text-spes-red text-[11px]">
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Content Scroll Area -->
+      <div id="notepad-notes-scroll-area" class="flex-1 p-2.5 overflow-y-auto space-y-2 min-h-[180px] max-h-[380px]">
+        <!-- Rendered Note Cards Container -->
+        <div id="notepad-cards-container" class="space-y-1.5"></div>
+
+        <!-- EMPTY STATE (Visible when no notes exist) -->
+        <div id="notepad-empty-state" class="hidden flex flex-col items-center justify-center py-8 px-3 text-center">
+          <!-- Big Plus SVG Icon with Tooltip -->
+          <button id="btn-empty-create-note"
+                  type="button"
+                  data-tooltip-target="tooltip-empty-create-note"
+                  class="cursor-pointer group flex items-center justify-center w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-spes-blue dark:hover:text-spes-yellow hover:bg-spes-blue/10 dark:hover:bg-spes-yellow/10 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-spes-blue dark:hover:border-spes-yellow transition-all mb-2 focus:outline-none">
+            <svg class="w-6 h-6 transition-transform group-hover:scale-110" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <span class="sr-only">Create your first note</span>
+          </button>
+          <div id="tooltip-empty-create-note" role="tooltip" class="absolute z-[70] invisible inline-block px-2.5 py-1 text-xs font-semibold text-white bg-slate-900 dark:bg-slate-800 rounded-lg shadow-sm opacity-0 tooltip">
+            Create your first note
+            <div class="tooltip-arrow" data-popper-arrow></div>
+          </div>
+
+          <h4 class="text-xs font-bold text-slate-700 dark:text-slate-200">No notes found</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mt-0.5">
+            Tap the button above to start drafting quick notes or memos.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: WYSIWYG TEXT EDITOR VIEW -->
+    <div id="notepad-editor-view" class="hidden flex-col flex-1 overflow-hidden bg-white dark:bg-slate-900">
+      
+      <!-- Editor Subheader & Navigation -->
+      <div class="px-2.5 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-1.5 bg-slate-50/60 dark:bg-slate-800/40">
+        <button id="btn-editor-back"
+                type="button"
+                class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-spes-blue dark:hover:text-spes-yellow py-1 px-1.5 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+          Notes
+        </button>
+
+        <!-- View Mode Switch: Editor vs Live Preview -->
+        <div class="inline-flex rounded-lg p-0.5 bg-slate-200/70 dark:bg-slate-800 text-[10px]">
+          <button id="btn-mode-edit" type="button" class="cursor-pointer px-2 py-0.5 font-bold rounded-md bg-white dark:bg-slate-700 text-spes-blue dark:text-spes-yellow shadow-xs">Edit</button>
+          <button id="btn-mode-preview" type="button" class="cursor-pointer px-2 py-0.5 font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">Preview</button>
+        </div>
+
+        <!-- Editor Actions: Save & Delete -->
+        <div class="flex items-center gap-1">
+          <button id="btn-delete-current-note"
+                  type="button"
+                  title="Delete Note"
+                  class="cursor-pointer p-1 rounded-lg text-slate-400 hover:text-spes-red hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+          </button>
+          <button id="btn-save-current-note"
+                  type="button"
+                  class="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 bg-spes-blue dark:bg-spes-yellow text-white dark:text-spes-dark-secondary rounded-md text-[11px] font-bold shadow-xs hover:opacity-90 transition-opacity">
+            <svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Note Title Input -->
+      <div class="px-3 pt-2 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+        <input id="note-title-input"
+               type="text"
+               placeholder="Note Title..."
+               class="w-full text-sm sm:text-base font-bold bg-transparent text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none border-none p-0" />
+      </div>
+
+      <!-- WYSIWYG EDITOR CORE (Integrated Flowbite Text Editor) -->
+      <div id="wysiwyg-editor-section" class="flex-1 flex flex-col overflow-y-auto max-h-[320px] sm:max-h-[380px]">
+        
+        <!-- TOOLBAR CONTAINER -->
+        <div class="w-full bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div class="p-1.5 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex flex-wrap items-center">
+              <div class="flex items-center space-x-0.5 rtl:space-x-reverse flex-wrap">
+                
+                <!-- BOLD -->
+                <button id="toggleBoldButton" data-tooltip-target="tooltip-bold" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5h4.5a3.5 3.5 0 1 1 0 7H8m0-7v7m0-7H6m2 7h6.5a3.5 3.5 0 1 1 0 7H8m0-7v7m0 0H6"/></svg>
+                  <span class="sr-only">Bold</span>
+                </button>
+                <div id="tooltip-bold" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Toggle bold
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- ITALIC -->
+                <button id="toggleItalicButton" data-tooltip-target="tooltip-italic" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8.874 19 6.143-14M6 19h6.33m-.66-14H18"/></svg>
+                  <span class="sr-only">Italic</span>
+                </button>
+                <div id="tooltip-italic" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Toggle italic
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- UNDERLINE -->
+                <button id="toggleUnderlineButton" data-tooltip-target="tooltip-underline" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M6 19h12M8 5v9a4 4 0 0 0 8 0V5M6 5h4m4 0h4"/></svg>
+                  <span class="sr-only">Underline</span>
+                </button>
+                <div id="tooltip-underline" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Toggle underline
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- STRIKE -->
+                <button id="toggleStrikeButton" data-tooltip-target="tooltip-strike" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 6.2V5h12v1.2M7 19h6m.2-14-1.677 6.523M9.6 19l1.029-4M5 5l6.523 6.523M19 19l-7.477-7.477"/></svg>
+                  <span class="sr-only">Strike</span>
+                </button>
+                <div id="tooltip-strike" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Toggle strike
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- HIGHLIGHT -->
+                <button id="toggleHighlightButton" data-tooltip-target="tooltip-highlight" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 20H5.5c-.27614 0-.5-.2239-.5-.5v-3c0-.2761.22386-.5.5-.5h13c.2761 0 .5.2239.5.5v3c0 .2761-.2239.5-.5.5H18m-6-1 1.42 1.8933c.04.0534.12.0534.16 0L15 19m-7-6 3.9072-9.76789c.0335-.08381.1521-.08381.1856 0L16 13m-8 0H7m1 0h1.5m6.5 0h-1.5m1.5 0h1m-7-3.00001h4"/></svg>
+                  <span class="sr-only">Highlight</span>
+                </button>
+                <div id="tooltip-highlight" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Toggle highlight
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- CODE -->
+                <button id="toggleCodeButton" type="button" data-tooltip-target="tooltip-code" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 8-4 4 4 4m8 0 4-4-4-4m-2-3-4 14"/></svg>
+                  <span class="sr-only">Code</span>
+                </button>
+                <div id="tooltip-code" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Format code
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- LINK -->
+                <button id="toggleLinkButton" data-tooltip-target="tooltip-link" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.213 9.787a3.391 3.391 0 0 0-4.795 0l-3.425 3.426a3.39 3.39 0 0 0 4.795 4.794l.321-.304m-.321-4.49a3.39 3.39 0 0 0 4.795 0l3.424-3.426a3.39 3.39 0 0 0-4.794-4.795l-1.028.961"/></svg>
+                  <span class="sr-only">Link</span>
+                </button>
+                <div id="tooltip-link" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Add link
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- REMOVE LINK -->
+                <button id="removeLinkButton" data-tooltip-target="tooltip-remove-link" type="button" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M13.2131 9.78732c-.6359-.63557-1.4983-.99259-2.3974-.99259-.89911 0-1.76143.35702-2.39741.99259l-3.4253 3.42528C4.35719 13.8485 4 14.7108 4 15.61c0 .8992.35719 1.7616.99299 2.3974.63598.6356 1.4983.9926 2.39742.9926.89912 0 1.76144-.357 2.39742-.9926l.32157-.3043m-.32157-4.4905c.63587.6358 1.49827.993 2.39747.993.8991 0 1.7615-.3572 2.3974-.993l3.4243-3.42528c.6358-.63585.993-1.49822.993-2.39741 0-.89919-.3572-1.76156-.993-2.39741C17.3712 4.357 16.509 4 15.6101 4c-.899 0-1.7612.357-2.397.9925l-1.0278.96062m7.3873 14.04678-1.7862-1.7862m0 0L16 16.4274m1.7864 1.7863 1.7862-1.7863m-1.7862 1.7863L16 20"/></svg>
+                  <span class="sr-only">Remove link</span>
+                </button>
+                <div id="tooltip-remove-link" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Remove link
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- TEXT SIZE -->
+                <button id="toggleTextSizeButton" data-dropdown-toggle="textSizeDropdown" type="button" data-tooltip-target="tooltip-text-size" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6.2V5h11v1.2M8 5v14m-3 0h6m2-6.8V11h8v1.2M17 11v8m-1.5 0h3"/></svg>
+                  <span class="sr-only">Text size</span>
+                </button>
+                <div id="tooltip-text-size" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Text size
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+                <div id="textSizeDropdown" class="z-[90] hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-48">
+                  <ul class="p-1.5 space-y-0.5 text-xs text-slate-700 dark:text-slate-300 font-medium" aria-labelledby="toggleTextSizeButton">
+                    <li><button data-text-size="15px" type="button" class="cursor-pointer inline-flex items-center w-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs">15px (Default)</button></li>
+                    <li><button data-text-size="12px" type="button" class="cursor-pointer inline-flex items-center w-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-[10px]">12px (Tiny)</button></li>
+                    <li><button data-text-size="14px" type="button" class="cursor-pointer inline-flex items-center w-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs">14px (Small)</button></li>
+                    <li><button data-text-size="18px" type="button" class="cursor-pointer inline-flex items-center w-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-sm font-medium">18px (Lead)</button></li>
+                    <li><button data-text-size="22px" type="button" class="cursor-pointer inline-flex items-center w-full p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-base font-bold">22px (Large)</button></li>
+                  </ul>
+                </div>
+
+                <!-- TEXT COLOR -->
+                <button id="toggleTextColorButton" data-dropdown-toggle="textColorDropdown" type="button" data-tooltip-target="tooltip-text-color" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="m6.08169 15.9817 1.57292-4m-1.57292 4h-1.1m1.1 0h1.65m-.07708-4 2.72499-6.92967c.0368-.09379.1673-.09379.2042 0l2.725 6.92967m-5.65419 0h-.00607m.00607 0h5.65419m0 0 .6169 1.569m5.1104 4.453c0 1.1025-.8543 1.9963-1.908 1.9963s-1.908-.8938-1.908-1.9963c0-1.1026 1.908-4.1275 1.908-4.1275s1.908 3.0249 1.908 4.1275Z"/></svg>
+                  <span class="sr-only">Text color</span>
+                </button>
+                <div id="tooltip-text-color" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Text color
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+                <div id="textColorDropdown" class="z-[90] hidden w-48 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 shadow-xl">
+                  <div class="grid grid-cols-6 gap-1.5 group mb-2 items-center p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <input type="color" id="color" value="#0038A8" class="cursor-pointer border-slate-300 dark:border-slate-600 border bg-transparent rounded p-px w-full h-6 col-span-3" />
+                    <label for="color" class="cursor-pointer text-slate-700 dark:text-slate-300 text-[10px] font-semibold col-span-3">Custom</label>
+                  </div>
+                  <div class="grid grid-cols-6 gap-1 mb-2">
+                    <button type="button" data-hex-color="#0038A8" style="background-color: #0038A8" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">SPES Blue</span></button>
+                    <button type="button" data-hex-color="#CE1126" style="background-color: #CE1126" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">SPES Red</span></button>
+                    <button type="button" data-hex-color="#FCD116" style="background-color: #FCD116" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">SPES Yellow</span></button>
+                    <button type="button" data-hex-color="#0E9F6E" style="background-color: #0E9F6E" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Green</span></button>
+                    <button type="button" data-hex-color="#7E3AF2" style="background-color: #7E3AF2" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Purple</span></button>
+                    <button type="button" data-hex-color="#111928" style="background-color: #111928" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Black</span></button>
+                    <button type="button" data-hex-color="#4B5563" style="background-color: #4B5563" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Gray</span></button>
+                    <button type="button" data-hex-color="#0694A2" style="background-color: #0694A2" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Teal</span></button>
+                    <button type="button" data-hex-color="#FF8A4C" style="background-color: #FF8A4C" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Orange</span></button>
+                    <button type="button" data-hex-color="#D61F69" style="background-color: #D61F69" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Pink</span></button>
+                    <button type="button" data-hex-color="#8DA2FB" style="background-color: #8DA2FB" class="cursor-pointer w-5 h-5 rounded hover:scale-110 transition-transform"><span class="sr-only">Indigo</span></button>
+                    <button type="button" data-hex-color="#F3F4F6" style="background-color: #F3F4F6" class="cursor-pointer w-5 h-5 rounded border border-slate-300 hover:scale-110 transition-transform"><span class="sr-only">Light</span></button>
+                  </div>
+                  <button type="button" id="reset-color" class="cursor-pointer text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-md text-[10px] py-0.5 px-1.5 w-full font-medium transition-colors">Reset color</button>
+                </div>
+
+                <!-- FONT FAMILY -->
+                <button id="toggleFontFamilyButton" data-dropdown-toggle="fontFamilyDropdown" type="button" data-tooltip-target="tooltip-font-family" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m10.5785 19 4.2979-10.92966c.0369-.09379.1674-.09379.2042 0L19.3785 19m-8.8 0H9.47851m1.09999 0h1.65m7.15 0h-1.65m1.65 0h1.1m-7.7-3.9846h4.4M3 16l1.56685-3.9846m0 0 2.73102-6.94506c.03688-.09379.16738-.09379.20426 0l2.50367 6.94506H4.56685Z"/></svg>
+                  <span class="sr-only">Font family</span>
+                </button>
+                <div id="tooltip-font-family" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Font Family
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+                <div id="fontFamilyDropdown" class="z-[90] hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-40">
+                  <ul class="p-1.5 space-y-0.5 text-xs text-slate-700 dark:text-slate-300 font-medium" aria-labelledby="toggleFontFamilyButton">
+                    <li><button data-font-family="Inter, ui-sans-serif" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs">Default</button></li>
+                    <li><button data-font-family="Arial, sans-serif" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs" style="font-family: Arial, sans-serif;">Arial</button></li>
+                    <li><button data-font-family="'Courier New', monospace" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs" style="font-family: 'Courier New', monospace;">Courier New</button></li>
+                    <li><button data-font-family="Georgia, serif" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs" style="font-family: Georgia, serif;">Georgia</button></li>
+                    <li><button data-font-family="Verdana, sans-serif" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs" style="font-family: Verdana, sans-serif;">Verdana</button></li>
+                  </ul>
+                </div>
+
+                <div class="px-0.5"><span class="block w-px h-3.5 bg-slate-300 dark:bg-slate-700"></span></div>
+
+                <!-- ALIGN LEFT -->
+                <button id="toggleLeftAlignButton" type="button" data-tooltip-target="tooltip-left-align" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6h8m-8 4h12M6 14h8m-8 4h12"/></svg>
+                  <span class="sr-only">Align left</span>
+                </button>
+                <div id="tooltip-left-align" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Align left
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- ALIGN CENTER -->
+                <button id="toggleCenterAlignButton" type="button" data-tooltip-target="tooltip-center-align" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6h8M6 10h12M8 14h8M6 18h12"/></svg>
+                  <span class="sr-only">Align center</span>
+                </button>
+                <div id="tooltip-center-align" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Align center
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+                <!-- ALIGN RIGHT -->
+                <button id="toggleRightAlignButton" type="button" data-tooltip-target="tooltip-right-align" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                  <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6h-8m8 4H6m12 4h-8m8 4H6"/></svg>
+                  <span class="sr-only">Align right</span>
+                </button>
+                <div id="tooltip-right-align" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                  Align right
+                  <div class="tooltip-arrow" data-popper-arrow></div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- SECONDARY TOOLBAR ROW -->
+            <div class="flex items-center gap-1 pt-1.5 flex-wrap border-t border-slate-200/60 dark:border-slate-700/60 mt-1">
+              <!-- Typography Formats Dropdown -->
+              <button id="typographyDropdownButton" data-dropdown-toggle="typographyDropdown" class="cursor-pointer flex items-center justify-center text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 rounded text-[10px] px-2 py-0.5 focus:outline-none" type="button">
+                Format
+                <svg class="w-2.5 h-2.5 ms-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
+              </button>
+              
+              <div id="typographyDropdown" class="z-[90] hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg w-44">
+                <ul class="p-1.5 space-y-0.5 text-xs text-slate-700 dark:text-slate-300 font-medium" aria-labelledby="typographyDropdownButton">
+                  <li><button id="toggleParagraphButton" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-xs">Paragraph</button></li>
+                  <li><button data-heading-level="1" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded font-bold text-xs">Heading 1</button></li>
+                  <li><button data-heading-level="2" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded font-bold text-xs">Heading 2</button></li>
+                  <li><button data-heading-level="3" type="button" class="cursor-pointer inline-flex items-center w-full p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded font-semibold text-xs">Heading 3</button></li>
+                </ul>
+              </div>
+
+              <!-- ADD IMAGE -->
+              <button id="addImageButton" type="button" data-tooltip-target="tooltip-image" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m3 16 5-7 6 6.5m6.5 2.5L16 13l-4.286 6M14 10h.01M4 19h16a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1Z"/></svg>
+                <span class="sr-only">Add image</span>
+              </button>
+              <div id="tooltip-image" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Add image
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+              <!-- ADD VIDEO -->
+              <button id="addVideoButton" type="button" data-tooltip-target="tooltip-video" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M10 3v4a1 1 0 0 1-1 1H5m14-4v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1ZM9 12h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm5.697 2.395v-.733l1.269-1.219v2.984l-1.268-1.032Z"/></svg>
+                <span class="sr-only">Add video</span>
+              </button>
+              <div id="tooltip-video" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Add video
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+              <!-- BULLET LIST -->
+              <button id="toggleListButton" type="button" data-tooltip-target="tooltip-list" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M9 8h10M9 12h10M9 16h10M4.99 8H5m-.02 4h.01m0 4H5"/></svg>
+                <span class="sr-only">Toggle list</span>
+              </button>
+              <div id="tooltip-list" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Bullet list
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+              <!-- ORDERED LIST -->
+              <button id="toggleOrderedListButton" type="button" data-tooltip-target="tooltip-ordered-list" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6h8m-8 6h8m-8 6h8M4 6h2v4M4 10h4m-4 6h2.5c.69 0 1.25.56 1.25 1.25v.5c0 .69-.56 1.25-1.25 1.25H4m0 0h4"/></svg>
+                <span class="sr-only">Toggle ordered list</span>
+              </button>
+              <div id="tooltip-ordered-list" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Numbered list
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+              <!-- BLOCKQUOTE -->
+              <button id="toggleBlockquoteButton" type="button" data-tooltip-target="tooltip-blockquote" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M6 6a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h3a3 3 0 0 1-3 3H5a1 1 0 1 0 0 2h1a5 5 0 0 0 5-5V8a2 2 0 0 0-2-2H6Zm9 0a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h3a3 3 0 0 1-3 3h-1a1 1 0 1 0 0 2h1a5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-3Z" clip-rule="evenodd"/></svg>
+                <span class="sr-only">Blockquote</span>
+              </button>
+              <div id="tooltip-blockquote" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Blockquote
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+              <!-- HORIZONTAL RULE -->
+              <button id="toggleHRButton" type="button" data-tooltip-target="tooltip-hr" class="p-1 text-slate-700 dark:text-slate-300 rounded-sm cursor-pointer hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700">
+                <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="M5 12h14"/></svg>
+                <span class="sr-only">Horizontal Rule</span>
+              </button>
+              <div id="tooltip-hr" role="tooltip" class="absolute z-[80] invisible inline-block px-2 py-1 text-[10px] font-medium text-white transition-opacity duration-300 bg-slate-900 dark:bg-slate-800 rounded-md shadow-xs opacity-0 tooltip">
+                Divider line
+                <div class="tooltip-arrow" data-popper-arrow></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- CANVAS CONTAINER (TipTap Mounted Surface) -->
+        <div id="editor-canvas-container" class="p-3 bg-white dark:bg-slate-900 flex-1 overflow-y-auto cursor-text min-h-[120px]">
+          <div id="wysiwyg-example" class="prose prose-xs sm:prose-sm dark:prose-invert focus:outline-none max-w-none text-slate-800 dark:text-slate-100"></div>
+        </div>
+
+        <!-- LIVE PREVIEW CONTAINER (Shown when Preview Mode active) -->
+        <div id="editor-preview-container" class="hidden p-3 bg-slate-50 dark:bg-slate-800/60 flex-1 overflow-y-auto min-h-[120px]">
+          <div id="wysiwyg-preview-content" class="format dark:format-invert max-w-none text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed"></div>
+        </div>
+
+        <!-- Editor Status Footer -->
+        <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span id="editor-word-count">0 words</span>
+            <span>&bull;</span>
+            <span id="editor-char-count">0 chars</span>
+          </div>
+          <span id="editor-save-status" class="italic">Ready</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </aside>
+
+</div>
+<!-- SPES NOTEPAD FLOATING COMPONENT (END) -->

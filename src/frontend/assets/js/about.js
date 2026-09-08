@@ -12,6 +12,7 @@ import { applyPermissions, highlightSidebarActiveLink, requireAuth, signOut, get
 import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { applyTextSize } from "./components/settings.js";
+import { notepad } from "./components/notepad.js";
 import aboutTemplate from "../../components/about.html?raw";
 
 const session = requireAuth();
@@ -52,6 +53,7 @@ async function boot() {
   initAutoYear();
   initFlowbite();
   _initClock();
+  notepad();
   _setActiveSidebarLink("about-developer");
 
   // Apply saved global text size scale

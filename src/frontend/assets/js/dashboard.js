@@ -26,6 +26,7 @@ import { initQuickAccessCarousel, initQuickAccessPremiumInteractions } from "./c
 import { applyTextSize } from "./components/settings.js";
 import { flowDebug, flowDebugError, flowDebugSuccess } from "./components/flow-debugger.js";
 import { preferenceStorage } from "./components/storage.js";
+import { notepad } from "./components/notepad.js";
 
 const ROLE_PERMISSION_DESCRIPTIONS = {
   "users:view": "View the implementor directory for the user’s assigned office.",
@@ -238,6 +239,7 @@ async function init(user) {
 
   populateSidebar(user);
   initClock();
+  notepad();
 
   const path = window.location.pathname;
   const isAdmin = user.role === "admin" || Number(user.role_id) === 1;

@@ -85,3 +85,16 @@ export async function initRememberMePreferences() {
   signInButton.addEventListener("click", persistPreferences);
 }
 // --- FUNCTION: INITIALIZE REMEMBER-ME PREFERENCES (END) ---
+
+// --- FUNCTION: GET AUTHENTICATED USER SESSION (START) ---
+export function getAuthenticatedUser() {
+  try {
+    const raw = localStorage.getItem("spes_session") || sessionStorage.getItem("spes_session");
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    return session?.id ? session : null;
+  } catch {
+    return null;
+  }
+}
+// --- FUNCTION: GET AUTHENTICATED USER SESSION (END) ---

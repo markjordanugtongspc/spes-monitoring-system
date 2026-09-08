@@ -15,6 +15,7 @@ import { initThemeToggle } from "./components/theme-toggle.js";
 import { initAutoYear } from "./components/year.js";
 import { initExportButtonTilt } from "./components/animations.js";
 import { initSettings, initAppearancePrefs } from "./components/settings.js";
+import { notepad } from "./components/notepad.js";
 
 const session = requireAuth();
 if (session) {
@@ -67,6 +68,7 @@ async function boot() {
   initAutoYear();
   initFlowbite();
   _initClock();
+  notepad();
   _setActiveSidebarLink("settings");
   initAppearancePrefs();   // text-size slider + theme button label sync
   initExportButtonTilt();  // skew-tilt hover on [data-tilt-btn]

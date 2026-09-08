@@ -7,9 +7,13 @@ import { requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession,
 import { initThemeToggle } from "../assets/js/components/theme-toggle.js";
 import { buildImportPlan, executeImportPlan, loadConverterContext } from "./beneficiary-csv-converter.js";
 import { bulkDeleteBeneficiaries, fetchBeneficiaryDuplicateGroups } from "../../backend/api/beneficiary.js";
+import { notepad } from "../assets/js/components/notepad.js";
 // --- END: BENEFICIARY CSV TOOL IMPORTS ---
 
 const session = requireAdmin();
+if (session) {
+  notepad();
+}
 const elements = {
   session: document.getElementById("converter-session"),
   batch: document.getElementById("bdf-batch-id"),
