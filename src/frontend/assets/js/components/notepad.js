@@ -207,7 +207,7 @@ export function initNotepadOverlayObserver() {
       "#configure-drawer-overlay, #implementors-drawer-overlay, #drawer-add-impl-overlay, #drawer-bene-form-overlay, #drawer-batch-form-overlay, #drawer-payroll-edit-overlay, #drawer-backdrop, [data-drawer-backdrop]"
     );
     for (const ov of drawerOverlays) {
-      if (!ov.classList.contains("hidden") && ov.offsetParent !== null) {
+      if (!ov.classList.contains("hidden")) {
         const style = window.getComputedStyle(ov);
         if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
           return true;
@@ -222,7 +222,6 @@ export function initNotepadOverlayObserver() {
     for (const d of knownDrawers) {
       if (d.classList.contains("hidden") || d.getAttribute("aria-hidden") === "true") continue;
       if (d.dataset.drawerState === "closed") continue;
-      if (d.offsetParent === null) continue;
 
       // Check if drawer is transformed off-screen
       const isOffscreen = d.classList.contains("-translate-x-full") ||
@@ -232,7 +231,7 @@ export function initNotepadOverlayObserver() {
                           d.classList.contains("sm:translate-x-full");
       if (!isOffscreen) {
         const style = window.getComputedStyle(d);
-        if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
+        if (style.display !== "none" && style.visibility !== "hidden") {
           return true;
         }
       }

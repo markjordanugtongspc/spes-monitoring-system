@@ -658,6 +658,8 @@ function _wireButtons() {
   const openDrawer = () => {
     drawer?.classList.remove("translate-x-full");
     drawer?.classList.add("translate-x-0");
+    drawer?.setAttribute("aria-hidden", "false");
+    if (drawer) drawer.dataset.drawerState = "open";
     overlay?.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
   };
@@ -665,6 +667,8 @@ function _wireButtons() {
   const closeDrawer = () => {
     drawer?.classList.add("translate-x-full");
     drawer?.classList.remove("translate-x-0");
+    drawer?.setAttribute("aria-hidden", "true");
+    if (drawer) drawer.dataset.drawerState = "closed";
     overlay?.classList.add("hidden");
     document.body.classList.remove("overflow-hidden");
   };
