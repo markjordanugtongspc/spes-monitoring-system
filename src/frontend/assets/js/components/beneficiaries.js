@@ -46,6 +46,38 @@ const DEFAULT_EDU_LEVELS = [
   { id: 11, education_id: 4, name: "Grade 10" },
 ];
 
+// --- START: GRADE LEVEL COLOR CODING HELPER ---
+// Provides vibrant color palette tokens and decorations for each Grade / Year level
+function getGradeLevelBadgeStyle(bOrStr) {
+  let str = "";
+  if (typeof bOrStr === "string") {
+    str = bOrStr.toLowerCase();
+  } else if (bOrStr) {
+    const categoryName = String(bOrStr.education?.name ?? "").toLowerCase();
+    const joinedLevelName = String(bOrStr.education_level?.name ?? "").toLowerCase();
+    const idLevelName = (DEFAULT_EDU_LEVELS.find(
+      level => Number(level.id) === Number(bOrStr.education_level_id)
+    )?.name ?? "").toLowerCase();
+    str = `${categoryName} ${joinedLevelName || idLevelName}`;
+  }
+  if (str.includes("grade 7")) return { dot: "bg-sky-500", text: "text-sky-600 dark:text-sky-400", bg: "bg-sky-500/10 dark:bg-sky-500/20", border: "border-sky-500/20", decor: "decoration-sky-500" };
+  if (str.includes("grade 8")) return { dot: "bg-teal-500", text: "text-teal-600 dark:text-teal-400", bg: "bg-teal-500/10 dark:bg-teal-500/20", border: "border-teal-500/20", decor: "decoration-teal-500" };
+  if (str.includes("grade 9")) return { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10 dark:bg-emerald-500/20", border: "border-emerald-500/20", decor: "decoration-emerald-500" };
+  if (str.includes("grade 10") || str.includes("highschool")) return { dot: "bg-green-500", text: "text-green-600 dark:text-green-400", bg: "bg-green-500/10 dark:bg-green-500/20", border: "border-green-500/20", decor: "decoration-green-500" };
+  if (str.includes("grade 11")) return { dot: "bg-indigo-500", text: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-500/10 dark:bg-indigo-500/20", border: "border-indigo-500/20", decor: "decoration-indigo-500" };
+  if (str.includes("grade 12") || str.includes("senior high")) return { dot: "bg-blue-500", text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10 dark:bg-blue-500/20", border: "border-blue-500/20", decor: "decoration-blue-500" };
+  if (str.includes("1st year") || str.includes("1st")) return { dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-500/20", decor: "decoration-amber-500" };
+  if (str.includes("2nd year") || str.includes("2nd")) return { dot: "bg-orange-500", text: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10 dark:bg-orange-500/20", border: "border-orange-500/20", decor: "decoration-orange-500" };
+  if (str.includes("3rd year") || str.includes("3rd")) return { dot: "bg-rose-500", text: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10 dark:bg-rose-500/20", border: "border-rose-500/20", decor: "decoration-rose-500" };
+  if (str.includes("4th year") || str.includes("4th") || str.includes("college level")) return { dot: "bg-purple-500", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10 dark:bg-purple-500/20", border: "border-purple-500/20", decor: "decoration-purple-500" };
+  if (str.includes("graduate")) return { dot: "bg-purple-600", text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10 dark:bg-purple-500/20", border: "border-purple-500/20", decor: "decoration-purple-500" };
+  if (str.includes("osy")) return { dot: "bg-cyan-500", text: "text-cyan-600 dark:text-cyan-400", bg: "bg-cyan-500/10 dark:bg-cyan-500/20", border: "border-cyan-500/20", decor: "decoration-cyan-500" };
+  return { dot: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10 dark:bg-amber-500/20", border: "border-amber-500/20", decor: "decoration-amber-500" };
+}
+// --- END: GRADE LEVEL COLOR CODING HELPER ---
+
+// --- START: FORMAT EDUCATION DISPLAY ---
+// Returns formatted category and color-coded level text
 function formatEducationDisplay(b) {
   const categoryName = String(b?.education?.name ?? "").trim();
   const joinedLevelName = String(b?.education_level?.name ?? "").trim();
@@ -58,8 +90,20 @@ function formatEducationDisplay(b) {
   if (!levelName) return escHtml(categoryName.toUpperCase());
   if (!categoryName) return escHtml(levelName.toUpperCase());
 
-  return `${escHtml(categoryName.toUpperCase())} - <u class="underline decoration-amber-500 font-extrabold decoration-2 underline-offset-2">${escHtml(levelName.toUpperCase())}</u>`;
+  const style = getGradeLevelBadgeStyle(b);
+  return `${escHtml(categoryName.toUpperCase())} - <u class="underline ${style.decor} font-extrabold decoration-2 underline-offset-2">${escHtml(levelName.toUpperCase())}</u>`;
 }
+// --- END: FORMAT EDUCATION DISPLAY ---
+
+// --- START: GET GENDER TABLE CLASS ---
+// Returns responsive blue classes for Male and pinkish classes for Female in the table
+function getGenderTableClass(genderName) {
+  const g = String(genderName || "").trim().toUpperCase();
+  if (g === "MALE") return "font-black text-blue-600 dark:text-blue-400";
+  if (g === "FEMALE") return "font-black text-pink-500 dark:text-pink-400";
+  return "font-bold text-spes-black/70 dark:text-spes-white/70";
+}
+// --- END: GET GENDER TABLE CLASS ---
 
 
 // ── Office badge color palette (cycles through offices) ───────────
@@ -270,6 +314,7 @@ function initAnimatedBadgePanel(config) {
         b.style.display = label.includes(q) ? "" : "none";
       });
       syncClearBtn();
+      config.onSearch?.(q);
     });
     // Support pressing Enter to automatically select the first matching search result
     searchInput.addEventListener("keydown", (e) => {
@@ -392,7 +437,8 @@ function initAnimatedBadgePanel(config) {
     });
 
     panelOpen = true;
-    btn.classList.add("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80");
+    btn.dataset.toggled = "true";
+    btn.classList.add("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80", "opacity-85", "scale-[0.97]");
     config.onOpen?.();
   }
 
@@ -417,7 +463,8 @@ function initAnimatedBadgePanel(config) {
     }, total * 35 + 180);
 
     panelOpen = false;
-    btn.classList.remove("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80");
+    btn.dataset.toggled = "false";
+    btn.classList.remove("bg-yellow-300", "text-spes-blue", "ring-2", "ring-spes-yellow/80", "opacity-85", "scale-[0.97]");
     if (resetFilter) {
       activeId = "all";
       config.onFilter(null);
@@ -437,6 +484,9 @@ function initAnimatedBadgePanel(config) {
   return {
     show()    { panel.classList.remove("hidden"); panel.classList.add("flex"); },
     hide()    { if (panelOpen) closePanel(false); panel.classList.add("hidden"); panel.classList.remove("flex"); },
+    open()    { if (!panelOpen) openPanel(); },
+    close()   { if (panelOpen) closePanel(); },
+    isOpen()  { return panelOpen; },
     rebuild() { if (panelOpen) { closePanel(false); openPanel(); } },
     setActive(id) {
       activeId = id == null ? "all" : String(id);
@@ -500,7 +550,9 @@ function addDragScroll(el) {
 }
 
 // ── Office Sort Panel ─────────────────────────────────────────
-function initOfficeSortPanel(onFilter) {
+// --- START: OFFICE SORT PANEL INITIALIZATION ---
+// Initializes the animated office badges panel with search callback for strict implementor/office search
+function initOfficeSortPanel(onFilter, onSearch) {
   let _cached = [];
   const panel = initAnimatedBadgePanel({
     panelId:      "sort-offices-panel",
@@ -524,10 +576,12 @@ function initOfficeSortPanel(onFilter) {
     getId:      (o) => String(o.id),
     getPalette: (_o, i) => OFFICE_BADGE_PALETTES[i % OFFICE_BADGE_PALETTES.length],
     onFilter,
+    onSearch,
   });
   addDragScroll(document.getElementById("office-badges-list"));
   return panel;
 }
+// --- END: OFFICE SORT PANEL INITIALIZATION ---
 
 // ── Batch Sort Panel (DB-driven) ──────────────────────────────────
 function initBatchSortPanel(onFilter) {
@@ -709,12 +763,43 @@ export function initBeneficiaries() {
   // --- END: LOAD OFFICER ASSIGNED OFFICE INFO ---
 
   // ── Office Sort Panel (admin only) ──────────────────────────
-  const officeSortPanel = initOfficeSortPanel((officeId) => {
-    const filtered = officeId == null
+  let selectedOfficeSortId = null;
+  const officeSortPanel = initOfficeSortPanel(
+    (officeId) => {
+      selectedOfficeSortId = officeId;
+      applyImplementorsSearchAndFilter();
+    },
+    (query) => {
+      applyImplementorsSearchAndFilter(query);
+    }
+  );
+
+  // --- START: IMPLEMENTORS SEARCH AND FILTER (STRICT BY NAME OR OFFICE) ---
+  // Strictly filters active implementors either by the name of the implementor or the office
+  function applyImplementorsSearchAndFilter(queryOverride = null) {
+    if (viewMode !== "implementors") return;
+    const q = (queryOverride !== null
+      ? queryOverride
+      : (document.getElementById("office-search-input")?.value || "")
+    ).trim().toLowerCase();
+
+    let base = selectedOfficeSortId == null
       ? allImplementors
-      : allImplementors.filter((staff) => String(staff.office_id) === String(officeId));
-    sortFilterInstance?.updateData(filtered);
-  });
+      : allImplementors.filter((staff) => String(staff.office_id) === String(selectedOfficeSortId));
+
+    if (q) {
+      base = base.filter((staff) => {
+        const implName = String(staff.full_name || staff.name || "").toLowerCase();
+        const officeName = String(staff.office || staff.offices?.name || "").toLowerCase();
+        return implName.includes(q) || officeName.includes(q);
+      });
+    }
+
+    activeImplementors = pinSystemAdministratorFirst(base);
+    currentPage = 1;
+    renderPaginatedTable();
+  }
+  // --- END: IMPLEMENTORS SEARCH AND FILTER (STRICT BY NAME OR OFFICE) ---
 
   // State
   let allBeneficiaries = [];
@@ -1823,6 +1908,7 @@ export function initBeneficiaries() {
 
     // Status filters apply only after opening a beneficiary roster.
     officeSortPanel.show();
+    officeSortPanel.open();
     batchSortPanel?.hide();
     _showStatusSwitch(false);
 
@@ -1899,12 +1985,12 @@ export function initBeneficiaries() {
     content.innerHTML = `
       <div class="space-y-3 text-xs sm:text-sm mt-2 mb-4">
         <div class="flex justify-between items-start py-1.5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50 text-xs sm:text-sm">Designated Beneficiary</span>
-          <span class="font-black text-right text-spes-black dark:text-white uppercase text-xs sm:text-sm">${escHtml(b.designated || "N/A")}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white text-xs sm:text-sm">Designated Beneficiary</span>
+          <span class="font-extrabold text-right text-slate-600 dark:text-slate-400 uppercase text-xs sm:text-sm">${escHtml(b.designated || "N/A")}</span>
         </div>
         <div class="flex justify-between items-center py-1.5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50 text-xs sm:text-sm">Relationship to Assured</span>
-          <span class="font-black text-emerald-600 dark:text-emerald-400 uppercase text-xs sm:text-sm">${escHtml(b.relationship || "N/A")}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white text-xs sm:text-sm">Relationship to Assured</span>
+          <span class="font-extrabold text-emerald-600 dark:text-emerald-400 uppercase text-xs sm:text-sm">${escHtml(b.relationship || "N/A")}</span>
         </div>
       </div>
 
@@ -1926,54 +2012,54 @@ export function initBeneficiaries() {
 
       <div class="space-y-4 text-xs">
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Contact No.</span>
-          <span class="font-black ${b.contact_number ? "text-indigo-600 dark:text-indigo-400" : "italic text-spes-black/30 dark:text-white/30"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Contact No.</span>
+          <span class="font-extrabold ${b.contact_number ? "text-indigo-600 dark:text-indigo-400" : "italic text-slate-400 dark:text-slate-500"} uppercase">${escHtml(b.contact_number || "Not Provided")}</span>
         </div>
         ${isDirectoryViewer ? `
         <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Office</span>
-          <span class="font-extrabold text-right text-spes-black dark:text-white max-w-[200px] text-wrap uppercase">
+          <span class="font-bold text-spes-black/70 dark:text-white">Office</span>
+          <span class="font-extrabold text-right text-slate-600 dark:text-slate-400 max-w-[200px] text-wrap uppercase">
             ${escHtml(b.staffs && b.staffs.office_id ? (allOffices.find(o => o.id === b.staffs.office_id)?.name || "N/A") : (b.staffs?.full_name || "N/A"))}
           </span>
         </div>
         ` : ''}
         <div class="flex justify-between items-start py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Address</span>
-          <span class="font-extrabold text-right text-spes-black dark:text-white max-w-[200px] uppercase">${escHtml(b.address || "N/A")}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Address</span>
+          <span class="font-extrabold text-right text-slate-600 dark:text-slate-400 max-w-[200px] uppercase">${escHtml(b.address || "N/A")}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Birthday</span>
-          <span class="font-extrabold text-spes-black dark:text-white">${escHtml(bday)}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Birthday</span>
+          <span class="font-extrabold text-slate-600 dark:text-slate-400">${escHtml(bday)}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Age</span>
-          <span class="font-extrabold text-spes-black dark:text-white">${b.age ?? "N/A"}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Age</span>
+          <span class="font-extrabold text-slate-600 dark:text-slate-400">${b.age ?? "N/A"}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Period</span>
-          <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(period)}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Period</span>
+          <span class="font-extrabold text-slate-600 dark:text-slate-400 uppercase">${escHtml(period)}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Gender</span>
-          <span class="font-extrabold text-spes-black dark:text-white uppercase">${escHtml(b.gender?.name || "N/A")}</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Gender</span>
+          <span class="font-extrabold text-slate-600 dark:text-slate-400 uppercase">${escHtml(b.gender?.name || "N/A")}</span>
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Batch</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Batch</span>
           ${b.batch?.id != null
             ? `<span class="inline-flex items-center gap-1 bg-spes-blue/10 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-spes-blue dark:bg-spes-yellow/10 dark:text-spes-yellow">${escHtml(b.batch.batch_name ? b.batch.batch_name.toUpperCase() : `BATCH ${b.batch.id}`)}</span>`
             : `<span class="italic text-[0.625rem] text-spes-black/30 dark:text-white/30">Not Assigned</span>`
           }
         </div>
         <div class="flex justify-between items-center py-1 border-b border-gray-50 dark:border-white/5">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Status</span>
+          <span class="font-bold text-spes-black/70 dark:text-white">Status</span>
           ${String(b.return_status || "NEW").toUpperCase() === "SPES BABY"
             ? `<span class="inline-flex items-center gap-1 bg-red-400/15 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-red-500 dark:bg-red-400/20 dark:text-red-300">SPES Baby</span>`
             : `<span class="inline-flex items-center gap-1 bg-emerald-500/15 px-2.5 py-1 text-[0.625rem] font-black uppercase tracking-wide text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">New</span>`
           }
         </div>
         <div class="flex justify-between items-center py-1">
-          <span class="font-bold text-spes-black/55 dark:text-white/50">Education</span>
-          <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+          <span class="font-bold text-spes-black/70 dark:text-white">Education</span>
+          <span class="inline-flex items-center gap-1 rounded ${getGradeLevelBadgeStyle(b).bg} px-2 py-1 text-[0.625rem] font-black uppercase ${getGradeLevelBadgeStyle(b).text} border ${getGradeLevelBadgeStyle(b).border}">
             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
             ${formatEducationDisplay(b)}
           </span>
@@ -2316,12 +2402,12 @@ export function initBeneficiaries() {
               </td>
               <td class="px-6 py-4 text-left tabular-nums text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap">${escHtml(beneficiarySortMode === "phone" ? (b.contact_number || "N/A") : (b.address || "N/A"))}</td>
               <td class="px-6 py-4 text-center whitespace-nowrap">
-                <span class="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-[0.625rem] font-black uppercase text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                <span class="inline-flex items-center gap-1 rounded ${getGradeLevelBadgeStyle(b).bg} px-2 py-1 text-[0.625rem] font-black uppercase ${getGradeLevelBadgeStyle(b).text} border ${getGradeLevelBadgeStyle(b).border}">
                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
                   ${formatEducationDisplay(b)}
                 </span>
               </td>
-              <td class="px-6 py-4 text-center font-bold text-spes-black/70 dark:text-spes-white/70 whitespace-nowrap uppercase">${escHtml(b.gender?.name || "—")}</td>
+              <td class="px-6 py-4 text-center ${getGenderTableClass(b.gender?.name)} whitespace-nowrap uppercase">${escHtml(b.gender?.name || "—")}</td>
               ${actionsTd}
             </tr>
           `;
@@ -2890,6 +2976,21 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
       addressInput.classList.remove("bg-gray-100", "dark:bg-white/5", "pointer-events-none");
     }
 
+    const returnStatusSelect = document.getElementById("bdf-return-status");
+    const syncReturnStatusColor = () => {
+      if (!returnStatusSelect) return;
+      const isBaby = returnStatusSelect.value === "SPES BABY";
+      returnStatusSelect.classList.toggle("text-emerald-600", !isBaby);
+      returnStatusSelect.classList.toggle("dark:text-emerald-400", !isBaby);
+      returnStatusSelect.classList.toggle("text-red-600", isBaby);
+      returnStatusSelect.classList.toggle("dark:text-red-400", isBaby);
+    };
+    if (returnStatusSelect && returnStatusSelect.dataset.colorSynced !== "true") {
+      returnStatusSelect.dataset.colorSynced = "true";
+      returnStatusSelect.addEventListener("change", syncReturnStatusColor);
+    }
+    syncReturnStatusColor();
+
     // Populate and show Admin staff assignment dropdown if admin
     const assignContainer = document.getElementById("admin-assign-staff-container");
     const assignSelect = document.getElementById("bdf-assign-staff");
@@ -3177,21 +3278,25 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
   const eduSubSearchInput  = document.getElementById("edulevel-search-input");
   const eduSubOptionsList  = document.getElementById("edulevel-options-list");
 
+  // --- START: RENDER EDUCATION SUB-LEVEL OPTIONS ---
+  // Renders grade/year sub-level options with color-coding and icons
   function renderEduSubOptions(optionsArr) {
     if (!eduSubOptionsList) return;
     eduSubOptionsList.innerHTML = "";
     optionsArr.forEach(item => {
       const optVal = item.id != null ? item.id : item.name;
       const optText = item.name || item;
+      const badgeStyle = getGradeLevelBadgeStyle(optText);
       const li = document.createElement("li");
       li.innerHTML = `
         <button type="button"
-          class="edulevel-option cursor-pointer flex w-full items-center gap-2 px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
+          class="edulevel-option cursor-pointer flex w-full items-center justify-between px-3.5 py-2 hover:bg-spes-blue/8 dark:hover:bg-white/5 transition-colors"
           data-value="${optVal}" data-name="${escHtml(optText)}">
-          <svg class="h-3.5 w-3.5 text-spes-blue dark:text-spes-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span class="font-semibold text-xs">${escHtml(optText)}</span>
+          <div class="flex items-center gap-2">
+            <span class="inline-block h-2 w-2 rounded-full ${badgeStyle.dot}"></span>
+            <span class="font-semibold text-xs text-spes-black dark:text-spes-white">${escHtml(optText)}</span>
+          </div>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[0.5625rem] font-black uppercase tracking-wider ${badgeStyle.bg} ${badgeStyle.text} border ${badgeStyle.border}">${escHtml(optText)}</span>
         </button>
       `;
       const btn = li.querySelector("button");
@@ -3203,6 +3308,7 @@ function renderPageSizeSelector(totalCount, onChangeCallback) {
       eduSubOptionsList.appendChild(li);
     });
   }
+  // --- END: RENDER EDUCATION SUB-LEVEL OPTIONS ---
 
   const DEFAULT_EDU_LEVELS = [
     { id: 1, education_id: 1, name: "Grade 11" },

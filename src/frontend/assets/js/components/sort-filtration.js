@@ -312,17 +312,23 @@ export function setupSortFiltration({
 
       if (key === "search") {
         processed = processed.filter(item => {
-          const nameVal   = (item.name || item.full_name || "").toLowerCase();
-          const emailVal  = (item.email || "").toLowerCase();
-          const officeVal = (item.office || "").toLowerCase();
-          const addrVal   = (item.address || "").toLowerCase();
-          const contactVal= String(item.contact_number || "").toLowerCase();
+          const nameVal    = (item.name || item.full_name || "").toLowerCase();
+          const emailVal   = (item.email || "").toLowerCase();
+          const officeVal  = (item.office || "").toLowerCase();
+          const addrVal    = (item.address || "").toLowerCase();
+          const contactVal = String(item.contact_number || "").toLowerCase();
+          const batchIdVal = String(item.batch?.id ?? item.batch_id ?? "").toLowerCase();
+          const batchName  = String(item.batch?.batch_name || "").toLowerCase();
+          const batchLabel = batchIdVal ? `batch ${batchIdVal}` : "";
           return (
             nameVal.includes(activeValue) ||
-            emailVal.includes(activeValue) ||
-            officeVal.includes(activeValue) ||
+            contactVal.includes(activeValue) ||
             addrVal.includes(activeValue) ||
-            contactVal.includes(activeValue)
+            batchIdVal.includes(activeValue) ||
+            batchName.includes(activeValue) ||
+            batchLabel.includes(activeValue) ||
+            emailVal.includes(activeValue) ||
+            officeVal.includes(activeValue)
           );
         });
       } else if (key === "status") {

@@ -113,13 +113,13 @@
                   <!-- Search input (hidden until panel opens) -->
                   <div id="office-search-wrap" class="relative order-1 min-w-0 flex-1 shrink-0 opacity-0 transition-opacity duration-300 sm:order-none sm:flex-none">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
-                      <svg class="h-3 w-3 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg class="h-3.5 w-3.5 text-spes-blue/60 dark:text-spes-yellow/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-width="2.5" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                       </svg>
                     </div>
                     <input type="text" id="office-search-input"
-                      class="h-9 w-full rounded-md border sm:w-36 border-white/40 bg-white/15 pl-7 pr-2 text-xs text-white placeholder:text-white/70 focus:border-spes-yellow focus:bg-white/20 focus:outline-none transition-all"
-                      placeholder="Search offices…" autocomplete="off" />
+                      class="h-9 w-full sm:w-56 md:w-64 rounded-md border border-spes-blue/25 bg-white pl-8 pr-2.5 text-xs font-semibold text-spes-black placeholder:text-spes-black/50 shadow-sm focus:border-spes-yellow focus:ring-2 focus:ring-spes-yellow/30 focus:outline-none dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-spes-white/40 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/30 transition-all"
+                      placeholder="Search implementor or office…" autocomplete="off" />
                   </div>
                   <!-- Badge list: drag-scrollable single row -->
                   <div id="office-badges-list"
@@ -127,10 +127,14 @@
                     style="scrollbar-width:none;-ms-overflow-style:none;"></div>
                 </div>
                 <button id="btn-sort-offices" data-dropdown-placement="bottom"
-                  class="order-1 ml-auto inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
-                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
+                  class="group order-1 ml-auto inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-spes-yellow bg-spes-yellow px-4 py-2 text-center text-xs font-black uppercase tracking-widest text-spes-blue shadow-sm transition-all hover:bg-yellow-300 active:scale-95 sm:order-none sm:w-auto sm:shrink-0">
+                  <!-- Static icon (shown at rest on desktop) -->
+                  <svg class="sort-office-icon-static h-3.5 w-3.5 shrink-0 block group-hover:hidden group-active:hidden group-data-[toggled=true]:hidden max-sm:hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M17 13a.26.26 0 0 0-.26.21l-.19 1.32c-.3.13-.59.29-.85.47l-1.24-.5c-.11 0-.24 0-.31.13l-1 1.73c-.06.11-.04.24.06.32l1.06.82a4.193 4.193 0 0 0 0 1l-1.06.82a.26.26 0 0 0-.06.32l1 1.73c.06.13.19.13.31.13l1.24-.5c.26.18.54.35.85.47l.19 1.32c.02.12.12.21.26.21h2c.11 0 .22-.09.24-.21l.19-1.32c.3-.13.57-.29.84-.47l1.23.5c.13 0 .26 0 .33-.13l1-1.73a.26.26 0 0 0-.06-.32l-1.07-.82c.02-.17.04-.33.04-.5s-.01-.33-.04-.5l1.06-.82a.26.26 0 0 0 .06-.32l-1-1.73c-.06-.13-.19-.13-.32-.13l-1.23.5c-.27-.18-.54-.35-.85-.47l-.19-1.32A.236.236 0 0 0 19 13h-2m1 3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5c-.84 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5M10 5h2v2h-2V5m6 2h-2V5h2v2m-2 2h2v2h-2V9m-4 0h2v2h-2V9m3.11 14H2V1h18v10.29c-.63-.18-1.3-.29-2-.29V3H4v18h6v-3.5h1.03c-.03.17-.03.33-.03.5c0 1.96.81 3.73 2.11 5M8 15H6v-2h2v2m0-4H6V9h2v2m0-4H6V5h2v2M6 17h2v2H6v-2m4-4h2v1.41c-.11.19-.22.39-.32.59H10v-2Z"/>
+                  </svg>
+                  <!-- Hover + Click + Active + Mobile responsive icon -->
+                  <svg class="sort-office-icon-active h-3.5 w-3.5 shrink-0 hidden group-hover:block group-active:block group-data-[toggled=true]:block max-sm:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M16 13a.26.26 0 0 0-.26.21l-.19 1.32c-.3.13-.59.29-.85.47l-1.24-.5c-.11 0-.24 0-.31.13l-1 1.73c-.06.11-.04.24.06.32l1.06.82a4.193 4.193 0 0 0 0 1l-1.06.82a.26.26 0 0 0-.06.32l1 1.73c.06.13.19.13.31.13l1.24-.5c.26.18.54.35.85.47l.19 1.32c.02.12.12.21.26.21h2c.11 0 .22-.09.24-.21l.19-1.32c.3-.13.57-.29.84-.47l1.23.5c.13 0 .26 0 .33-.13l1-1.73a.26.26 0 0 0-.06-.32l-1.07-.82c.02-.17.04-.33.04-.5s-.01-.33-.04-.5l1.06-.82a.26.26 0 0 0 .06-.32l-1-1.73c-.06-.13-.19-.13-.32-.13l-1.23.5c-.27-.18-.54-.35-.85-.47l-.19-1.32A.236.236 0 0 0 18 13h-2m1 3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5c-.84 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5m-1-5.42V3H2v18h6v-3.5h2.03c.23-3.3 2.74-5.96 5.97-6.42M6 19H4v-2h2v2m0-4H4v-2h2v2m0-4H4V9h2v2m0-4H4V5h2v2m6-2h2v2h-2V5m0 4h2v2h-2V9m-2 6H8v-2h2v2m0-4H8V9h2v2M8 7V5h2v2H8Z"/>
                   </svg>
                   Sort Offices
                 </button>
@@ -141,14 +145,14 @@
                 <!-- Search (Left of Sort Batch, properly sized solid aesthetic) -->
                 <div id="staff-search-wrap" class="relative min-w-0 w-full sm:w-64 md:w-72 lg:w-80 transition-all duration-200">
                   <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
-                    <svg class="h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-width="2"
+                    <svg class="h-4 w-4 text-spes-blue/60 dark:text-spes-yellow/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-width="2.5"
                         d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                     </svg>
                   </div>
                   <input type="text" id="staff-search-input"
-                    class="block w-full rounded-lg border border-white/25 bg-white/10 py-2 pe-4 ps-9 text-xs font-semibold text-white placeholder:text-white/60 focus:bg-white/20 focus:border-spes-yellow focus:ring-2 focus:ring-spes-yellow/30 focus:outline-none transition-all"
-                    placeholder="Search beneficiary, contact, batch..." />
+                    class="block w-full rounded-lg border border-spes-blue/25 bg-white py-2 pe-4 ps-9 text-xs font-semibold text-spes-black placeholder:text-spes-black/50 shadow-sm focus:border-spes-yellow focus:ring-2 focus:ring-spes-yellow/30 focus:outline-none dark:border-white/20 dark:bg-spes-dark-primary dark:text-spes-white dark:placeholder:text-spes-white/40 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/30 transition-all"
+                    placeholder="Search beneficiary, contact, batch, address..." />
                 </div>
 
                 <!-- Sort Batch — tightly grouped with its sliding badges -->
@@ -636,7 +640,7 @@
             Assign to Office / Implementor (Admin Only)
           </label>
           <select id="bdf-assign-staff" name="staff_id"
-            class="cursor-pointer block w-full rounded-none border border-indigo-300 bg-indigo-50/30 px-3.5 py-2.5 text-sm text-spes-black focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-indigo-500/30 dark:bg-indigo-900/10 dark:text-spes-white dark:focus:border-indigo-400 dark:focus:ring-indigo-400/20 transition">
+            class="cursor-pointer block w-full rounded-none border border-indigo-300 bg-indigo-50/30 px-3.5 py-2.5 text-sm text-slate-700 opacity-75 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-indigo-500/30 dark:bg-indigo-900/10 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-indigo-400 dark:focus:ring-indigo-400/20 transition-all duration-200">
             <!-- Populated by JS if Admin -->
           </select>
         </div>
@@ -644,11 +648,11 @@
         <!-- Full Name -->
         <div>
           <label for="bdf-full-name"
-            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
             Name of Assured <span class="text-red-500">*</span>
           </label>
           <input type="text" id="bdf-full-name" name="full_name" required
-            class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+            class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
             placeholder="Full name of the student" />
         </div>
 
@@ -656,20 +660,20 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label for="bdf-designated"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Designated Beneficiary
             </label>
             <input type="text" id="bdf-designated" name="designated"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
               placeholder="Beneficiary name" />
           </div>
           <div>
             <label for="bdf-relationship"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Relationship
             </label>
             <input type="text" id="bdf-relationship" name="relationship"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
               placeholder="e.g. MOTHER, FATHER" />
           </div>
         </div>
@@ -677,11 +681,11 @@
         <!-- Address -->
         <div>
           <label for="bdf-address"
-            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
             Address
           </label>
           <input type="text" id="bdf-address" name="address"
-            class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+            class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
             placeholder="City / Municipality" />
         </div>
 
@@ -689,11 +693,11 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
             <label for="bdf-month-period"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Month
             </label>
             <select id="bdf-month-period" name="month_period"
-              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
               <option value="">— Month —</option>
               <option>JANUARY</option>
               <option>FEBRUARY</option>
@@ -711,20 +715,20 @@
           </div>
           <div>
             <label for="bdf-year-period"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Year
             </label>
             <input type="number" id="bdf-year-period" name="year_period" min="2018" max="2035"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
               placeholder="e.g. 2025" />
           </div>
           <div>
             <label
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Batch
             </label>
             <select id="bdf-batch-id" name="batch_id"
-              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
               <option value="">— Unassigned —</option>
               <!-- JS fills this -->
             </select>
@@ -735,20 +739,20 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label for="bdf-contact"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Contact Number
             </label>
             <input type="tel" id="bdf-contact" name="contact_number"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
               placeholder="+63 9XX XXX XXXX" />
           </div>
           <div>
             <label for="bdf-gender"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Gender <span class="text-red-500">*</span>
             </label>
             <select id="bdf-gender" name="gender_id" required
-              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
               <option value="">— Select Gender —</option>
               <option value="1">MALE</option>
               <option value="2">FEMALE</option>
@@ -760,19 +764,19 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label for="bdf-birthday"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Birthday
             </label>
             <input type="date" id="bdf-birthday" name="birthday"
-              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition" />
+              class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200" />
           </div>
           <div>
             <label for="bdf-age"
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Age
             </label>
             <input type="number" id="bdf-age" name="age" min="1" max="99"
-              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black placeholder:text-spes-black/30 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-spes-white dark:placeholder:text-spes-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition"
+              class="block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 placeholder:text-spes-black/30 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/25 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200"
               placeholder="Age" />
           </div>
         </div>
@@ -782,7 +786,7 @@
           <!-- Category Dropdown -->
           <div>
             <label
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Education Category
             </label>
             <div class="relative" id="dropdown-education-wrapper">
@@ -791,14 +795,14 @@
 
               <!-- Dropdown Trigger Button -->
               <button type="button" id="btn-education-dropdown"
-                class="flex w-full cursor-pointer items-center justify-between rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+                class="flex w-full cursor-pointer items-center justify-between rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
                 <div class="flex items-center gap-2" id="education-selected-content">
                   <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
                   </svg>
-                  <span class="text-spes-black/50 dark:text-spes-white/50" id="education-selected-text">— Select Category —</span>
+                  <span class="text-slate-500 dark:text-slate-400" id="education-selected-text">— Select Category —</span>
                 </div>
                 <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor">
@@ -874,20 +878,20 @@
           <!-- Specific Grade / Year Sub-Level Dropdown -->
           <div id="container-edulevel-sub" class="hidden">
             <label
-              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+              class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
               Grade / Year Level
             </label>
             <div class="relative" id="dropdown-edulevel-wrapper">
               <input type="hidden" id="bdf-edulevel" name="edulevel" value="" />
               <button type="button" id="btn-edulevel-dropdown"
-                class="flex w-full cursor-pointer items-center justify-between rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+                class="flex w-full cursor-pointer items-center justify-between rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm text-slate-600 opacity-70 hover:opacity-90 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-slate-300 dark:opacity-70 dark:hover:opacity-90 dark:focus:opacity-100 dark:focus:text-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
                 <div class="flex items-center gap-2" id="edulevel-selected-content">
                   <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span class="text-spes-black/50 dark:text-spes-white/50" id="edulevel-selected-text">— Select Level —</span>
+                  <span class="text-slate-500 dark:text-slate-400" id="edulevel-selected-text">— Select Level —</span>
                 </div>
                 <svg class="h-4 w-4 text-spes-black/40 dark:text-spes-white/40" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor">
@@ -908,7 +912,7 @@
                       </svg>
                     </div>
                     <input type="text" id="edulevel-search-input"
-                      class="w-full rounded-none border border-spes-blue/20 bg-transparent pl-8 pr-2 py-1.5 text-xs text-spes-black placeholder:text-spes-black/40 focus:border-spes-blue focus:outline-none dark:border-spes-white/20 dark:text-spes-white dark:placeholder:text-spes-white/40 dark:focus:border-spes-yellow"
+                      class="w-full rounded-none border border-spes-blue/20 bg-transparent pl-8 pr-2 py-1.5 text-xs text-slate-600 opacity-75 placeholder:text-spes-black/40 focus:opacity-100 focus:text-spes-black focus:border-spes-blue focus:outline-none dark:border-spes-white/20 dark:text-slate-300 dark:opacity-70 dark:focus:opacity-100 dark:focus:text-white dark:placeholder:text-white/40 dark:focus:border-spes-yellow transition-all duration-200"
                       placeholder="Search grade/year level..." autocomplete="off" />
                   </div>
                 </div>
@@ -922,11 +926,11 @@
         <!-- Beneficiary Category / Status (NEW or SPES BABY for transfer) -->
         <div class="col-span-full">
           <label for="bdf-return-status"
-            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/60 dark:text-spes-white/50">
+            class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-spes-black/80 dark:text-white">
             Beneficiary Category / Status (Transfer)
           </label>
           <select id="bdf-return-status" name="return_status" required
-            class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm font-bold text-spes-black focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-spes-white dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition">
+            class="cursor-pointer block w-full rounded-none border border-spes-blue/20 bg-transparent px-3.5 py-2.5 text-sm font-extrabold text-emerald-600 opacity-80 hover:opacity-95 focus:opacity-100 focus:border-spes-blue focus:outline-none focus:ring-2 focus:ring-spes-blue/20 dark:border-spes-white/15 dark:bg-spes-dark-secondary dark:text-emerald-400 dark:opacity-80 dark:hover:opacity-95 dark:focus:opacity-100 dark:focus:border-spes-yellow dark:focus:ring-spes-yellow/20 transition-all duration-200">
             <option value="NEW" class="cursor-pointer font-bold text-emerald-600 dark:text-emerald-400">NEW</option>
             <option value="SPES BABY" class="cursor-pointer font-bold text-red-600 dark:text-red-400">SPES BABY</option>
           </select>
@@ -937,18 +941,20 @@
 
     <!-- Sticky Footer -->
     <div
-      class="shrink-0 grid grid-cols-2 gap-3 border-t border-spes-blue/10 bg-spes-white p-3.5 sm:px-5 sm:py-4 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
-      <button type="button" id="btn-cancel-bene-form"
-        class="cursor-pointer inline-flex items-center justify-center w-full rounded-none border border-spes-blue/20 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-red-600 dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-red-400 transition-all duration-150 whitespace-nowrap text-center">
-        Cancel
-      </button>
-      <button type="submit" form="form-bene-drawer" id="btn-submit-bene-form"
-        class="cursor-pointer inline-flex items-center justify-center w-full gap-1.5 bg-emerald-500 px-3.5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150 whitespace-nowrap text-center">
-        <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-        </svg>
-        <span id="btn-submit-bene-label" class="whitespace-nowrap">Save Beneficiary</span>
-      </button>
+      class="shrink-0 mt-3 border-t border-spes-blue/10 bg-spes-white p-4 sm:px-6 sm:py-5 dark:border-spes-white/10 dark:bg-spes-dark-secondary">
+      <div class="grid grid-cols-2 gap-4 sm:gap-6 w-full">
+        <button type="button" id="btn-cancel-bene-form"
+          class="cursor-pointer inline-flex items-center justify-center w-full rounded-none border border-spes-blue/20 px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-spes-black/70 hover:border-l-4 hover:border-spes-blue/60 hover:bg-spes-blue/5 hover:text-red-600 dark:border-spes-white/15 dark:text-spes-white/70 dark:hover:border-spes-white/40 dark:hover:bg-spes-white/5 dark:hover:text-red-400 transition-all duration-150 whitespace-nowrap text-center">
+          Cancel
+        </button>
+        <button type="submit" form="form-bene-drawer" id="btn-submit-bene-form"
+          class="cursor-pointer inline-flex items-center justify-center w-full gap-2 bg-emerald-500 px-5 py-2.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-white hover:bg-emerald-600 hover:border-l-4 hover:border-emerald-800 active:brightness-90 disabled:opacity-60 disabled:pointer-events-none transition-all duration-150 whitespace-nowrap text-center shadow-md">
+          <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+          <span id="btn-submit-bene-label" class="whitespace-nowrap">Save Beneficiary</span>
+        </button>
+      </div>
     </div>
   </div>
 

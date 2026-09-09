@@ -353,7 +353,7 @@ function _renderImplementorsByOffice(staffs) {
 
     summaryEl.innerHTML = `
       <div class="flex flex-col gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-white/5">
-        <p class="text-[10px] font-semibold text-spes-black/75 dark:text-spes-white/75">
+        <p class="text-[10px] font-semibold text-spes-black/75 dark:text-dirty-white">
           Roster Summary:
           <span class="font-extrabold text-spes-blue dark:text-spes-yellow">${staffs.length} implementors</span>
           across <strong>${officeCount}</strong> office${officeCount !== 1 ? "s" : ""}.
@@ -1113,7 +1113,7 @@ function _renderTopOfficeSummary(topOfficeBeneficiaries, globalStaffs) {
 
     if (sortedOffices.length > 0) {
       summaryEl.innerHTML = `
-        <h4 class="text-[10px] font-black uppercase tracking-widest text-spes-black/50 dark:text-white/40 mb-2">Global Top 3 Offices (Male + Female)</h4>
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-spes-black/50 dark:text-dirty-white mb-2">Global Top 3 Offices (Male + Female)</h4>
         <div class="flex flex-col gap-2">
           ${sortedOffices.map(([name, stats]) => {
             const percentage = globalGenderTotal > 0
@@ -1376,7 +1376,7 @@ function _renderBeneficiariesByYear(beneficiaries) {
 
         <!-- Roster Summary & Year Breakdown -->
         <div class="flex flex-col gap-1 mt-0.5">
-          <p class="text-[9px] font-semibold text-spes-black/75 dark:text-spes-white/75">
+          <p class="text-[9px] font-semibold text-spes-black/75 dark:text-dirty-white">
             Roster Summary: <span class="font-extrabold text-spes-blue dark:text-spes-yellow">${fmt(modeTotal)} ${modeLabel} students</span> across all years.
           </p>
           <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-spes-black/60 dark:text-spes-white/50">
