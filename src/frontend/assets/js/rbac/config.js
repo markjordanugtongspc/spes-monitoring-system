@@ -33,6 +33,15 @@ const roles = {
     ],
     inherits: ["student"]
   },
+  chief: {
+    can: [
+      "reports:export",
+      "offices:view-other",
+      "analytics:view-global",
+      "payroll:view"
+    ],
+    inherits: ["officer"]
+  },
   hr: {
     can: [
       "roles:manage",
@@ -64,9 +73,10 @@ const roles = {
 
 export const rbac = RBAC({ enableLogger: false })(roles);
 
+// --- START: CAN DO RBAC HELPER - Checks if given role has authority to perform action ---
 /**
  * Convenience helper — returns true/false without throwing.
- * @param {string} role    – "admin" | "officer" | "student"
+ * @param {string} role    – "admin" | "hr" | "chief" | "officer" | "student"
  * @param {string} action  – "users:edit", "attendance:verify", etc.
  */
 export async function canDo(role, action) {
@@ -76,3 +86,4 @@ export async function canDo(role, action) {
     return false;
   }
 }
+// --- END: CAN DO RBAC HELPER ---

@@ -16,6 +16,7 @@ function normalizeStaffPermissions(row = {}) {
 }
 // --- END: NORMALIZE PERMISSIONS ---
 
+// --- START: SESSION API HANDLER - Authenticates user via login_staff RPC and issues session cookie ---
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -72,6 +73,9 @@ export default async function handler(req, res) {
       } else if (data.user.role_id === 2 || dbRoleName === "hr") {
         data.user.role = "hr";
         data.user.role_label = "HR";
+      } else if (data.user.role_id === 4 || dbRoleName === "chief") {
+        data.user.role = "chief";
+        data.user.role_label = "Chief";
       } else {
         data.user.role = "officer";
         data.user.role_label = "Officer";
@@ -85,11 +89,13 @@ export default async function handler(req, res) {
     }
     // --- END: AUTHORITATIVE STAFF DATA FETCH ---
 
-    // --- START: FETCH PERMISSIONS with fallback & auto-grant for Admin/HR ---
+    // --- START: FETCH PERMISSIONS with fallback & auto-grant for Admin/HR/Chief ---
     const isAdmin = Number(data.user.role_id) === 1 || String(data.user.role || "").toLowerCase() === "admin";
     const isHr = Number(data.user.role_id) === 2 || String(data.user.role || "").toLowerCase() === "hr";
+    const isChief = Number(data.user.role_id) === 4 || String(data.user.role || "").toLowerCase() === "chief";
 
-    if (isAdmin || isHr) {
+    if (isAdmin || isHr || isChief) {
+      data.user.approved = true;
       data.user.permissions = {
         view_users: true,
         create_users: true,
@@ -121,3 +127,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: "Server authentication is not configured." });
   }
 }
+// --- END: SESSION API HANDLER ---

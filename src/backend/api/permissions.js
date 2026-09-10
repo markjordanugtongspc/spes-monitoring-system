@@ -23,10 +23,20 @@ const PERMISSION_FIELDS = [
 /**
  * Maps a staff_permissions row to a normalized permissions object.
  * Fields on `staff_permissions` use plain names (no perm_ prefix).
+ * Auto-grants all true for Admin (1), HR (2), and Chief (4).
  * @param {object} row
+ * @param {object} [staff]
  * @returns {Record<string, boolean>}
  */
-function normalizeStaffPermissions(row = {}) {
+function normalizeStaffPermissions(row = {}, staff = {}) {
+  const roleId = Number(staff?.role_id ?? row?.role_id);
+  const roleName = String(staff?.roles?.name ?? staff?.role ?? "").toLowerCase();
+  const isAutoGranted = roleId === 1 || roleId === 2 || roleId === 4 || roleName === "admin" || roleName === "hr" || roleName === "chief";
+  if (isAutoGranted) {
+    return Object.fromEntries(
+      PERMISSION_FIELDS.map((field) => [field, true])
+    );
+  }
   return Object.fromEntries(
     PERMISSION_FIELDS.map((field) => [field, Boolean(row[field])])
   );

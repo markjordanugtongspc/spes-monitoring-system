@@ -1,5 +1,5 @@
 <!-- SPES NOTEPAD FLOATING COMPONENT (START) -->
-<div id="spes-notepad-floating-container" class="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[60] font-inter select-none transition-all duration-300 ease-in-out">
+<div id="spes-notepad-floating-container" class="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[60] font-inter select-none transition-all duration-300 ease-in-out print:hidden">
   
   <!-- Floating Toggle Button -->
   <button id="spes-notepad-toggle-btn"
@@ -7,7 +7,7 @@
           data-tooltip-target="tooltip-spes-notepad"
           data-tooltip-placement="left"
           aria-label="Toggle SPES Notepad"
-          class="cursor-pointer group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white dark:bg-spes-dark-primary text-spes-blue dark:text-spes-yellow shadow-xl border border-spes-blue/20 dark:border-spes-yellow/30 hover:scale-105 active:scale-95 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-spes-blue/30 dark:focus:ring-spes-yellow/30">
+          class="cursor-pointer group relative flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white dark:bg-spes-dark-primary text-spes-blue dark:text-spes-yellow shadow-xl border border-spes-blue/20 dark:border-spes-yellow/30 hover:scale-105 active:scale-95 transition-transform duration-200 focus:outline-none focus:ring-2 focus:ring-spes-blue/30 dark:focus:ring-spes-yellow/30 print:hidden">
     
     <!-- STATIC FLOATING SVG ICON (Desktop default, hidden on hover, active, or mobile) -->
     <span class="spes-notepad-static-icon block group-hover:hidden sm:group-[.is-active]:hidden">
@@ -28,7 +28,7 @@
   </button>
 
   <!-- Flowbite Tooltip for Toggle -->
-  <div id="tooltip-spes-notepad" role="tooltip" class="absolute z-[70] invisible inline-block px-2.5 py-1 text-[11px] font-semibold text-white bg-slate-900 dark:bg-slate-800 rounded-lg shadow-lg opacity-0 tooltip transition-opacity duration-200">
+  <div id="tooltip-spes-notepad" role="tooltip" class="absolute z-[70] invisible inline-block px-2.5 py-1 text-[11px] font-semibold text-white bg-slate-900 dark:bg-slate-800 rounded-lg shadow-lg opacity-0 tooltip transition-opacity duration-200 print:hidden">
     SPES Quick Notes
     <div class="tooltip-arrow" data-popper-arrow></div>
   </div>
@@ -36,7 +36,7 @@
   <!-- Notepad Floating Card Panel -->
   <aside id="spes-notepad-panel"
          aria-label="SPES Notepad Panel"
-         class="hidden absolute bottom-14 sm:bottom-15 right-0 w-[calc(100vw-2rem)] sm:w-[380px] md:w-[410px] max-h-[76vh] sm:max-h-[540px] flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 overflow-hidden transition-all duration-300 origin-bottom-right">
+         class="hidden absolute bottom-14 sm:bottom-15 right-0 w-[calc(100vw-2rem)] sm:w-[380px] md:w-[410px] max-h-[76vh] sm:max-h-[540px] flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 overflow-hidden transition-all duration-300 origin-bottom-right print:hidden">
     
     <!-- Top Header & Branding -->
     <header class="relative px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2.5">

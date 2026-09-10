@@ -40,26 +40,85 @@ export default async function handler(req, res) {
       body: JSON.stringify({ system_key: 'SPES', code, state })
     });
     const consumed = await consumeResponse.json().catch(() => ({}));
-    const externalUserId = Number(consumed?.data?.external_user_id);
-    if (!consumeResponse.ok || !Number.isSafeInteger(externalUserId) || externalUserId < 1) {
+    const payloadData = consumed?.data || {};
+    const externalUserId = Number(payloadData.external_user_id);
+    const incomingName = String(payloadData.full_name || payloadData.name || '').trim();
+    const incomingUsername = String(payloadData.username || '').trim();
+    const incomingEmail = String(payloadData.email || '').trim().toLowerCase();
+
+    if (!consumeResponse.ok || (!Number.isSafeInteger(externalUserId) && !incomingName && !incomingUsername)) {
       return renderError(res, 'This SPES sign-in link is invalid, expired, or already used.');
     }
 
     const supabase = createSupabaseAdmin();
-    const { data: staff, error } = await supabase
-      .from('staffs')
-      .select(`
-        id, username, full_name, email, role_id, office_id, approved, archive_at,
-        staff_permissions!staff_id(
-          view_users, create_users, edit_users, delete_users,
-          export_reports, view_other_offices, view_global_stats, view_payroll
-        ),
-        roles(name)
-      `)
-      .eq('id', externalUserId)
-      .maybeSingle();
-    if (error || !staff || staff.archive_at || !staff.approved) {
-      return renderError(res, 'The assigned SPES account is no longer active.');
+    let staff = null;
+
+    // --- TWO-LOGIC FUNCTION: AUTOMATIC ASSIGNMENT BY DETECTED SAME NAME ---
+    // LOGIC 1: Detect staff with the SAME NAME (case-insensitive) or matching email/username
+    if (incomingName) {
+      const { data: nameMatches } = await supabase
+        .from('staffs')
+        .select(`
+          id, username, full_name, email, role_id, office_id, approved, archive_at,
+          staff_permissions!staff_id(
+            view_users, create_users, edit_users, delete_users,
+            export_reports, view_other_offices, view_global_stats, view_payroll
+          ),
+          roles(name)
+        `)
+        .ilike('full_name', incomingName)
+        .limit(1);
+
+      if (nameMatches && nameMatches.length > 0) {
+        staff = nameMatches[0];
+      }
+    }
+
+    if (!staff && incomingEmail) {
+      const { data: emailMatches } = await supabase
+        .from('staffs')
+        .select(`
+          id, username, full_name, email, role_id, office_id, approved, archive_at,
+          staff_permissions!staff_id(
+            view_users, create_users, edit_users, delete_users,
+            export_reports, view_other_offices, view_global_stats, view_payroll
+          ),
+          roles(name)
+        `)
+        .eq('email', incomingEmail)
+        .limit(1);
+
+      if (emailMatches && emailMatches.length > 0) {
+        staff = emailMatches[0];
+      }
+    }
+
+    if (!staff && incomingUsername) {
+      const { data: userMatches } = await supabase
+        .from('staffs')
+        .select(`
+          id, username, full_name, email, role_id, office_id, approved, archive_at,
+          staff_permissions!staff_id(
+            view_users, create_users, edit_users, delete_users,
+            export_reports, view_other_offices, view_global_stats, view_payroll
+          ),
+          roles(name)
+        `)
+        .eq('username', incomingUsername)
+        .limit(1);
+
+      if (userMatches && userMatches.length > 0) {
+        staff = userMatches[0];
+      }
+    }
+
+    // LOGIC 2: If no staff with the same name was detected, skip assigning to any staff (never default to HR / ID 2)
+    if (!staff) {
+      return renderError(res, 'No registered SPES account was detected matching your name. Access is set to N/A. Please request an administrator to register and approve your account.');
+    }
+
+    if (staff.archive_at || !staff.approved) {
+      return renderError(res, 'The assigned SPES account is pending approval or no longer active.');
     }
 
     const sp = Array.isArray(staff.staff_permissions)
@@ -75,6 +134,9 @@ export default async function handler(req, res) {
     } else if (roleId === 2 || roleName === 'hr') {
       resolvedRole = 'hr';
       resolvedLabel = 'HR';
+    } else if (roleId === 4 || roleName === 'chief') {
+      resolvedRole = 'chief';
+      resolvedLabel = 'Chief';
     }
 
     const isHrOrAdmin = resolvedRole === 'admin' || resolvedRole === 'hr';

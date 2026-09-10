@@ -22,43 +22,54 @@ import { canDo } from "./config.js";
 import { modals } from "../components/modals.js";
 import { initPresence, destroyPresence } from "../components/presence.js";
 
-/**
- * Check if the session belongs to Admin or HR role.
- * Both roles enjoy full baseline capability across the portal.
- */
+// --- START: IS HR OR ADMIN - Check if session belongs to Admin or HR role ---
 export function isHrOrAdmin(session) {
   if (!session) return false;
   const role = String(session.role || "").trim().toLowerCase();
   const roleId = Number(session.role_id);
   return role === "admin" || role === "hr" || roleId === 1 || roleId === 2;
 }
+// --- END: IS HR OR ADMIN ---
+
+// --- START: IS CHIEF - Check if session belongs to Chief role ---
+export function isChief(session) {
+  if (!session) return false;
+  const role = String(session.role || "").trim().toLowerCase();
+  const roleId = Number(session.role_id);
+  return role === "chief" || roleId === 4;
+}
+// --- END: IS CHIEF ---
 
 // Map permission strings used in HTML → DB column names in session.permissions
 const DB_PERM_MAP = {
   // Navigation groups on sidebar
   "beneficiaries:group": (_p, session) => session?.approved === true,
   "beneficiaries:view":  (_p, session) => session?.approved === true,
-  "payroll:view":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_payroll)),
-  "payroll:manage":      (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_payroll)),
+  "beneficiaries:create": (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.create_beneficiaries)),
+  "beneficiaries:edit":   (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.edit_beneficiaries)),
+  "beneficiaries:delete": (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.delete_beneficiaries)),
 
-  "users:group":         (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users)),
-  "users:view":          (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users)),
-  "users:create":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.create_users)),
-  "users:manage":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.create_users || p?.edit_users)),
-  "users:edit":          (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.edit_users)),
-  "users:delete":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.delete_users)),
+  "payroll:view":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || isChief(session) || Boolean(p?.view_payroll)),
+  "payroll:manage":      (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.view_payroll)),
 
-  "offices:view-other":   (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_other_offices)),
-  "analytics:view-global":(p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_global_stats)),
+  "users:group":         (p, session) => session?.approved === true && (isHrOrAdmin(session) || isChief(session) || Boolean(p?.view_users)),
+  "users:view":          (p, session) => session?.approved === true && (isHrOrAdmin(session) || isChief(session) || Boolean(p?.view_users)),
+  "users:create":        (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.create_users)),
+  "users:manage":        (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.create_users || p?.edit_users)),
+  "users:edit":          (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.edit_users)),
+  "users:delete":        (p, session) => session?.approved === true && !isChief(session) && (isHrOrAdmin(session) || Boolean(p?.delete_users)),
 
-  // Roles & Permissions: Accessible to Admin and HR
-  "roles:manage":        (p, session) => session?.approved === true && isHrOrAdmin(session),
+  "offices:view-other":   (p, session) => session?.approved === true && (isHrOrAdmin(session) || isChief(session) || Boolean(p?.view_other_offices)),
+  "analytics:view-global":(p, session) => session?.approved === true && (isHrOrAdmin(session) || isChief(session) || Boolean(p?.view_global_stats)),
 
-  // Approved users may export their own office.
-  "reports:export":      (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.export_reports)),
-  "reports:view":        (p, session) => session?.approved === true && (isHrOrAdmin(session) || Boolean(p?.view_users || p?.export_reports)),
+  // Roles & Permissions: Accessible to Admin and HR (Chief is strictly read-only)
+  "roles:manage":        (p, session) => session?.approved === true && isHrOrAdmin(session) && !isChief(session),
 
-  // Auto Import Tool: STRICTLY ADMIN ONLY (No Officer, No HR)
+  // Approved users may export their own office; users with export_reports or HR/Admin/Chief may export globally.
+  "reports:export":      (_p, session) => session?.approved === true || session?.approved === "true" || session?.approved === 1,
+  "reports:view":        (_p, session) => session?.approved === true || session?.approved === "true" || session?.approved === 1,
+
+  // Auto Import Tool: STRICTLY ADMIN ONLY (No Officer, No HR, No Chief)
   "services:manage":     (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
 };
 
@@ -330,6 +341,10 @@ export function getSession() {
         session.role_id = 3;
         session.role = "officer";
         session.role_label = session.role_label && session.role_label !== "Unknown" ? session.role_label : "Officer";
+      } else if (roleId === 4 || role === "chief") {
+        session.role_id = 4;
+        session.role = "chief";
+        session.role_label = session.role_label && session.role_label !== "Unknown" ? session.role_label : "Chief";
       }
 
       try {
@@ -456,6 +471,9 @@ export function initStaffPermissionsRealtime(staffId) {
                   } else if (session.role_id === 2) {
                     session.role = "hr";
                     session.role_label = "HR";
+                  } else if (session.role_id === 4) {
+                    session.role = "chief";
+                    session.role_label = "Chief";
                   } else {
                     session.role = "officer";
                     session.role_label = "Officer";
@@ -536,16 +554,13 @@ export function requireBeneficiariesAccess() {
   return session;
 }
 
-/**
- * Require payroll access permission (Admin, HR, or approved staff with view_payroll permission).
- * Redirects unauthorized users to the dashboard.
- */
+// --- START: REQUIRE PAYROLL ACCESS - Checks executive or view_payroll permission for payroll page entry ---
 export function requirePayrollAccess() {
   const session = requireAuth();
   if (!session) return null;
-  const isExecutive = isHrOrAdmin(session);
-  const isApproved = session.approved === true;
-  const hasPayrollPerm = isApproved && Boolean(session.permissions?.view_payroll);
+  const isExecutive = isHrOrAdmin(session) || isChief(session);
+  const isApproved = session.approved === true || session.approved === "true" || session.approved === 1 || isChief(session);
+  const hasPayrollPerm = isApproved && (isExecutive || Boolean(session.permissions?.view_payroll));
 
   if (!isExecutive && !hasPayrollPerm) {
     window.location.href = "/src/frontend/pages/dashboard/";
@@ -553,6 +568,7 @@ export function requirePayrollAccess() {
   }
   return session;
 }
+// --- END: REQUIRE PAYROLL ACCESS ---
 
 /**
  * Sign out — set status OFFLINE in DB, clear session + all caches, redirect to login.

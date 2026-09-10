@@ -5,6 +5,7 @@
  * Offices and roles lists are cached in sessionStorage.
  */
 import { supabase } from "./supabase.js";
+import { upsertStaffPermissions } from "./permissions.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 import { preferenceStorage } from "../../frontend/assets/js/components/storage.js";
 
@@ -154,10 +155,16 @@ export async function addStaff(payload) {
   const deployments = clean._batch_deployments;
   delete clean._batch_deployments;
 
+  const isAutoGrantRole = Number(clean.role_id) === 1 || Number(clean.role_id) === 2 || Number(clean.role_id) === 4;
+  if (isAutoGrantRole) {
+    clean.approved = true;
+    clean.office_id = null; // Global roles are not bound to a single local office
+  }
+
   const { data, error } = await supabase
     .from("staffs")
     .insert([clean])
-    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id, created_by")
+    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id, created_by, approved")
     .single();
 
   if (error) {
@@ -171,6 +178,21 @@ export async function addStaff(payload) {
   if (data?.id && Array.isArray(deployments) && deployments.length > 0) {
     preferenceStorage.saveImplementorDeployments(data.id, deployments);
     data.batch_deployments = deployments;
+  }
+
+  if (data?.id && isAutoGrantRole) {
+    try {
+      await upsertStaffPermissions(data.id, {
+        view_users: true,
+        create_users: true,
+        edit_users: true,
+        delete_users: true,
+        export_reports: true,
+        view_other_offices: true,
+        view_global_stats: true,
+        view_payroll: true,
+      });
+    } catch {}
   }
 
   invalidateStaffCache();
@@ -193,6 +215,12 @@ export async function updateStaff(id, payload) {
     clean.office_id = Number(authorization.access.ownOfficeId);
   }
 
+  const isAutoGrantRole = Number(clean.role_id) === 1 || Number(clean.role_id) === 2 || Number(clean.role_id) === 4;
+  if (isAutoGrantRole) {
+    clean.approved = true;
+    clean.office_id = null; // Global roles are not bound to a single local office
+  }
+
   const deployments = clean._batch_deployments;
   delete clean._batch_deployments;
 
@@ -204,7 +232,7 @@ export async function updateStaff(id, payload) {
     .update({ ...clean, updated_at: new Date().toISOString() })
     .eq("id", id)
     .is("archive_at", null)
-    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id")
+    .select("id, full_name, username, email, status, role_id, office_id, beneficiary_id, approved")
     .single();
 
   if (error) {
@@ -218,6 +246,21 @@ export async function updateStaff(id, payload) {
   if (Array.isArray(deployments)) {
     preferenceStorage.saveImplementorDeployments(id, deployments);
     if (data) data.batch_deployments = deployments;
+  }
+
+  if (isAutoGrantRole) {
+    try {
+      await upsertStaffPermissions(id, {
+        view_users: true,
+        create_users: true,
+        edit_users: true,
+        delete_users: true,
+        export_reports: true,
+        view_other_offices: true,
+        view_global_stats: true,
+        view_payroll: true,
+      });
+    } catch {}
   }
 
   invalidateStaffCache();
@@ -379,6 +422,7 @@ function _getStoredSession() {
 // --- START: HAS STAFF MUTATION PERMISSION - checks if session has permission to mutate staff records ---
 function _hasStaffMutationPermission(session, permissionColumn) {
   const access = getOfficeAccessScope(session);
+  if (access.isChief) return false; // Chief is strictly read-only
   return access.isAdmin || access.isHr || (
     session.approved === true &&
     Boolean(session.permissions?.[permissionColumn])
@@ -390,6 +434,9 @@ function _hasStaffMutationPermission(session, permissionColumn) {
 async function _authorizeStaffMutation(ids, permissionColumn) {
   const session = _getStoredSession();
   const access = getOfficeAccessScope(session);
+  if (access.isChief) {
+    return { allowed: false, error: "Chief role has global read-only access. Modifying implementor records is not permitted." };
+  }
   if (!_hasStaffMutationPermission(session, permissionColumn)) {
     return { allowed: false, error: "You do not have permission to manage implementors." };
   }

@@ -218,9 +218,13 @@ function _getStoredSession() {
   }
 }
 
+// --- START: AUTHORIZE BENEFICIARY MUTATION - Validates session and prevents Chief from editing beneficiaries ---
 async function _authorizeBeneficiaryMutation(beneficiaryId) {
   const session = _getStoredSession();
   const access = getOfficeAccessScope(session);
+  if (access.isChief) {
+    return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
+  }
   if (access.isAdmin) return { allowed: true, session, access };
   if (session.approved !== true || access.ownOfficeId == null) {
     return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
@@ -239,10 +243,15 @@ async function _authorizeBeneficiaryMutation(beneficiaryId) {
   }
   return { allowed: true, session, access };
 }
+// --- END: AUTHORIZE BENEFICIARY MUTATION ---
 
+// --- START: AUTHORIZE BENEFICIARY STAFF TARGET - Validates target staff assignment ---
 async function _authorizeBeneficiaryStaffTarget(staffId) {
   const session = _getStoredSession();
   const access = getOfficeAccessScope(session);
+  if (access.isChief) {
+    return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
+  }
   if (access.isAdmin) return { allowed: true, session, access };
   if (session.approved !== true || access.ownOfficeId == null) {
     return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
@@ -260,6 +269,7 @@ async function _authorizeBeneficiaryStaffTarget(staffId) {
   }
   return { allowed: true, session, access, staffId: data.id };
 }
+// --- END: AUTHORIZE BENEFICIARY STAFF TARGET ---
 
 // -- Read -------------------------------------------------------
 /**
@@ -607,7 +617,11 @@ export async function bulkTransferBeneficiaries(ids, {
     session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   } catch {}
 
-  const isAdmin = String(session.role || "").toLowerCase() === "admin";
+  const access = getOfficeAccessScope(session);
+  if (access.isChief) {
+    return { success: false, error: "Chief role has global read-only access. Transferring beneficiaries is not permitted." };
+  }
+  const isAdmin = access.isAdmin;
   if (!isAdmin && session.approved !== true) {
     return { success: false, error: "Your account is not approved for beneficiary transfers." };
   }
@@ -735,9 +749,13 @@ function _chunkIds(ids, chunkSize = 400) {
   return chunks;
 }
 
+// --- START: AUTHORIZE BULK BENEFICIARY MUTATION - Validates bulk archive/restore/delete permissions ---
 async function _authorizeBulkBeneficiaryMutation(ids, { requireAdmin = false, onlyActive = true, onlyArchived = false } = {}) {
   const session = _getStoredSession();
   const access = getOfficeAccessScope(session);
+  if (access.isChief) {
+    return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
+  }
   if (requireAdmin && !access.isAdmin) {
     return { allowed: false, error: "Only administrators can permanently delete beneficiaries." };
   }

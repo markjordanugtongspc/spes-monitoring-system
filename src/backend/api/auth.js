@@ -66,7 +66,7 @@ export async function loginImplementor(username, password) {
     const implementor = data.user;
     const resolvedRoleId = Number(implementor.role_id) || (typeof implementor.role === "number" ? implementor.role : null);
     const roleName = _mapToRbacRole(implementor.role_label ?? implementor.role ?? resolvedRoleId);
-    const finalRoleId = resolvedRoleId || (roleName === "admin" ? 1 : (roleName === "hr" ? 2 : 3));
+    const finalRoleId = resolvedRoleId || (roleName === "admin" ? 1 : (roleName === "hr" ? 2 : (roleName === "chief" ? 4 : 3)));
 
     // The secure session endpoint resolves permissions for this individual
     // staff account. Optional grants no longer inherit from the shared role.
@@ -113,7 +113,7 @@ export async function loginImplementor(username, password) {
       if (updatedStaff?.role_id != null) {
         session.role_id = Number(updatedStaff.role_id);
         session.role = _mapToRbacRole(updatedStaff.roles?.name || session.role_id);
-        session.role_label = updatedStaff.roles?.name || (session.role_id === 1 ? "Admin" : (session.role_id === 2 ? "HR" : "Officer"));
+        session.role_label = updatedStaff.roles?.name || (session.role_id === 1 ? "Admin" : (session.role_id === 2 ? "HR" : (session.role_id === 4 ? "Chief" : "Officer")));
       }
       invalidateImplementorCache();
     }
@@ -164,17 +164,66 @@ export async function updateImplementorPassword(staffId, newPassword) {
 }
 
 // ── Registration ────────────────────────────────────────────────
-// --- START: REGISTER IMPLEMENTOR - Creates new staff account with default Officer role (role_id: 3) ---
+// --- START: REGISTER IMPLEMENTOR - Creates or links staff account using two-logic name detector ---
 /**
  * Register a new staff member (Implementor).
- * Posts directly to the `staffs` table. Password hashing is 
- * handled by the DB trigger `hash_staff_password_trigger`.
+ * Implements a Two-Logic function:
+ * 1. Detects if an existing staff record matches the SAME NAME. If found, links credentials to it.
+ * 2. If no record with the same name exists, skips linking and creates a default Officer account (role_id: 3, not HR).
  *
  * @param {object} staffData
  * @returns {Promise<{ success: boolean, data?: object, error?: string }>}
  */
 export async function registerImplementor(staffData) {
   try {
+    const trimmedName = String(staffData.full_name || "").trim();
+
+    // --- LOGIC 1: Detect existing unlinked staff record with the SAME NAME ---
+    let detectedStaff = null;
+    if (trimmedName) {
+      const { data: existingMatches } = await supabase
+        .from("staffs")
+        .select("id, full_name, role_id, approved, office_id")
+        .ilike("full_name", trimmedName)
+        .limit(1);
+      if (existingMatches && existingMatches.length > 0) {
+        detectedStaff = existingMatches[0];
+      }
+    }
+
+    if (detectedStaff) {
+      // Automatically assign user to the detected record with the same name
+      const updatePayload = {
+        username: staffData.username,
+        email: staffData.email,
+        password: staffData.password, // DB handles hashing
+        office_id: staffData.office_id || detectedStaff.office_id,
+        phone: staffData.phone || null,
+        religion: staffData.religion || null,
+        language: staffData.language || null,
+        status: "OFFLINE",
+        updated_at: new Date().toISOString(),
+      };
+      if (!detectedStaff.role_id) {
+        updatePayload.role_id = 3; // Officer by default, never HR
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from("staffs")
+        .update(updatePayload)
+        .eq("id", detectedStaff.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        if (import.meta.env.DEV) console.error("[SPES Auth] Register update error:", updateError.code);
+        return { success: false, error: "Failed to link existing staff profile. Please try again." };
+      }
+
+      return { success: true, data: updated };
+    }
+
+    // --- LOGIC 2: If no existing staff with the same name, skip linking and create new Officer account ---
     const { data, error } = await supabase
       .from("staffs")
       .insert([
@@ -183,12 +232,12 @@ export async function registerImplementor(staffData) {
           username: staffData.username,
           email: staffData.email,
           password: staffData.password, // DB handles hashing
-          office_id: staffData.office_id,
+          office_id: staffData.office_id || null,
           phone: staffData.phone || null,
           religion: staffData.religion || null,
           language: staffData.language || null,
           status: "OFFLINE", // Default status
-          role_id: 3, // 3 = Officer role by default (1 = Admin, 2 = HR, 3 = Officer)
+          role_id: 3, // Officer role by default (1 = Admin, 2 = HR, 3 = Officer, 4 = Chief)
           approved: false, // New accounts must be explicitly approved
         }
       ])
@@ -212,7 +261,6 @@ export async function registerImplementor(staffData) {
 
     return { success: true, data };
   } catch (err) {
-    // DO NOT console.log the raw inputs or password for security
     if (import.meta.env.DEV) console.error("[SPES Auth] Register catch block error");
     return { success: false, error: "An unexpected error occurred during registration." };
   }
@@ -276,7 +324,8 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
         : (rawSp ?? {});
       const isAdmin = Number(s.role_id) === 1 || String(s.roles?.name || "").toUpperCase() === "ADMIN";
       const isHr = Number(s.role_id) === 2 || String(s.roles?.name || "").toUpperCase() === "HR";
-      const autoAllTrue = isAdmin || (isHr && s.approved === true);
+      const isChief = Number(s.role_id) === 4 || String(s.roles?.name || "").toUpperCase() === "CHIEF";
+      const autoAllTrue = isAdmin || ((isHr || isChief) && (s.approved === true || isChief));
 
       const savedDeployments = preferenceStorage.getImplementorDeployments(s.id);
       const batchDeployments = (savedDeployments && savedDeployments.length > 0)
@@ -359,12 +408,13 @@ export async function logoutImplementor() {
   window.location.href = "/src/frontend/login/";
 }
 
-// --- START: MAP TO RBAC ROLE - Converts DB role id or label to standard RBAC key (admin, hr, officer) ---
+// --- START: MAP TO RBAC ROLE - Converts DB role id or label to standard RBAC key (admin, hr, chief, officer) ---
 /**
  * Map DB role label/id → RBAC role key used throughout the portal.
  * Admin: 1 -> "admin"
  * HR: 2 -> "hr"
  * Officer: 3 -> "officer"
+ * Chief: 4 -> "chief"
  */
 export function _mapToRbacRole(role) {
   if (!role) return "officer";
@@ -374,12 +424,14 @@ export function _mapToRbacRole(role) {
     if (id === 1) return "admin";
     if (id === 2) return "hr";
     if (id === 3) return "officer";
+    if (id === 4) return "chief";
     return "officer";
   }
 
   const lower = String(role).toLowerCase().trim();
   if (lower.includes("admin")) return "admin";
-  if (lower === "hr" || lower.includes("human resource") || lower.includes("hr")) return "hr";
+  if (lower === "hr" || lower === "human resource" || lower === "human resources") return "hr";
+  if (lower === "chief") return "chief";
   if (lower.includes("officer")) return "officer";
   return "officer";
 }

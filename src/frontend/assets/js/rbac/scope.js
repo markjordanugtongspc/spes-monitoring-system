@@ -6,13 +6,14 @@
  * Neither permission grants cross-office create, edit, archive, or transfer access.
  */
 
-// --- START: OFFICE ACCESS SCOPE FUNCTION ---
+// --- START: OFFICE ACCESS SCOPE FUNCTION - Resolves executive, chief, and officer access scope across offices ---
 export function getOfficeAccessScope(session = {}) {
   const role = String(session?.role || "").trim().toLowerCase();
   const roleId = Number(session?.role_id);
   const isAdmin = role === "admin" || roleId === 1;
   const isHr = role === "hr" || roleId === 2;
-  const isExecutive = isAdmin || isHr;
+  const isChief = role === "chief" || roleId === 4;
+  const isExecutive = isAdmin || isHr || isChief;
   const isOfficer = role === "officer" || roleId === 3;
   const permissions = session?.permissions || {};
   const ownOfficeId = session?.office_id ?? null;
@@ -20,15 +21,17 @@ export function getOfficeAccessScope(session = {}) {
   return {
     isAdmin,
     isHr,
+    isChief,
     isExecutive,
     isOfficer,
     ownOfficeId,
-    // Admin and HR can see all global stats and other offices.
+    // Admin, HR, and Chief can see all global stats and other offices.
     // Officers check their individual permission grants.
     canViewGlobalStats: isExecutive || Boolean(permissions.view_global_stats),
     canViewOtherOffices: isExecutive || Boolean(permissions.view_other_offices),
     canManageOffice(targetOfficeId) {
-      if (isExecutive) return true;
+      if (isChief) return false; // Chief is strictly global read-only; editing/managing office data is prohibited
+      if (isAdmin || isHr) return true;
       if (isOfficer) {
         if (targetOfficeId == null) return true;
         if (ownOfficeId == null) return false;

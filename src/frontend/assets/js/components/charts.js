@@ -146,7 +146,7 @@ export async function initDashboardCharts() {
   const session = sessionStr ? JSON.parse(sessionStr) : {};
   const access = getOfficeAccessScope(session);
   const officeId = session.office_id;
-  const isExecutive = access.isAdmin || access.isHr;
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
   const isApproved = isExecutive || session.approved === true;
   const hasRequiredOffice = isExecutive || officeId != null;
 

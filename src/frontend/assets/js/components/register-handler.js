@@ -99,18 +99,28 @@ export function initRegisterHandler() {
       modals.close();
 
       if (result.success) {
+        // Clear the form safely only on success
+        registerForm.reset();
+        
+        // Hide confirm password container and error message after reset
+        const confirmContainer = document.getElementById("reg-confirm-password-container");
+        if (confirmContainer) {
+          confirmContainer.classList.remove("opacity-100", "translate-y-0");
+          confirmContainer.classList.add("opacity-0", "translate-y-2", "hidden");
+        }
+        passwordError?.classList.add("hidden");
+
+        // Auto-switch back to the Sign In panel first
+        const btnShowLogin = document.getElementById('btn-show-login');
+        if (btnShowLogin) {
+          btnShowLogin.click();
+        }
+
+        // Show success notification modal
         await modals.success(
           "Registration Successful!",
           "Your account has been created. You can now sign in using your credentials."
         );
-        
-        // Clear the form safely only on success
-        registerForm.reset();
-        
-        // Auto-switch back to the Sign In panel
-        const btnShowLogin = document.getElementById('btn-show-login');
-        if (btnShowLogin) btnShowLogin.click();
-        
       } else {
         modals.error("Registration Failed", result.error || "Could not create your account.");
       }

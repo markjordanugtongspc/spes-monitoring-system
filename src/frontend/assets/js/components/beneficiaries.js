@@ -1538,14 +1538,30 @@ export function initBeneficiaries() {
       }
     };
 
-    // 1. Administrator first
+    // 1. Position 1: System Administrator
     takeFirst((item) =>
       String(item.full_name || "").trim().toLowerCase() === "system administrator" ||
       String(item.username || "").trim().toLowerCase() === "admin" ||
-      String(item.role || "").toLowerCase().includes("admin")
+      Number(item.role_id) === 1 ||
+      String(item.role || "").toUpperCase() === "ADMIN"
     );
-    // 2. ILIGAN CITY second (below Administrator)
-    takeFirst((item) => isIliganLguOffice(item));
+
+    // 2. Position 2: Chief Role
+    takeFirst((item) =>
+      Number(item.role_id) === 4 ||
+      String(item.role || "").toUpperCase() === "CHIEF" ||
+      String(item.username || "").trim().toLowerCase().includes("chief") ||
+      String(item.full_name || "").trim().toLowerCase().includes("chief")
+    );
+
+    // 3. Position 3: HR / Lace Torregosa Arellano
+    takeFirst((item) =>
+      Number(item.role_id) === 2 ||
+      String(item.role || "").toUpperCase() === "HR" ||
+      String(item.username || "").trim().toLowerCase() === "lace_arellano" ||
+      String(item.username || "").trim().toLowerCase().includes("lace") ||
+      isIliganLguOffice(item)
+    );
 
     return [
       ...pinned,

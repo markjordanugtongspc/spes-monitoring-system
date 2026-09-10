@@ -1251,8 +1251,14 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
 
     if (!payload.full_name) return _showError("Full name is required.");
     if (!payload.username) return _showError("Username is required.");
-    if (!payload.office_id) return _showError("Please select an office.");
     if (!payload.role_id) return _showError("Please select a role.");
+
+    const isGlobalRole = Number(payload.role_id) === 1 || Number(payload.role_id) === 2 || Number(payload.role_id) === 4;
+    if (isGlobalRole) {
+      payload.office_id = null;
+    } else {
+      if (!payload.office_id) return _showError("Please select an office.");
+    }
 
     const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
     const isCallerHr = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
@@ -1293,6 +1299,9 @@ export function initAddImplementorDrawer({ onSuccess } = {}) {
       } else if (session.role_id === 2) {
         session.role = "hr";
         session.role_label = "HR";
+      } else if (session.role_id === 4) {
+        session.role = "chief";
+        session.role_label = "Chief";
       } else {
         session.role = "officer";
         session.role_label = "Officer";

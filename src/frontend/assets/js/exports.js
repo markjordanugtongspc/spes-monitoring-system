@@ -11,6 +11,7 @@ import { fetchOffices } from "../../../backend/api/staff.js";
 import { fetchBatches } from "../../../backend/api/beneficiary.js";
 import { initExportButtonTilt } from "./components/animations.js";
 import { notepad } from "./components/notepad.js";
+import { preferenceStorage } from "./components/storage.js";
 
 // ── Column definitions ────────────────────────────────────────
 const BENEF_COLUMNS = [
@@ -32,6 +33,7 @@ const BENEF_COLUMNS = [
 const IMPL_COLUMNS = [
   { key: "id_display", label: "ID No.",      default: true  },
   { key: "full_name",  label: "Name",        default: true  },
+  { key: "batch",      label: "Batch",       default: true  },
   { key: "office",     label: "Office",      default: true  },
   { key: "role",       label: "Designation", default: true  },
   { key: "status",     label: "Status",      default: true  },
@@ -85,6 +87,10 @@ async function _boot(user) {
       user.role_id = 2;
       user.role = "hr";
       user.role_label = "HR";
+    } else if (rid === 4 || r === "chief") {
+      user.role_id = 4;
+      user.role = "chief";
+      user.role_label = "Chief";
     } else if (rid === 3 || r === "officer") {
       user.role_id = 3;
       user.role = "officer";
@@ -126,6 +132,9 @@ async function _boot(user) {
       } else if (user.role_id === 2 || rName === "hr") {
         user.role = "hr";
         user.role_label = "HR";
+      } else if (user.role_id === 4 || rName === "chief") {
+        user.role = "chief";
+        user.role_label = "Chief";
       } else {
         user.role = "officer";
         user.role_label = "Officer";
@@ -159,8 +168,9 @@ async function _boot(user) {
 
   // Approved users receive baseline export access for their own office.
   // Cross-office export remains an explicit elevated permission.
-  const isAdmin = getOfficeAccessScope(user).isAdmin;
-  const canExport = isAdmin || (user.approved === true && user.office_id != null);
+  const access = getOfficeAccessScope(user);
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
+  const canExport = isExecutive || (user.approved === true && user.office_id != null);
   if (!canExport) {
     const { modals } = await import("./components/modals.js");
     const denialMessage = user.approved === true && user.office_id == null
@@ -184,22 +194,26 @@ async function _boot(user) {
 // --- START: LOAD DATA - Fetches offices, beneficiaries, implementors, and batches respecting access scope ---
 async function _loadData(user) {
   const access = getOfficeAccessScope(user);
-  const isAdmin = access.isAdmin;
-  const canExportOtherOffices =
-    isAdmin ||
-    (access.canViewOtherOffices && Boolean(user.permissions?.export_reports));
-  // Approved users without both elevated permissions remain scoped to their
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
+  const hasCrossOfficePerm = Boolean(
+    user?.permissions?.export_reports === true ||
+    user?.permissions?.export_reports === "true" ||
+    user?.permissions?.export_reports === 1 ||
+    user?.permissions?.view_other_offices
+  );
+  const canExportOtherOffices = isExecutive || hasCrossOfficePerm;
+  // Approved users without elevated permissions remain scoped to their
   // assigned office for beneficiaries and implementors.
   const scopeToOwnOffice = !canExportOtherOffices;
 
-  // Build beneficiary select — for officers scope via staffs!staff_id inner join
+  // Build beneficiary select — for restricted officers scope via staffs!staff_id inner join
   // so only beneficiaries whose assigned staff belongs to the officer's office are returned.
   let benefSelectStr = "id, full_name, age, gender_id, address, contact_number, relationship, year_period, month_period, birthday, designated, batch_id, educ_id, education:educ_id(name), batch:batch_id(id, batch_name)";
-  if (!isAdmin && scopeToOwnOffice && user.office_id) {
+  if (scopeToOwnOffice && user.office_id) {
     // Inner join: excludes beneficiaries with no staff or staff in a different office
     benefSelectStr += ", staffs!staff_id!inner(office_id, full_name, offices!office_id(id, name, location))";
   } else {
-    // Outer join: admin or officer with cross-office view gets all, with office info attached
+    // Outer join: executive or officer with cross-office export gets all, with office info attached
     benefSelectStr += ", staffs!staff_id(office_id, full_name, offices!office_id(id, name, location))";
   }
 
@@ -214,7 +228,7 @@ async function _loadData(user) {
 
     // Server-side office scope prevents a restricted user's first 1,000
     // global rows from hiding in-scope rows that occur later in the table.
-    if (!isAdmin && scopeToOwnOffice && user.office_id) {
+    if (scopeToOwnOffice && user.office_id) {
       query = query.eq("staffs.office_id", user.office_id);
     }
     return query;
@@ -281,22 +295,38 @@ async function _loadData(user) {
     const { data, error } = staffsRes;
     if (import.meta.env.DEV && error) console.warn("[SPES Exports] staffs fetch:", error.message ?? error);
 
-    // RBAC scoping: officers without users:view export only their own office's staff
+    // RBAC scoping: officers without cross-office export permission export only their own office's staff
     let rows = data ?? [];
     if (scopeToOwnOffice) {
       rows = user.office_id != null ? rows.filter(s => s.office_id === user.office_id) : [];
     }
 
-    _allImplementors = rows.map(s => ({
-      ...s,
-      id_display: `ROX-RD-IMPL-${String(s.id).padStart(4, "0")}`,
-      office:     s.offices?.name ?? "N/A",
-      role:       s.roles?.name ?? "N/A",
-      status:     s.archive_at ? "Archived" : (s.status ?? "Offline"),
-      start_date: _formatDateVal(s.started_at || s.start_date),
-      end_date:   _formatDateVal(s.ended_at || s.end_date),
-      _group:     s.offices?.name ?? "Unknown",
-    }));
+    _allImplementors = rows.map(s => {
+      const savedDeployments = preferenceStorage?.getImplementorDeployments?.(s.id);
+      const deployments = (Array.isArray(s.batch_deployments) && s.batch_deployments.length > 0)
+        ? s.batch_deployments
+        : (Array.isArray(savedDeployments) && savedDeployments.length > 0)
+          ? savedDeployments
+          : (s.started_at || s.ended_at)
+            ? [{ batch_id: 1, batch_name: "Batch 1" }]
+            : [];
+
+      const batchLabel = deployments.length > 0
+        ? deployments.map(d => d.batch_name || (d.batch_id ? `Batch ${d.batch_id}` : "Batch")).join(", ")
+        : (s.batch_name || (s.batch_id ? `Batch ${s.batch_id}` : (s.batch || "N/A")));
+
+      return {
+        ...s,
+        id_display: `ROX-RD-IMPL-${String(s.id).padStart(4, "0")}`,
+        office:     s.offices?.name ?? "N/A",
+        batch:      batchLabel,
+        role:       s.roles?.name ?? "N/A",
+        status:     s.archive_at ? "Archived" : (s.status ?? "Offline"),
+        start_date: _formatDateVal(s.started_at || s.start_date),
+        end_date:   _formatDateVal(s.ended_at || s.end_date),
+        _group:     s.offices?.name ?? "Unknown",
+      };
+    });
   }
 
   // Populate batch filter options in configure drawer
@@ -587,13 +617,15 @@ function _cellHtml(row, key) {
 // --- START: INIT DRAWER - Initializes Configure Reports drawer and office checkboxes ---
 function _initDrawer(user) {
   const access = getOfficeAccessScope(user);
-  const isAdmin = access.isAdmin;
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
+  const hasCrossOfficePerm = Boolean(
+    user?.permissions?.export_reports === true ||
+    user?.permissions?.export_reports === "true" ||
+    user?.permissions?.export_reports === 1 ||
+    user?.permissions?.view_other_offices
+  );
 
-  // Cross-office exporting requires both read-only cross-office access and
-  // the dedicated export expansion permission.
-  const canViewOtherOffices =
-    isAdmin ||
-    (access.canViewOtherOffices && Boolean(user.permissions?.export_reports));
+  const canViewOtherOffices = isExecutive || hasCrossOfficePerm || access.canViewOtherOffices;
 
   // Populate office checkboxes — restricted officers only ever see their own office
   const officeList    = document.getElementById("cfg-office-list");
@@ -1443,6 +1475,15 @@ function _print() {
     @media print { 
       @page { size: ${_cfg.orientation}; margin: ${margin}; } 
       #print-area { zoom: 0.92; } /* Shrinks layout to prevent margin collision */
+      #spes-notepad-floating-container,
+      #tooltip-spes-notepad,
+      #spes-notepad-panel,
+      .spes-notepad-floating,
+      [data-tooltip-target="tooltip-spes-notepad"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+      }
     }
   `;
 

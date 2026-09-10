@@ -30,7 +30,8 @@ export default async function handler(req, res) {
           export_reports,
           view_other_offices,
           view_global_stats,
-          view_payroll
+          view_payroll,
+          staffs ( role_id, approved )
         `);
 
       if (error) {
@@ -41,9 +42,11 @@ export default async function handler(req, res) {
       const map = {};
       for (const row of data ?? []) {
         if (row.staff_id != null) {
+          const roleId = Number(row.staffs?.role_id);
+          const isAuto = roleId === 1 || roleId === 2 || roleId === 4;
           map[row.staff_id] = {};
           for (const field of ALLOWED_FIELDS) {
-            map[row.staff_id][field] = Boolean(row[field]);
+            map[row.staff_id][field] = isAuto ? true : Boolean(row[field]);
           }
         }
       }
@@ -129,13 +132,13 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const rows = staffIds.map((id) => {
       const target = targetMap.get(Number(id));
-      const isHrTarget = target && Number(target.role_id) === 2;
+      const isAutoTarget = target && (Number(target.role_id) === 2 || Number(target.role_id) === 4);
       const existing = existingMap.get(Number(id)) || {};
       const merged = {};
 
       for (const field of ALLOWED_FIELDS) {
-        if (isHrTarget) {
-          // HR automatically gets true for all permissions once approved
+        if (isAutoTarget) {
+          // HR and Chief automatically get true for all permissions once approved
           merged[field] = target.approved === true;
         } else if (field in permPayload) {
           merged[field] = Boolean(permPayload[field]);

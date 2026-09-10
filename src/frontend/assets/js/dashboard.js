@@ -223,6 +223,9 @@ async function init(user) {
           } else if (user.role_id === 2 || rName === "hr") {
             user.role = "hr";
             user.role_label = "HR";
+          } else if (user.role_id === 4 || rName === "chief") {
+            user.role = "chief";
+            user.role_label = "Chief";
           } else {
             user.role = "officer";
             user.role_label = "Officer";
@@ -244,9 +247,11 @@ async function init(user) {
   const path = window.location.pathname;
   const isAdmin = user.role === "admin" || Number(user.role_id) === 1;
   const isHr = user.role === "hr" || Number(user.role_id) === 2;
+  const isChief = user.role === "chief" || Number(user.role_id) === 4;
+  const isExecutive = isAdmin || isHr || isChief;
 
   // Page-level Authorization Guards
-  const isApproved = isAdmin || isHr || user.approved === true;
+  const isApproved = isExecutive || user.approved === true;
 
   if (path.includes("/beneficiaries/")) {
     if (!isApproved) {
@@ -258,7 +263,7 @@ async function init(user) {
   }
 
   if (path.includes("/implementors/")) {
-    const canViewUsers = isApproved && (isAdmin || isHr || (user.permissions && user.permissions.view_users));
+    const canViewUsers = isApproved && (isExecutive || (user.permissions && user.permissions.view_users));
     if (!canViewUsers) {
       modals.error("Access Denied", "You do not have permission to view the Implementor Directory.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
@@ -268,9 +273,9 @@ async function init(user) {
   }
 
   if (path.includes("/roles/")) {
-    // Roles & Permissions is accessible to Administrators and HR
-    if (!isAdmin && !isHr) {
-      modals.error("Access Denied", "Only Administrators and HR have permission to view or manage roles and permissions.").then(() => {
+    // Roles & Permissions is accessible to Administrators, HR, and Chief (read-only)
+    if (!isExecutive) {
+      modals.error("Access Denied", "Only Administrators, HR, and Chief have permission to view roles and permissions.").then(() => {
         window.location.href = "/src/frontend/pages/dashboard/";
       });
       return;
@@ -323,7 +328,6 @@ async function init(user) {
   }
 
   if (path.includes("/dashboard/")) {
-    const isExecutive = isAdmin || isHr;
     const viewAllLink = document.getElementById("dashboard-view-all-link");
     if (viewAllLink) {
       if (!isApproved) {
@@ -473,6 +477,7 @@ function isIliganLguOffice(officeName) {
   return isLguIliganOffice(officeName) || String(officeName || "").trim().toLowerCase() === "lace" || String(officeName || "").trim().toLowerCase().includes("lace iligan");
 }
 
+// --- START: PIN SYSTEM ADMINISTRATOR FIRST - Pins 1. Admin, 2. Chief, 3. HR at the top of the roster ---
 function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lguOfficeIds = null) {
   const ordered = [...items];
   if (!shouldPin) return ordered;
@@ -488,16 +493,27 @@ function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lg
     }
   };
 
-  // 1. Top Pinned: Admin
+  // 1. Top Pinned (Position 1): System Administrator
   takeFirst((item) => 
     String(item.full_name || "").trim().toLowerCase() === "system administrator" || 
     String(item.username || "").trim().toLowerCase() === "admin" ||
+    Number(item.role_id) === 1 ||
     String(item.role || "").toUpperCase() === "ADMIN"
   );
 
-  // 2. Second Pinned: HR / @lace_arrellano
+  // 2. Second Pinned (Position 2): Chief Role
   takeFirst((item) => 
-    String(item.username || "").trim().toLowerCase() === "lace_arrellano" ||
+    Number(item.role_id) === 4 ||
+    String(item.role || "").toUpperCase() === "CHIEF" ||
+    String(item.username || "").trim().toLowerCase().includes("chief") ||
+    String(item.full_name || "").trim().toLowerCase().includes("chief")
+  );
+
+  // 3. Third Pinned (Position 3): HR / Lace Torregosa Arellano
+  takeFirst((item) => 
+    Number(item.role_id) === 2 ||
+    String(item.role || "").toUpperCase() === "HR" ||
+    String(item.username || "").trim().toLowerCase() === "lace_arellano" ||
     String(item.username || "").trim().toLowerCase().includes("lace") ||
     (lguOfficeIds instanceof Set
       ? lguOfficeIds.has(String(item.office_id)) || isLguIliganOffice(item.office)
@@ -516,6 +532,7 @@ function pinSystemAdministratorFirst(items, shouldPin, groupApproval = false, lg
 
   return [...pinned, ...approved, ...unapproved];
 }
+// --- END: PIN SYSTEM ADMINISTRATOR FIRST ---
 let allImplementors = [];
 let allStaffPermissions = {};
 const selectedPermissionStaffIds = new Set();
@@ -1227,16 +1244,21 @@ function renderTableRows(implementors, userRole) {
       const staffPerms = allStaffPermissions[staffId] || allStaffPermissions[s.id] || allStaffPermissions[String(s.id)] || s.permissions || {};
       const isAdmin   = s.role === "ADMIN" || s.role === "admin" || Number(s.role_id) === 1;
       const isHr      = s.role === "HR" || s.role === "hr" || Number(s.role_id) === 2;
+      const isChief   = s.role === "CHIEF" || s.role === "chief" || Number(s.role_id) === 4;
       const isCallerAdmin = session.role === "admin" || Number(session.role_id) === 1;
       const isCallerHr    = session.role === "hr" || session.role === "HR" || Number(session.role_id) === 2;
 
       // Admin account cannot be modified. Approved HR accounts have all permissions automatically active.
-      // HR callers cannot modify Admin accounts or permissions.
-      const canSelectPermissions = !isAdmin && !(isCallerHr && isAdmin) && !(isHr && s.approved === true) && s.approved === true;
+      // Chief accounts have global read-only permissions fixed and cannot be toggled.
+      const canSelectPermissions = !isAdmin && !isChief && !(isCallerHr && isAdmin) && !(isHr && s.approved === true) && s.approved === true;
 
       const hasPerm = (perm) => {
         if (isAdmin) return true;
         if (isHr && s.approved) return true;
+        if (isChief) {
+          // Chief has viewing permissions enabled and mutation permissions disabled
+          return perm === "users:view" || perm === "offices:view-other" || perm === "analytics:view-global" || perm === "reports:export" || perm === "payroll:view";
+        }
         if (!s.approved) return false;
         const col = PERM_COL_MAP[perm];
         const val = staffPerms?.[col] ?? s.permissions?.[col];
@@ -1290,11 +1312,13 @@ function renderTableRows(implementors, userRole) {
             const description = ROLE_PERMISSION_DESCRIPTIONS[perm];
             const tooltipText = isAdmin
               ? `${description} Administrators always have all permissions.`
-              : isHr && s.approved
-                ? `${description} HR accounts automatically have all permissions upon approval.`
-                : !s.approved
-                  ? `${description} Approve this account before assigning optional permissions.`
-                  : description;
+              : isChief
+                ? `${description} Chief role has global read-only permissions.`
+                : isHr && s.approved
+                  ? `${description} HR accounts automatically have all permissions upon approval.`
+                  : !s.approved
+                    ? `${description} Approve this account before assigning optional permissions.`
+                    : description;
             return `
               <td class="px-6 py-4 text-center">
                 <div class="relative group inline-flex items-center justify-center">
@@ -1800,17 +1824,20 @@ async function showEditStaffModal(staff) {
 
 // ── Permissions page handlers ─────────────────────────────────
 
+// --- START: ELIGIBLE PERMISSION STAFF - Filters approved officers eligible for custom permissions ---
 function eligiblePermissionStaff() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
   return allImplementors.filter((staff) => {
     if (staff.approved !== true) return false;
     const isStaffAdmin = String(staff.role).toUpperCase() === "ADMIN" || Number(staff.role_id) === 1;
     const isStaffHr = String(staff.role).toUpperCase() === "HR" || Number(staff.role_id) === 2;
-    // Admins and approved HR have all permissions automatically active and fixed to true
-    if (isStaffAdmin || isStaffHr) return false;
+    const isStaffChief = String(staff.role).toUpperCase() === "CHIEF" || Number(staff.role_id) === 4;
+    // Admins, approved HR, and Chief have all permissions automatically active and fixed to true
+    if (isStaffAdmin || isStaffHr || isStaffChief) return false;
     return true;
   });
 }
+// --- END: ELIGIBLE PERMISSION STAFF ---
 
 function updatePermissionSelectionControls() {
   const eligibleIds = new Set(eligiblePermissionStaff().map((staff) => Number(staff.id)));
@@ -2200,9 +2227,13 @@ function setupDashboardListToggle(user) {
 }
 
 // ── Supabase Realtime Permissions Listener ────────────────────────
+let permissionsTransitionInProgress = false;
+
 function setupRealtimePermissionsListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  if (!session || !session.id || session.role === "admin") return;
+  const isExecutive = session.role === "admin" || session.role === "hr" || session.role === "chief" ||
+                      Number(session.role_id) === 1 || Number(session.role_id) === 2 || Number(session.role_id) === 4;
+  if (!session || !session.id || isExecutive) return;
 
   supabase
     .channel(`staff-permissions-${session.id}`)
@@ -2211,27 +2242,35 @@ function setupRealtimePermissionsListener() {
       {
         event: "UPDATE",
         schema: "public",
-        table: "staffs",
-        filter: `id=eq.${session.id}`
+        table: "staff_permissions",
+        filter: `staff_id=eq.${session.id}`
       },
       async (payload) => {
+        if (!payload.new || permissionsTransitionInProgress) return;
+        const currentSession = JSON.parse(localStorage.getItem("spes_session") || "{}");
+        const currentPerms = currentSession.permissions || {};
+
         const permissionChanged = Object.values(PERM_COL_MAP).some((field) => {
-          return Boolean(payload.new?.[`perm_${field}`]) !== Boolean(session.permissions?.[field]);
+          return Boolean(payload.new[field]) !== Boolean(currentPerms[field]);
         });
         if (!permissionChanged) return;
         if (import.meta.env.DEV) console.log("[SPES Realtime] Individual permissions updated:", payload);
-        
+
+        permissionsTransitionInProgress = true;
+
         // Refresh local cache and localStorage
         const { data: freshPerms } = await fetchStaffPermissions(session.id, { forceRefresh: true });
         if (freshPerms) {
-          session.permissions = freshPerms;
-          localStorage.setItem("spes_session", JSON.stringify(session));
-          
+          currentSession.permissions = freshPerms;
+          localStorage.setItem("spes_session", JSON.stringify(currentSession));
+          sessionStorage.setItem("spes_session", JSON.stringify(currentSession));
+          await applyPermissions(currentSession.role);
+
           Swal.fire({
             title: "Permissions Updated",
             text: "Your individual access permissions were updated and are being synchronized automatically.",
             icon: "info",
-            timer: 3000,
+            timer: 2500,
             timerProgressBar: true,
             showConfirmButton: false,
             customClass: {
@@ -2240,8 +2279,10 @@ function setupRealtimePermissionsListener() {
             background: document.documentElement.classList.contains("dark") ? "#111827" : "#ffffff",
             color: document.documentElement.classList.contains("dark") ? "#f3f4f6" : "#1f2937"
           }).then(() => {
-            window.location.reload();
+            permissionsTransitionInProgress = false;
           });
+        } else {
+          permissionsTransitionInProgress = false;
         }
       }
     )
@@ -2307,7 +2348,9 @@ async function reconcileApprovalState(staffId) {
 
 function setupRealtimeApprovalListener() {
   const session = JSON.parse(localStorage.getItem("spes_session") || "{}");
-  if (!session || !session.id || session.role === "admin") return;
+  const isExecutive = session.role === "admin" || session.role === "hr" || session.role === "chief" ||
+                      Number(session.role_id) === 1 || Number(session.role_id) === 2 || Number(session.role_id) === 4;
+  if (!session || !session.id || isExecutive) return;
 
   const channel = supabase
     .channel(`dashboard-approval-${session.id}`)

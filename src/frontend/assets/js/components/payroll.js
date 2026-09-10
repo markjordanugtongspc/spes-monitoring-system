@@ -195,6 +195,15 @@ function isHrOrAdmin(session) {
   return isAdm || isHr;
 }
 
+// --- START: CHIEF PERMISSION HELPER - Checks if session belongs to Chief role ---
+function isChief(session) {
+  if (!session) return false;
+  const role = String(session.role || "").trim().toLowerCase();
+  const roleId = Number(session.role_id);
+  return role === "chief" || roleId === 4;
+}
+// --- END: CHIEF PERMISSION HELPER ---
+
 /**
  * Validates whether the deployment start date is set and not "N/A", null, or empty.
  * @param {string|null} val
@@ -216,15 +225,15 @@ function updateExecutiveSummaryCards(beneficiaries, forceFromZero = false, isFir
   const session = getSession();
   const access = getOfficeAccessScope(session);
   const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
-  const isExecutive = access.canViewGlobalStats && !isOfficer; // true for Admin and HR only
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
 
   // Global pool: full beneficiary roster across all offices for literal global budget & balance
   const globalPool = (globalBeneficiaries && globalBeneficiaries.length > 0) ? globalBeneficiaries : (beneficiaries || []);
   const globalStats = computePayrollExecutiveSummary(globalPool, customGeneralBudget);
 
   // Scoped pool for Card 02 (Paid) and Card 03 (Pending):
-  // For Admin / HR: Global stats
-  // For Officer: Scoped strictly to their own assigned office
+  // For Executive (Admin, HR, Chief): Global stats
+  // For Standard Officer: Scoped strictly to their own assigned office
   const officeId = session?.office_id;
   const scopedBeneficiaries = isExecutive
     ? globalPool
@@ -1144,14 +1153,39 @@ function initPayrollRowDragAndDrop() {
 
 // --- START: PAYROLL RBAC ACTION GATING ---
 /**
- * Restricts payroll actions for non-admin/HR users without an active deployment date (started_at).
- * Allows view-only access, but disables modification and export actions.
+ * Restricts payroll actions for non-admin/HR users without an active deployment date (started_at),
+ * and enforces global read-only rules for the Chief role while keeping exports fully unlocked.
  */
 function applyPayrollActionGating(session) {
   const currentSession = session || getSession();
   if (!currentSession) return;
 
   if (isHrOrAdmin(currentSession)) return; // Full access bypass for admin / HR
+
+  if (isChief(currentSession)) {
+    // Chief: Full global oversight & export access, but mutation actions are disabled/hidden
+    const disableTargets = [
+      document.getElementById("btn-toggle-inline-edit"),
+      document.getElementById("btn-bulk-disburse"),
+      document.getElementById("btn-payroll-bulk-actions"),
+      document.getElementById("btn-switch-to-edit-drawer"),
+      ...document.querySelectorAll(".btn-quick-edit-row"),
+      ...document.querySelectorAll(".btn-toggle-pay-row"),
+      ...document.querySelectorAll(".payroll-row-checkbox"),
+      document.getElementById("payroll-checkbox-all"),
+    ].filter(Boolean);
+
+    disableTargets.forEach(el => {
+      el.classList.add("pointer-events-none", "opacity-40", "cursor-not-allowed");
+      el.setAttribute("disabled", "true");
+      el.setAttribute("title", "Chief role has global read-only oversight.");
+    });
+
+    document.querySelectorAll(".beneficiary-row").forEach(r => {
+      r.removeAttribute("draggable");
+    });
+    return;
+  }
 
   const hasStartDate = hasValidDeploymentDate(currentSession.started_at);
   if (hasStartDate) return; // Has deployment start date -> full payroll action access
@@ -2434,7 +2468,9 @@ async function refreshPayrollData({ silent = true } = {}) {
     }
 
     const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
-    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+    const isExecutive = access.isAdmin || access.isHr || access.isChief;
+    const shouldScopeToOwnOffice = !access.canViewOtherOffices && !isExecutive && session?.office_id;
+    if (shouldScopeToOwnOffice) {
       allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
       allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
       allImplementors = allImplementors.filter(
@@ -2508,7 +2544,22 @@ export async function initPayroll() {
         session.ended_at = staffRes.data.ended_at;
         session.approved = staffRes.data.approved;
         if (staffRes.data.office_id != null) session.office_id = staffRes.data.office_id;
-        if (staffRes.data.role_id != null) session.role_id = staffRes.data.role_id;
+        if (staffRes.data.role_id != null) {
+          session.role_id = Number(staffRes.data.role_id);
+          if (session.role_id === 1) {
+            session.role = "admin";
+            session.role_label = "Admin";
+          } else if (session.role_id === 2) {
+            session.role = "hr";
+            session.role_label = "HR";
+          } else if (session.role_id === 4) {
+            session.role = "chief";
+            session.role_label = "Chief";
+          } else {
+            session.role = "officer";
+            session.role_label = "Officer";
+          }
+        }
       }
       if (permRes?.data) {
         session.permissions = {
@@ -2533,7 +2584,9 @@ export async function initPayroll() {
 
   const access = getOfficeAccessScope(session);
   const isOfficer = String(session?.role || "").trim().toLowerCase() === "officer" || Number(session?.role_id) === 3;
-  const canEditBudgets = isHrOrAdmin(session) && !isOfficer;
+  const isChiefUser = isChief(session);
+  const isExecutive = access.isAdmin || access.isHr || access.isChief;
+  const canEditBudgets = isHrOrAdmin(session) && !isOfficer && !isChiefUser;
   const editDataBtn = document.getElementById("btn-toggle-inline-edit");
   if (editDataBtn) {
     if (!canEditBudgets) {
@@ -2559,7 +2612,8 @@ export async function initPayroll() {
     allOffices = cachedData.offices || [];
     allImplementors = cachedData.implementors || [];
 
-    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+    const shouldScopeToOwnOffice = !access.canViewOtherOffices && !isExecutive && session?.office_id;
+    if (shouldScopeToOwnOffice) {
       allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
       allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
       allImplementors = allImplementors.filter(
@@ -2596,7 +2650,8 @@ export async function initPayroll() {
     allImplementors = implRes || [];
     allBatches = batchRes?.data || [];
 
-    if ((!access.canViewOtherOffices || isOfficer) && session?.office_id) {
+    const shouldScopeToOwnOffice = !access.canViewOtherOffices && !isExecutive && session?.office_id;
+    if (shouldScopeToOwnOffice) {
       allOffices = allOffices.filter(o => String(o.id) === String(session.office_id));
       allBeneficiaries = globalBeneficiaries.filter(b => String(b.staffs?.office_id) === String(session.office_id));
       allImplementors = allImplementors.filter(
