@@ -321,7 +321,15 @@ export function highlightSidebarActiveLink(navId) {
 export function getSession() {
   try {
     // SSO writes only safe display data to this tab. Authentication remains the HttpOnly server cookie.
-    const raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
+    let raw = sessionStorage.getItem("spes_session") || localStorage.getItem("spes_session");
+    if (!raw && typeof document !== "undefined" && document.cookie) {
+      const match = document.cookie.split("; ").find((row) => row.startsWith("spes_user="));
+      if (match) {
+        try {
+          raw = decodeURIComponent(match.split("=").slice(1).join("="));
+        } catch {}
+      }
+    }
     if (!raw) return null;
     const session = JSON.parse(raw);
     if (session) {
