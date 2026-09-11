@@ -19,7 +19,10 @@ const createSpesAdmin = () => {
 
 /* START CONSUME PORTAL SSO TOKEN - Validates authorization code with Portal SSO API */
 const consumePortalToken = async (code, state) => {
-    const portalBaseUrl = (process.env.PORTAL_SSO_CONSUME_URL || process.env.PORTAL_API_URL || process.env.PORTAL_URL || 'https://dole-portal.vercel.app').replace(/\/$/, '');
+    let portalBaseUrl = (process.env.PORTAL_SSO_CONSUME_URL || process.env.PORTAL_API_URL || process.env.PORTAL_URL || 'https://dole-portal.vercel.app').replace(/\/$/, '');
+    if (portalBaseUrl.includes('localhost:5173')) {
+        portalBaseUrl = 'https://dole-portal.vercel.app';
+    }
     const consumeEndpoint = portalBaseUrl.endsWith('/api/sso/consume') ? portalBaseUrl : `${portalBaseUrl}/api/sso/consume`;
     const clientSecret = process.env.PORTAL_SSO_CLIENT_SECRET || process.env.SSO_SPES_CLIENT_SECRET || process.env.SPES_CLIENT_SECRET || '';
     

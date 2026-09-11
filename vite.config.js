@@ -147,6 +147,7 @@ function spesVercelApiDev(env) {
     "/api/batch": () => import("./api/batch.js"),
     "/api/beacon": () => import("./api/beacon.js"),
     "/sso/callback": () => import("./api/sso/callback.js"),
+    "/api/sso/callback": () => import("./api/sso/callback.js"),
   };
 
   for (const name of [
