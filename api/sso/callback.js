@@ -37,8 +37,7 @@ const consumePortalToken = async (code, state) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-sso-client-secret': clientSecret,
-            'X-SSO-Client-Secret': clientSecret
+            'x-sso-client-secret': clientSecret
         },
         body: JSON.stringify({
             system_key: 'SPES',
