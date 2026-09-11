@@ -6,8 +6,8 @@ const EXECUTIVE_ROLE_IDS = new Set([1, 2, 4]); // 1 = Admin, 2 = HR, 4 = Chief
 
 /* START CREATE SPES SUPABASE ADMIN CLIENT - Initializes privileged Supabase client for SSO verification */
 const createSpesAdmin = () => {
-    const url = process.env.SPES_SUPABASE_URL || process.env.VITE_SPES_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const serviceKey = process.env.SPES_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SPES_SUPABASE_ANON_KEY || process.env.VITE_SPES_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const url = process.env.SPES_SUPABASE_URL || process.env.VITE_SPES_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://pprmqnrevuyllhkxejbu.supabase.co';
+    const serviceKey = process.env.SPES_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SPES_SUPABASE_ANON_KEY || process.env.VITE_SPES_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwcm1xbnJldnV5bGxoa3hlamJ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc2ODI3MywiZXhwIjoyMDk1MzQ0MjczfQ.PzskDM5K_6kIwk4cas91gR0285bxxP631V5ZzZRRqkk';
     if (!url || !serviceKey) {
         throw new Error('SPES Supabase credentials are not configured in environment variables.');
     }
@@ -24,7 +24,14 @@ const consumePortalToken = async (code, state) => {
         portalBaseUrl = 'https://dole-portal.vercel.app';
     }
     const consumeEndpoint = portalBaseUrl.endsWith('/api/sso/consume') ? portalBaseUrl : `${portalBaseUrl}/api/sso/consume`;
-    const clientSecret = process.env.PORTAL_SSO_CLIENT_SECRET || process.env.SSO_SPES_CLIENT_SECRET || process.env.SPES_CLIENT_SECRET || '';
+    const clientSecret = (
+        process.env.PORTAL_SSO_CLIENT_SECRET ||
+        process.env.SSO_SPES_CLIENT_SECRET ||
+        process.env.SPES_CLIENT_SECRET ||
+        process.env.PORTAL_CLIENT_SECRET ||
+        process.env.SSO_CLIENT_SECRET ||
+        'yKPrAiC3YVJ6Au5nKInSzq7HzcYwqfnjv4f9EeZ4um92aq0hq4vAInaYtV2LJluD'
+    ).trim();
     
     const response = await fetch(consumeEndpoint, {
         method: 'POST',
