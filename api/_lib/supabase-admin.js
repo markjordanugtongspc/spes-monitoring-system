@@ -35,6 +35,7 @@ export function createSupabaseAdmin() {
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },
+    db: { schema: process.env.SUPABASE_SCHEMA || "spes" },
   });
 }
 /* END CREATE SUPABASE ADMIN CLIENT */

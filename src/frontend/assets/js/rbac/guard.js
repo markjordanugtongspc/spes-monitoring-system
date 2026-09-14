@@ -516,14 +516,16 @@ export function initStaffPermissionsRealtime(staffId) {
 }
 // --- END: INIT STAFF PERMISSIONS REALTIME ---
 
-/**
- * Redirect to login if no valid session exists.
- * Call at the top of every protected page.
- */
+// --- START: REQUIRE AUTH - Redirects unauthenticated or unapproved users to Portal login while preventing data flash ---
 export function requireAuth() {
   const session = getSession();
-  if (!session || !session.role) {
-    window.location.href = "/src/frontend/login/";
+  const isApproved = session && (session.approved === true || session.approved === "true" || session.approved === 1);
+  if (!session || !session.role || !isApproved) {
+    if (typeof document !== "undefined") {
+      document.documentElement.style.display = "none";
+    }
+    const currentUrl = encodeURIComponent(window.location.href);
+    window.location.replace(`https://dole-portal.vercel.app/?redirect=${currentUrl}`);
     return null;
   }
   // Auto-establish Presence channel on every protected page load (idempotent)
@@ -533,6 +535,7 @@ export function requireAuth() {
   }
   return session;
 }
+// --- END: REQUIRE AUTH ---
 
 /* START REQUIRE ADMIN - Enforces Admin role for protected operations */
 export function requireAdmin() {
@@ -607,9 +610,7 @@ export function requirePayrollAccess() {
 }
 // --- END: REQUIRE PAYROLL ACCESS ---
 
-/**
- * Sign out — set status OFFLINE in DB, clear session + all caches, redirect to login.
- */
+// --- START: SIGN OUT - Cleans up session and presence before redirecting to Portal Login ---
 export function signOut() {
   modals.confirm(
     "Sign Out",
@@ -637,7 +638,8 @@ export function signOut() {
       localStorage.removeItem("spes_supabase_token");
       localStorage.removeItem("spes_notepad_dismissed");
       sessionStorage.clear();
-      window.location.href = "/src/frontend/login/";
+      window.location.href = "https://dole-portal.vercel.app/";
     }
   });
 }
+// --- END: SIGN OUT ---

@@ -38,18 +38,15 @@ const createSpesAdmin = () => {
         throw new Error('SPES Supabase credentials are not configured in environment variables (SUPABASE_URL / SUPABASE_SERVICE_ROLE).');
     }
     return createClient(url, serviceKey, {
-        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+        db: { schema: process.env.SUPABASE_SCHEMA || 'spes' }
     });
 };
 /* END CREATE SPES SUPABASE ADMIN CLIENT */
 
 /* START CONSUME PORTAL SSO TOKEN - Validates authorization code with Portal SSO API */
 const consumePortalToken = async (code, state) => {
-    let portalBaseUrl = (process.env.PORTAL_SSO_CONSUME_URL || process.env.PORTAL_API_URL || process.env.PORTAL_URL || 'https://dole-portal.vercel.app').replace(/\/$/, '');
-    if (portalBaseUrl.includes('localhost:5173')) {
-        portalBaseUrl = 'https://dole-portal.vercel.app';
-    }
-    const consumeEndpoint = portalBaseUrl.endsWith('/api/sso/consume') ? portalBaseUrl : `${portalBaseUrl}/api/sso/consume`;
+    const portalBaseUrl = (process.env.PORTAL_SSO_CONSUME_URL || process.env.PORTAL_API_URL || process.env.PORTAL_URL || 'https://dole-portal.vercel.app').replace(/\/$/, '');
     const clientSecret = (
         process.env.PORTAL_SSO_CLIENT_SECRET ||
         process.env.SSO_SPES_CLIENT_SECRET ||
@@ -62,24 +59,69 @@ const consumePortalToken = async (code, state) => {
         throw new Error('Portal SSO Client Secret is not configured in environment variables (PORTAL_SSO_CLIENT_SECRET).');
     }
 
-    const response = await fetch(consumeEndpoint, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-sso-client-secret': clientSecret
-        },
-        body: JSON.stringify({
-            system_key: 'SPES',
-            code: String(code || '').trim(),
-            state: String(state || '').trim()
-        })
+    const payload = JSON.stringify({
+        system_key: 'SPES',
+        code: String(code || '').trim(),
+        state: String(state || '').trim()
     });
+
+    const primaryEndpoint = portalBaseUrl.endsWith('/api/sso/consume') ? portalBaseUrl : `${portalBaseUrl}/api/sso/consume`;
     
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || !payload?.data) {
-        throw new Error(payload?.error || `Portal SSO validation failed with HTTP ${response.status}.`);
+    // 1. Try configured endpoint
+    try {
+        const response = await fetch(primaryEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-sso-client-secret': clientSecret
+            },
+            body: payload
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok && result?.data) {
+            return result.data;
+        }
+    } catch (error) {
+        console.warn('[SPES SSO] Primary consume attempt failed:', error.message);
     }
-    return payload.data;
+
+    // 2. Try local Portal endpoint if not already tried
+    if (!primaryEndpoint.includes('localhost:5173')) {
+        try {
+            const localResponse = await fetch('http://localhost:5173/api/sso/consume', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-sso-client-secret': clientSecret
+                },
+                body: payload
+            });
+            const localResult = await localResponse.json().catch(() => ({}));
+            if (localResponse.ok && localResult?.data) {
+                return localResult.data;
+            }
+        } catch {}
+    }
+
+    // 3. Try production Vercel endpoint if not already tried
+    if (!primaryEndpoint.includes('dole-portal.vercel.app')) {
+        try {
+            const prodResponse = await fetch('https://dole-portal.vercel.app/api/sso/consume', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-sso-client-secret': clientSecret
+                },
+                body: payload
+            });
+            const prodResult = await prodResponse.json().catch(() => ({}));
+            if (prodResponse.ok && prodResult?.data) {
+                return prodResult.data;
+            }
+        } catch {}
+    }
+
+    throw new Error('Portal SSO validation failed. The one-time code is invalid, expired, or Portal is unreachable.');
 };
 /* END CONSUME PORTAL SSO TOKEN */
 

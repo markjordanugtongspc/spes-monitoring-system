@@ -41,3 +41,8 @@ tests/__snapshots__/
 *.snap
 junit.xml
 test-results/
+test_spes_queries.cjs
+RBAC-Git.md
+scripts/check_and_clean_chief.mjs
+scripts/force_delete_chief_account.mjs
+*.X
