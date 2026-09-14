@@ -3,14 +3,14 @@ import "../assets/styles/tailwind.css";
 import "../assets/js/components/analytics.js";
 import "flowbite";
 import { initFlowbite } from "flowbite";
-import { requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";
+import { requireServicesAccess, requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";
 import { initThemeToggle } from "../assets/js/components/theme-toggle.js";
 import { buildImportPlan, executeImportPlan, loadConverterContext } from "./beneficiary-csv-converter.js";
 import { bulkDeleteBeneficiaries, fetchBeneficiaryDuplicateGroups } from "../../backend/api/beneficiary.js";
 import { notepad } from "../assets/js/components/notepad.js";
 // --- END: BENEFICIARY CSV TOOL IMPORTS ---
 
-const session = requireAdmin();
+const session = requireServicesAccess();
 if (session) {
   notepad();
 }

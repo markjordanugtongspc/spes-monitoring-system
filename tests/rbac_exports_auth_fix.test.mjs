@@ -180,7 +180,11 @@ describe("4. Chief Role Integration (ID: 4)", () => {
     assert.equal(await canDo("chief", "users:delete"), false, "Chief cannot delete users");
     assert.equal(await canDo("chief", "payroll:manage"), false, "Chief cannot manage payroll budgets");
     assert.equal(await canDo("chief", "roles:manage"), false, "Chief cannot manage database roles");
-    assert.equal(await canDo("chief", "services:manage"), false, "Chief cannot access admin-only auto import");
+    assert.equal(await canDo("chief", "services:manage"), false, "Chief cannot access auto import");
+
+    // HR granted operational access
+    assert.equal(await canDo("hr", "services:manage"), true, "HR can access Auto Import review");
+    assert.equal(await canDo("hr", "services:access"), true, "HR can access services");
   });
 });
 

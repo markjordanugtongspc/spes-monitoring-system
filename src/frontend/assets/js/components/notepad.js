@@ -302,6 +302,7 @@ export function initNotepadFloating() {
   const toggleBtn = document.getElementById("spes-notepad-toggle-btn");
   const panel = document.getElementById("spes-notepad-panel");
   const closeBtn = document.getElementById("btn-close-notepad");
+  const dismissBtn = document.getElementById("spes-notepad-dismiss-btn");
   const badge = document.getElementById("spes-notepad-badge");
 
   if (!container || !toggleBtn || !panel) return;
@@ -336,11 +337,27 @@ export function initNotepadFloating() {
     toggleBtn.classList.remove("is-active");
   };
 
+  /* START DISMISS FLOATING NOTEPAD - Hides floating container temporarily and persists dismissal state */
+  const dismissNotepad = () => {
+    closePanel();
+    container.classList.add("hidden");
+    try {
+      localStorage.setItem("spes_notepad_dismissed", "true");
+    } catch {}
+  };
+  /* END DISMISS FLOATING NOTEPAD */
+
   if (container.dataset.floatingInit === "true") {
     updateBadge();
-    return { openPanel, closePanel, updateBadge };
+    return { openPanel, closePanel, updateBadge, dismissNotepad };
   }
   container.dataset.floatingInit = "true";
+
+  // Tiny upper-top dismiss close button
+  dismissBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dismissNotepad();
+  });
 
   toggleBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -374,9 +391,9 @@ export function initNotepadFloating() {
   });
 
   updateBadge();
-  return { openPanel, closePanel, updateBadge };
+  return { openPanel, closePanel, updateBadge, dismissNotepad };
 }
-// --- FUNCTION: NOTEPAD FLOATING UI HANDLER (END) ---
+/* END: NOTEPAD FLOATING UI HANDLER */
 
 
 // --- FUNCTION: RENDER NOTES LIST (START) ---
@@ -948,12 +965,7 @@ export function initNotepadEditor() {
 // --- FUNCTION: NOTEPAD TIPTAP WYSIWYG EDITOR (END) ---
 
 
-// --- FUNCTION: NOTEPAD PARENT INITIALIZER (START) ---
-/**
- * Parent orchestrator for the global SPES floating notepad component.
- * Verifies authenticated session, sets up storage, floating triggers, overlay observers,
- * search & filters, and TipTap WYSIWYG editor.
- */
+/* START NOTEPAD PARENT INITIALIZER - Initializes SPES floating notepad component with auth & dismissal checks */
 export function notepad() {
   // Only activate for authenticated users
   const user = getAuthenticatedUser();
@@ -966,6 +978,18 @@ export function notepad() {
     return;
   }
 
+  // Check if temporarily dismissed by user in localStorage
+  try {
+    if (localStorage.getItem("spes_notepad_dismissed") === "true") {
+      if (floatingContainer) {
+        floatingContainer.classList.add("hidden");
+      }
+      return;
+    }
+  } catch {
+    // Non-critical: Fallback to showing if localStorage throws
+  }
+
   if (!floatingContainer) return;
   floatingContainer.classList.remove("hidden");
 
@@ -975,4 +999,4 @@ export function notepad() {
   initNotepadFilters();
   initNotepadEditor();
 }
-// --- FUNCTION: NOTEPAD PARENT INITIALIZER (END) ---
+/* END NOTEPAD PARENT INITIALIZER */

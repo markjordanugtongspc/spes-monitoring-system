@@ -187,6 +187,7 @@ async function _handleIdleTimeout() {
   // 4. Clear local session
   localStorage.removeItem("spes_session");
   localStorage.removeItem("spes_supabase_token");
+  localStorage.removeItem("spes_notepad_dismissed");
   sessionStorage.clear();
 
   // 5. Clean up presence internals

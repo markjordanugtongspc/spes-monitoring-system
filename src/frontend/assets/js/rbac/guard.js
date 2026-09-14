@@ -69,8 +69,14 @@ const DB_PERM_MAP = {
   "reports:export":      (_p, session) => session?.approved === true || session?.approved === "true" || session?.approved === 1,
   "reports:view":        (_p, session) => session?.approved === true || session?.approved === "true" || session?.approved === 1,
 
-  // Auto Import Tool: STRICTLY ADMIN ONLY (No Officer, No HR, No Chief)
-  "services:manage":     (_p, session) => session?.approved === true && (String(session?.role || "").toLowerCase() === "admin" || Number(session?.role_id) === 1),
+  // Auto Import Tool: Accessible to Admin and HR (including GIP HR roles)
+  "services:manage":     (_p, session) => {
+    const isApproved = session?.approved === true || session?.approved === "true" || session?.approved === 1;
+    if (!isApproved) return false;
+    const r = String(session?.role || "").toLowerCase();
+    const rId = Number(session?.role_id);
+    return isHrOrAdmin(session) || r === "admin" || r === "hr" || rId === 1 || rId === 2 || Boolean(session?.is_hr) || Boolean(session?.gip_hr);
+  },
 };
 
 // --- START: CHECK DB PERMISSION - checks DB permission mapping against session permissions ---
@@ -93,15 +99,16 @@ function _checkDbPermission(dbPerms, permission, session) {
 async function _hasPermission(userRole, permission, session) {
   const isAdmin = String(session?.role || userRole || "").toLowerCase() === "admin" || Number(session?.role_id) === 1;
 
-  // Strict Admin-only permissions (Auto Import Tool)
-  if (permission === "services:manage") {
-    return isAdmin && session?.approved === true;
-  }
-
   // Any unapproved user (approved !== true) is strictly blocked from all protected navigation and resources
   const isApproved = session?.approved === true || session?.approved === "true" || session?.approved === 1;
   if (!isApproved) {
     return false;
+  }
+
+  // Auto Import Tool: Accessible to Admin and HR (including GIP HR roles)
+  if (permission === "services:manage") {
+    const isHr = String(session?.role || userRole || "").toLowerCase() === "hr" || Number(session?.role_id) === 2 || Boolean(session?.is_hr) || Boolean(session?.gip_hr);
+    return isAdmin || isHr || isHrOrAdmin(session);
   }
 
   // Admin and HR who are approved enjoy full baseline capability across the portal
@@ -527,10 +534,7 @@ export function requireAuth() {
   return session;
 }
 
-/**
- * Require an authenticated admin role.
- * Redirects non-admins to the dashboard and unauthenticated users to login.
- */
+/* START REQUIRE ADMIN - Enforces Admin role for protected operations */
 export function requireAdmin() {
   const session = requireAuth();
   if (!session) return null;
@@ -544,6 +548,31 @@ export function requireAdmin() {
   }
   return session;
 }
+/* END REQUIRE ADMIN */
+
+/* START REQUIRE SERVICES ACCESS - Enforces Admin or HR role for beneficiary CSV import and services utility */
+export function requireServicesAccess() {
+  const session = requireAuth();
+  if (!session) return null;
+  const isApproved = session.approved === true || session.approved === "true" || session.approved === 1;
+  const role = String(session.role || "").toLowerCase();
+  const roleId = Number(session.role_id);
+  const isAuthorized = isApproved && (
+    isHrOrAdmin(session) ||
+    role === "admin" ||
+    role === "hr" ||
+    roleId === 1 ||
+    roleId === 2 ||
+    Boolean(session.is_hr) ||
+    Boolean(session.gip_hr)
+  );
+  if (!isAuthorized) {
+    window.location.href = "/src/frontend/pages/dashboard/";
+    return null;
+  }
+  return session;
+}
+/* END REQUIRE SERVICES ACCESS */
 
 /**
  * Require beneficiary directory access permission (Admin or approved staff).
@@ -606,6 +635,7 @@ export function signOut() {
 
       localStorage.removeItem("spes_session");
       localStorage.removeItem("spes_supabase_token");
+      localStorage.removeItem("spes_notepad_dismissed");
       sessionStorage.clear();
       window.location.href = "/src/frontend/login/";
     }

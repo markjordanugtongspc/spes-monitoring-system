@@ -118,13 +118,13 @@ describe("3. Sidebar Navigation & Guard Permissions Matrix", () => {
     assert.equal(canManageRoles, true, "Roles & Permissions must be accessible to HR");
   });
 
-  test("HR is strictly barred from Admin-only Auto Import Tool", () => {
-    const isHrAdmin = String(hrSession.role).toLowerCase() === "admin" || Number(hrSession.role_id) === 1;
-    assert.equal(isHrAdmin, false, "HR must not have admin flag");
+  test("HR has access to Auto Import Tool (services:manage) and Roles & Permissions in sidebar", () => {
+    const isHrOrAdminUser = isHrOrAdmin(hrSession);
+    assert.equal(isHrOrAdminUser, true, "HR must be recognized as isHrOrAdmin");
 
-    // "services:manage" (Auto Import Tool) is strictly Admin only
-    const canAccessAutoImport = isHrAdmin && hrSession.approved === true;
-    assert.equal(canAccessAutoImport, false, "Auto Import must be inaccessible to HR");
+    // "services:manage" (Auto Import Tool) is accessible to HR and Admin
+    const canAccessAutoImport = isHrOrAdminUser && hrSession.approved === true;
+    assert.equal(canAccessAutoImport, true, "Auto Import must be accessible to HR");
   });
 
   test("Admin has full access to Auto Import and Roles", () => {

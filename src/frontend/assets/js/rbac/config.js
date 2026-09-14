@@ -57,7 +57,9 @@ const roles = {
       "beneficiaries:edit",
       "beneficiaries:delete",
       "payroll:view",
-      "payroll:manage"
+      "payroll:manage",
+      "services:manage",
+      "services:access"
     ],
     inherits: ["officer"]
   },

@@ -49,6 +49,7 @@ export function initLoginHandler() {
       modals.close();
 
       if (result.success) {
+        try { localStorage.removeItem("spes_notepad_dismissed"); } catch {}
         // Redirect directly to the unified dashboard
         window.location.href = "../pages/dashboard/";
       } else {

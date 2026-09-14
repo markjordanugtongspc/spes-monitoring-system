@@ -1,15 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createSessionCookie } from '../_lib/session.js';
+
+// Load local .env file in Node development/testing runtimes if variables aren't pre-loaded
+if (!process.env.PORTAL_SSO_CLIENT_SECRET || !process.env.SUPABASE_SERVICE_ROLE) {
+    try {
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        dotenv.config({ path: path.resolve(__dirname, '../../src/backend/.env') });
+    } catch {
+        // Non-critical: In production serverless environments (e.g. Vercel), process.env is injected by platform
+    }
+}
 
 // Executive roles that have global scope and valid null office_id
 const EXECUTIVE_ROLE_IDS = new Set([1, 2, 4]); // 1 = Admin, 2 = HR, 4 = Chief
 
 /* START CREATE SPES SUPABASE ADMIN CLIENT - Initializes privileged Supabase client for SSO verification */
 const createSpesAdmin = () => {
-    const url = process.env.SPES_SUPABASE_URL || process.env.VITE_SPES_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://pprmqnrevuyllhkxejbu.supabase.co';
-    const serviceKey = process.env.SPES_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SPES_SUPABASE_ANON_KEY || process.env.VITE_SPES_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwcm1xbnJldnV5bGxoa3hlamJ1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc2ODI3MywiZXhwIjoyMDk1MzQ0MjczfQ.PzskDM5K_6kIwk4cas91gR0285bxxP631V5ZzZRRqkk';
+    const url = (
+        process.env.SPES_SUPABASE_URL ||
+        process.env.VITE_SPES_SUPABASE_URL ||
+        process.env.SUPABASE_URL ||
+        process.env.VITE_SUPABASE_URL
+    )?.trim();
+
+    const serviceKey = (
+        process.env.SPES_SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SUPABASE_SERVICE_ROLE ||
+        process.env.SUPABASE_SECRET_KEY ||
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    )?.trim();
+
     if (!url || !serviceKey) {
-        throw new Error('SPES Supabase credentials are not configured in environment variables.');
+        throw new Error('SPES Supabase credentials are not configured in environment variables (SUPABASE_URL / SUPABASE_SERVICE_ROLE).');
     }
     return createClient(url, serviceKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
@@ -29,10 +55,13 @@ const consumePortalToken = async (code, state) => {
         process.env.SSO_SPES_CLIENT_SECRET ||
         process.env.SPES_CLIENT_SECRET ||
         process.env.PORTAL_CLIENT_SECRET ||
-        process.env.SSO_CLIENT_SECRET ||
-        'yKPrAiC3YVJ6Au5nKInSzq7HzcYwqfnjv4f9EeZ4um92aq0hq4vAInaYtV2LJluD'
-    ).trim();
+        process.env.SSO_CLIENT_SECRET
+    )?.trim();
     
+    if (!clientSecret) {
+        throw new Error('Portal SSO Client Secret is not configured in environment variables (PORTAL_SSO_CLIENT_SECRET).');
+    }
+
     const response = await fetch(consumeEndpoint, {
         method: 'POST',
         headers: {
@@ -295,6 +324,7 @@ export default async function handler(req, res) {
             const sessionData = ${safeSession};
             localStorage.setItem('spes_session', JSON.stringify(sessionData));
             sessionStorage.setItem('spes_session', JSON.stringify(sessionData));
+            localStorage.removeItem('spes_notepad_dismissed');
         } catch (e) {}
         window.location.replace('${targetDashboardUrl}');
     </script>

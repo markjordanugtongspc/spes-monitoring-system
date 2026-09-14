@@ -119,6 +119,7 @@ export async function loginImplementor(username, password) {
     }
 
     localStorage.setItem("spes_session", JSON.stringify(session));
+    try { localStorage.removeItem("spes_notepad_dismissed"); } catch {}
 
     // Subscribe to Presence channel for real-time status tracking
     initPresence(session.id);
