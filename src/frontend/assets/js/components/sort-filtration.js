@@ -332,19 +332,26 @@ export function setupSortFiltration({
           );
         });
       } else if (key === "status") {
-        // Beneficiaries — uses `archived_at` (with 'd')
-        if (activeValue === "active") {
-          processed = processed.filter(item => !item.archived_at);
+        // Implementors & Beneficiaries status handler
+        if (activeValue === "approved") {
+          processed = processed.filter(item => item.approved === true || String(item.status || "").toLowerCase() === "approved");
+        } else if (activeValue === "pending") {
+          processed = processed.filter(item => item.approved !== true && String(item.status || "").toLowerCase() !== "approved");
+        } else if (activeValue === "active") {
+          processed = processed.filter(item => !item.archived_at && !item.archive_at);
         } else if (activeValue === "archived") {
-          processed = processed.filter(item => !!item.archived_at);
+          processed = processed.filter(item => Boolean(item.archived_at || item.archive_at));
+        } else if (activeValue !== "all") {
+          processed = processed.filter(item => String(item.status || "").toLowerCase() === activeValue);
         }
       } else if (key === "archiveStatus") {
-        // Implementors — uses `archive_at` (no 'd')
+        // Implementors — uses `archive_at` (also checks `archived_at`)
         if (activeValue === "active") {
-          processed = processed.filter(item => !item.archive_at);
+          processed = processed.filter(item => !item.archive_at && !item.archived_at);
         } else if (activeValue === "archived") {
-          processed = processed.filter(item => !!item.archive_at);
+          processed = processed.filter(item => Boolean(item.archive_at || item.archived_at));
         }
+        // if "all", do not filter out archived or active
       } else if (key === "batch_id") {
         processed = processed.filter(item => {
           const num = item.batch?.id;

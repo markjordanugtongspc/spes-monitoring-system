@@ -457,14 +457,20 @@ async function _authorizeStaffMutation(ids, permissionColumn) {
 }
 // --- END: AUTHORIZE STAFF MUTATION ---
 
-// --- START: FETCH STAFFS with office and role join ---
+// --- START: FETCH STAFFS with office and role join - Fetches implementors with office and role metadata ---
 export async function fetchStaffs(options = {}) {
   let query = supabase
     .from("staffs")
     .select("id, role_id, office_id, offices!office_id(id, name, location), full_name, username, email, phone, status, approved, created_at, archive_at, beneficiary_id, started_at, ended_at, roles!role_id(id, name)")
-    .is("archive_at", null)
-    .neq("role_id", 1)
     .order("id", { ascending: true });
+
+  if (!options.includeArchived) {
+    query = query.is("archive_at", null);
+  }
+
+  if (options.excludeAdmin) {
+    query = query.neq("role_id", 1);
+  }
 
   if (options.officeId) {
     query = query.eq("office_id", options.officeId);
