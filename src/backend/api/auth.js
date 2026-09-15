@@ -9,6 +9,7 @@ import { supabase } from "./supabase.js";
 import { getOfficeAccessScope } from "../../frontend/assets/js/rbac/scope.js";
 import { initPresence, destroyPresence } from "../../frontend/assets/js/components/presence.js";
 import { preferenceStorage } from "../../frontend/assets/js/components/storage.js";
+import { flowDebug, flowDebugError } from "../../frontend/assets/js/components/flow-debugger.js";
 
 const IMPL_CACHE_KEY = "spes_implementors_v1";
 const IMPL_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -308,15 +309,28 @@ export async function fetchImplementorList({ forceRefresh = false } = {}) {
       .order("created_at", { ascending: false, nullsFirst: false })
       .order("id", { ascending: false });
 
+    flowDebug("DATA", "fetchImplementorList query initiated", {
+      canViewOtherOffices: access.canViewOtherOffices,
+      officeId,
+      userRole: session.role || session.role_id,
+      scopedToOffice: !access.canViewOtherOffices && Boolean(officeId),
+    });
+
     if (!access.canViewOtherOffices && officeId) {
       query = query.eq("office_id", officeId);
     }
     let { data, error } = await query;
 
     if (error) {
+      flowDebugError("fetchImplementorList query failed", error);
       if (import.meta.env.DEV) console.error("[SPES Auth] fetchImplementorList error:", error.code, error.message);
       return [];
     }
+
+    flowDebug("DATA", "fetchImplementorList raw query returned", {
+      count: (data ?? []).length,
+      sample: (data ?? []).slice(0, 3).map(s => ({ id: s.id, name: s.full_name, role: s.role_id, office: s.office_id })),
+    });
 
     const list = (data ?? []).map((s) => {
       const rawSp = s.permissions || s.staff_permissions;

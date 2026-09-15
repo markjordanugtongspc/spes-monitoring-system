@@ -6,7 +6,7 @@
  * flows are being diagnosed. Set it back to false when debugging is complete.
  */
 const DEFAULT_FLOW_DEBUG_ENABLED = false;
-const TEMPORARY_FLOW_DEBUG_ENABLED = false;
+const TEMPORARY_FLOW_DEBUG_ENABLED = true;
 const STORAGE_KEY = "spes_flow_debug";
 
 let initialized = false;
@@ -24,6 +24,7 @@ function readStoredOverride() {
 export function isFlowDebugEnabled() {
   const stored = readStoredOverride();
   if (stored !== null) return stored;
+  if (TEMPORARY_FLOW_DEBUG_ENABLED) return true;
   return import.meta.env?.DEV ?? true;
 }
 
@@ -100,6 +101,10 @@ export function flowDebug(stage, message, details) {
 
 export function flowDebugSuccess(message, details) {
   write("info", "SUCCESS", message, details);
+}
+
+export function flowDebugWarn(message, details) {
+  write("warn", "WARNING", message, details);
 }
 
 export function flowDebugError(message, error, details = {}) {

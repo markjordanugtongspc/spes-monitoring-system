@@ -1,4 +1,5 @@
 import { preferenceStorage } from "./storage.js";
+import { flowDebug, flowDebugWarn } from "./flow-debugger.js";
 
 /**
  * SPES Portal — General Sorting and Filtration Component
@@ -306,6 +307,13 @@ export function setupSortFiltration({
     _persistPreferences();
     let processed = [...originalData];
 
+    flowDebug("FILTER", "applySortAndFilter starting", {
+      originalCount: originalData.length,
+      activeFilters: { ...activeFilters },
+      activeSort,
+      storageKey,
+    });
+
     // 1. Apply Filtering
     Object.keys(activeFilters).forEach(key => {
       const activeValue = activeFilters[key].toLowerCase();
@@ -351,7 +359,18 @@ export function setupSortFiltration({
         } else if (activeValue === "archived") {
           processed = processed.filter(item => Boolean(item.archive_at || item.archived_at));
         }
-        // if "all", do not filter out archived or active
+      } else if (key === "role") {
+        if (activeValue !== "all") {
+          processed = processed.filter(item => {
+            const rName = String(item.role || item.roles?.name || "").toLowerCase();
+            const rId = Number(item.role_id);
+            if (activeValue === "admin") return rName === "admin" || rId === 1;
+            if (activeValue === "officer") return rName === "officer" || rId === 3;
+            if (activeValue === "hr") return rName === "hr" || rId === 2;
+            if (activeValue === "chief") return rName === "chief" || rId === 4;
+            return rName.includes(activeValue);
+          });
+        }
       } else if (key === "batch_id") {
         processed = processed.filter(item => {
           const num = item.batch?.id;
@@ -445,6 +464,13 @@ export function setupSortFiltration({
         return phoneCompare || String(a.full_name || a.name || "").localeCompare(String(b.full_name || b.name || ""));
       });
     }
+
+    flowDebug("FILTER", "applySortAndFilter finished", {
+      filteredCount: processed.length,
+      activeFilters: { ...activeFilters },
+      activeSort,
+      sampleIds: processed.slice(0, 5).map(item => item.id),
+    });
 
     onRender(processed);
   }
