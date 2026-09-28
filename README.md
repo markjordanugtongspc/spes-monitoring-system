@@ -3,10 +3,9 @@
 [![Licence](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Vite](https://img.shields.io/badge/Vite-v8.0-646CFF.svg?logo=vite)](https://vite.dev)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.2-38B2AC.svg?logo=tailwind-css)](https://tailwindcss.com)
-[![Electron](https://img.shields.io/badge/Electron-v36.4-47848F.svg?logo=electron)](https://www.electronjs.org)
 [![Supabase](https://img.shields.io/badge/Supabase-v2.105-3ECF8E.svg?logo=supabase)](https://supabase.com)
 
-The **DOLE SPES Portal (Special Program for Employment of Students)** is a state-of-the-art enterprise command center and management system. It serves as both a high-performance web application and a cross-platform desktop client (via Electron) designed to streamline SPES implementation, manage beneficiary databases, configure staff roles, and track live statistics across regional and provincial offices in the Philippines.
+The **DOLE SPES Portal (Special Program for Employment of Students)** is a state-of-the-art enterprise command center and management system. It serves as a high-performance web application designed to streamline SPES implementation, manage beneficiary databases, configure staff roles, and track live statistics across regional and provincial offices in the Philippines.
 
 ---
 
@@ -16,7 +15,7 @@ The **DOLE SPES Portal (Special Program for Employment of Students)** is a state
 *   **Role-Based Access Control (RBAC)**: Secure, granular permissions implementation controlling CRUD access across the whole interface (Admin vs. Officer/Staff).
 *   **Vibrant, Fluid Design System**: Rich, premium aesthetics leveraging **Tailwind CSS v4.2**, supporting dynamic animations, sleek card layouts, and zero-flash Dark Mode persistence (`theme-toggle` + blocking pre-paint execution).
 *   **Flowbite Skeleton Loaders**: Polished visual skeletons for asynchronous operations, table rows, and dashboard metrics that resolve seamlessly when data loads.
-*   **Enterprise Integrations**: Powered by a secure **Supabase (PostgreSQL)** backend and native desktop features via **Electron**.
+*   **Enterprise Integrations**: Powered by a secure **Supabase (PostgreSQL)** backend with serverless API routes deployed on **Vercel**.
 
 ---
 
@@ -25,7 +24,6 @@ The **DOLE SPES Portal (Special Program for Employment of Students)** is a state
 | Component | Technology | Description |
 | :--- | :--- | :--- |
 | **Framework & Bundler** | [Vite](https://vite.dev/) | Ultra-fast build tool and local development server |
-| **Desktop Environment** | [Electron](https://www.electronjs.org/) | Cross-platform framework for packaging the app natively |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) & [Flowbite](https://flowbite.com/) | Modern CSS classes & premium component UI library |
 | **Database & Auth** | [Supabase SDK](https://supabase.com/) | Live PostgreSQL database, user management, and security RLS |
 | **Data Visualization**| [ApexCharts](https://apexcharts.com/) | High-fidelity interactive chart and graph rendering |
@@ -37,9 +35,8 @@ The **DOLE SPES Portal (Special Program for Employment of Students)** is a state
 
 ```filepath
 SPES/
-├── .gemini/                 # AI Assistant workspace configurations
-├── electron/                # Main & Preload scripts for Electron desktop build
-│   └── main.cjs             # Desktop entry point
+├── .agents/                 # AI Assistant workspace configurations
+├── api/                     # Vercel Serverless Functions (production)
 ├── scripts/                 # Utility scripts (version bumping, asset sync)
 ├── src/
 │   ├── backend/             # Database and Auth services
@@ -66,6 +63,8 @@ SPES/
 
 ## 💻 Developer Guide
 
+> **📘 Full system documentation** (architecture, RBAC, API endpoints, database schema, deployment, and more) is available in [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md).
+
 Follow these steps to run, develop, or package the SPES application locally.
 
 ### Prerequisites
@@ -76,25 +75,47 @@ Follow these steps to run, develop, or package the SPES application locally.
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/your-organization/spes.git
-    cd spes
+    git clone https://github.com/markjordanugtongspc/spes-monitoring-system.git
+    cd spes-monitoring-system
     ```
 
 2.  **Install Dependencies**
     ```bash
     npm install
     ```
+    This installs both production dependencies (Supabase SDK, Flowbite, ApexCharts, RBAC, ExcelJS, etc.) and development dependencies (Vite, TailwindCSS, PostCSS).
 
 3.  **Configure Environment Variables**
-    Copy the example environment template in `src/backend` and insert your Supabase project keys:
+    Copy the example environment template in `src/backend` and fill in your Supabase project keys:
     ```bash
     cp src/backend/.env.example src/backend/.env
     ```
-    Open `src/backend/.env` and update the following fields:
+    Open `src/backend/.env` and configure the following:
     ```env
-    SUPABASE_URL=https://your-project-id.supabase.co
-    SUPABASE_KEY=your-supabase-publishable-key
+    # ── Server ────────────────────────────────────────────────────
+    PORT=3000
+    HOST=0.0.0.0
+
+    # ── Supabase (Frontend — Portal Unified Instance) ─────────────
+    VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+    VITE_SUPABASE_ANON_KEY=<your-publishable-anon-key>
+    VITE_SUPABASE_SCHEMA=spes
+
+    # ── Supabase (Backend — Direct DB Connection) ────────────────
+    SUPABASE_DB_URL="postgresql://postgres.<your-project-id>:<YOUR-PASSWORD>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?options=--search_path%3Dspes,public"
+
+    # ── Supabase (Service Role & Secrets) ────────────────────────
+    SUPABASE_URL=https://<your-project-id>.supabase.co
+    SUPABASE_SERVICE_ROLE=<your-service-role-key>
+    SUPABASE_SECRET_KEY=<your-secret-key>
+    SUPABASE_SCHEMA=spes
+
+    # ── Portal SSO Integration ────────────────────────────────────
+    PORTAL_SSO_CONSUME_URL=https://dole-portal.vercel.app/api/sso/consume
+    PORTAL_SSO_CLIENT_SECRET=<your-portal-sso-client-secret>
     ```
+
+    > **⚠️ Important**: The `.env` file is **gitignored** and must never be committed. To obtain full database credentials and access keys, contact the project maintainer — **Mark Jordan Ugtong** (`markjordanugtongspc`).
 
 ### Development Scripts
 
@@ -102,7 +123,7 @@ Follow these steps to run, develop, or package the SPES application locally.
     ```bash
     npm run dev
     ```
-    This launches the local server, typically available at `http://localhost:5173`.
+    This launches the local server at `http://localhost:5174` with Hot Module Replacement (HMR), TailwindCSS JIT compilation, and serverless API route emulation.
 
 *   **Preview Build Locally**
     ```bash
@@ -110,25 +131,15 @@ Follow these steps to run, develop, or package the SPES application locally.
     npm run preview
     ```
 
-*   **Run Desktop Client (Electron Development Mode)**
+*   **Preview on LAN (Accessible from Other Devices)**
     ```bash
-    npm run electron:run
-    ```
-
-*   **Build & Run Electron App**
-    ```bash
-    npm run electron
-    ```
-
-*   **Package for Production / Generate Installer**
-    Generates binaries (NSIS setup / portable exe for Windows) inside the `/release` directory:
-    ```bash
-    npm run dist
+    npm run build
+    npm run preview:lan
     ```
 
 ### 🧪 Running Unit Tests
 
-The project ships with a unit test suite covering payroll business logic and DOM structure validation. Tests run using Node's built-in `node:test` runner — **no extra dependencies required**.
+The project ships with a comprehensive test suite covering payroll logic, RBAC, security, and DOM structure. Tests run using Node's built-in `node:test` runner — **no extra dependencies required**.
 
 ```bash
 npm test
@@ -140,6 +151,10 @@ This executes all `*.test.mjs` files inside the `tests/` directory:
 | :--- | :--- |
 | `payroll.test.mjs` | Payroll computation, PAID/PENDING calculations, global vs. office budget logic, executive summary cards |
 | `payroll_dom_and_ui.test.mjs` | DOM element presence, stat card IDs, toast/modal elements, role-based UI visibility |
+| `auth_rbac_roles.test.mjs` | Authentication flows, RBAC role assignment, and permission validation |
+| `rbac_exports_auth_fix.test.mjs` | RBAC-guarded export functionality and auth edge cases |
+| `security_and_notepad.test.mjs` | Security controls, XSS prevention, and notepad feature validation |
+| `lace_verification.test.mjs` | Data integrity verification and record validation |
 
 > **Note**: The `supabase/` folder and `.env` files are intentionally excluded from this repository. Tests that require live database access must be run with a valid `.env` configured locally.
 
@@ -152,7 +167,7 @@ This executes all `*.test.mjs` files inside the `tests/` directory:
 If you are an administrator, officer, or system user, here is how you interact with the portal:
 
 ### 1. Accessing the System
-1.  Launch the Web/Desktop app.
+1.  Open the SPES Portal in your web browser.
 2.  You will be greeted by the secure **SPES login page**.
 3.  Enter your assigned credentials (e.g., standard credentials provided by your IT administrator).
 4.  Upon successful login, your session is saved, and you are securely redirected to the **Command Center**.
