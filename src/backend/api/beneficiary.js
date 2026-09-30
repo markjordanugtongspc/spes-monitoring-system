@@ -756,20 +756,21 @@ async function _authorizeBulkBeneficiaryMutation(ids, { requireAdmin = false, on
   if (access.isChief) {
     return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
   }
-  if (requireAdmin && !access.isAdmin) {
-    return { allowed: false, error: "Only administrators can permanently delete beneficiaries." };
+  const isPrivileged = access.isAdmin || access.isHr;
+  if (requireAdmin && !isPrivileged) {
+    return { allowed: false, error: "Only administrators and HR can permanently delete beneficiaries." };
   }
-  if (!access.isAdmin && (session.approved !== true || access.ownOfficeId == null)) {
+  if (!isPrivileged && (session.approved !== true || access.ownOfficeId == null)) {
     return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
   }
 
   for (const idChunk of _chunkIds(ids)) {
     let query = supabase
       .from("beneficiary")
-      .select(access.isAdmin ? "id" : "id, staffs!staff_id!inner(office_id)")
+      .select(isPrivileged ? "id" : "id, staffs!staff_id!inner(office_id)")
       .in("id", idChunk);
     if (onlyActive) query = query.is("archived_at", null);
-    if (!access.isAdmin) query = query.eq("staffs.office_id", access.ownOfficeId);
+    if (!isPrivileged) query = query.eq("staffs.office_id", access.ownOfficeId);
 
     const { data, error } = await query;
     if (error) {

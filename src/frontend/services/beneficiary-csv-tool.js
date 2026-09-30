@@ -3,7 +3,7 @@ import "../assets/styles/tailwind.css";
 import "../assets/js/components/analytics.js";
 import "flowbite";
 import { initFlowbite } from "flowbite";
-import { requireServicesAccess, requireAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";
+import { requireServicesAccess, requireAdmin, isHrOrAdmin, applyPermissions, highlightSidebarActiveLink, getSession, signOut } from "../assets/js/rbac/guard.js";
 import { initThemeToggle } from "../assets/js/components/theme-toggle.js";
 import { buildImportPlan, executeImportPlan, loadConverterContext } from "./beneficiary-csv-converter.js";
 import { bulkDeleteBeneficiaries, fetchBeneficiaryDuplicateGroups } from "../../backend/api/beneficiary.js";
@@ -142,17 +142,17 @@ function setBusy(busy) {
   elements.csv.disabled = busy;
   elements.batch.disabled = busy;
   elements.batchOptions?.querySelectorAll("button").forEach(button => { button.disabled = busy; });
-  const isAdmin = String(session?.role || "").toLowerCase() === "admin";
-  elements.staff.disabled = busy || !isAdmin;
-  elements.staffButton.disabled = busy || !isAdmin;
-  elements.staffSearch.disabled = busy || !isAdmin;
+  const hasFullAccess = isHrOrAdmin(session);
+  elements.staff.disabled = busy || !hasFullAccess;
+  elements.staffButton.disabled = busy || !hasFullAccess;
+  elements.staffSearch.disabled = busy || !hasFullAccess;
   elements.refresh.disabled = busy;
   const hasActions = Boolean(currentPlan) && getSelectionSummary().actionable > 0;
   elements.clear.disabled = busy;
   elements.includeAll.disabled = busy || !hasActions;
   elements.excludeAll.disabled = busy || !hasActions;
   elements.checkDuplicates.disabled = busy || !context;
-  elements.deleteDuplicates.disabled = busy || !context || duplicateSelectedIds.size === 0 || String(session?.role || "").toLowerCase() !== "admin";
+  elements.deleteDuplicates.disabled = busy || !context || duplicateSelectedIds.size === 0 || !hasFullAccess;
   elements.selectAllDuplicates.disabled = busy || !duplicateGroups.length;
   elements.analyze.classList.toggle("opacity-50", busy);
 }
@@ -195,9 +195,9 @@ function renderOptions(preferred = {}) {
   selectStaff(selectedStaff ? String(selectedStaff.id) : "");
   renderStaffOptions(activeStaff);
 
-  const isAdmin = String(session?.role || "").toLowerCase() === "admin";
-  elements.staffButton.disabled = !isAdmin;
-  if (!isAdmin && selectedStaff) {
+  const hasFullAccess = isHrOrAdmin(session);
+  elements.staffButton.disabled = !hasFullAccess;
+  if (!hasFullAccess && selectedStaff) {
     elements.staffLabel.textContent = `${selectedStaff.full_name}${selectedStaff.office ? ` (${selectedStaff.office})` : ""}`;
   }
 }
@@ -262,8 +262,8 @@ function getDuplicateRecordIds() {
 function updateDuplicateSelectionControls() {
   const selectedCount = duplicateSelectedIds.size;
   const { all, incomplete } = getDuplicateRecordIds();
-  const isAdmin = String(session?.role || "").toLowerCase() === "admin";
-  elements.deleteDuplicates.disabled = applying || !isAdmin || selectedCount === 0;
+  const hasFullAccess = isHrOrAdmin(session);
+  elements.deleteDuplicates.disabled = applying || !hasFullAccess || selectedCount === 0;
   elements.deleteDuplicates.textContent = selectedCount ? `Delete (${selectedCount})` : "Delete selected";
   elements.selectAllDuplicates.disabled = applying || duplicateGroups.length === 0;
 
