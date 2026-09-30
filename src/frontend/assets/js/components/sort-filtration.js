@@ -38,15 +38,19 @@ export function setupSortFiltration({
   if (savedPrefs) {
     if (savedPrefs.sort) activeSort = savedPrefs.sort;
     if (savedPrefs.filters && typeof savedPrefs.filters === "object") {
-      activeFilters = { ...resolveDefaultFilters(), ...savedPrefs.filters };
+      const restored = { ...savedPrefs.filters };
+      delete restored.search; // Ephemeral text queries should never be permanently restored from storage
+      activeFilters = { ...resolveDefaultFilters(), ...restored };
     }
   }
 
   const _persistPreferences = () => {
     if (!storageKey) return;
+    // Omit transient text search filter from saved preferences
+    const { search, ...persistentFilters } = activeFilters;
     preferenceStorage.saveSortFilterPreferences(storageKey, {
       sort: activeSort,
-      filters: activeFilters,
+      filters: persistentFilters,
     });
   };
 
@@ -241,7 +245,9 @@ export function setupSortFiltration({
       searchWrap.classList.add("relative");
       searchInput.classList.remove("pe-3", "pe-4");
       searchInput.classList.add("pe-10");
-      searchClearButton = searchWrap.querySelector('[data-clear-for="staff-search-input"]');
+      searchClearButton = searchWrap.querySelector('[data-clear-for="staff-search-input"]')
+        || searchWrap.querySelector('#staff-search-clear')
+        || document.getElementById("staff-search-clear");
       if (!searchClearButton) {
         searchClearButton = document.createElement("button");
         searchClearButton.type = "button";
@@ -264,6 +270,12 @@ export function setupSortFiltration({
         searchInput.dispatchEvent(new Event("input", { bubbles: true }));
         searchInput.focus();
       });
+    }
+    // Initialize activeFilters["search"] if the input already has a value, otherwise ensure it is unset
+    if (searchInput.value && searchInput.value.trim() !== "") {
+      activeFilters["search"] = searchInput.value.trim().toLowerCase();
+    } else {
+      delete activeFilters["search"];
     }
     searchInput.addEventListener("input", (e) => {
       const val = e.target.value.toLowerCase();
