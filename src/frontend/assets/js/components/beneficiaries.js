@@ -969,7 +969,7 @@ export function initBeneficiaries() {
       archiveBtn?.classList.toggle("dark:hover:text-emerald-300", isArchivedView);
       officeTransferBtn?.classList.toggle("hidden", count === 0);
       batchTransferBtn?.classList.toggle("hidden", count === 0);
-      deleteRevealBtn?.classList.toggle("hidden", !access.isAdmin);
+      deleteRevealBtn?.classList.toggle("hidden", !access.isAdmin && !access.isHr);
 
       const tableIsVisible =
         viewMode === "beneficiaries" &&
@@ -1140,6 +1140,28 @@ export function initBeneficiaries() {
       `).join("");
     };
 
+    const positionSubmenu = (submenuEl, parentBtn) => {
+      if (!submenuEl || !parentBtn) return;
+      // Reset custom classes/inline styles first
+      submenuEl.classList.remove("!left-auto", "!right-full", "!mr-2", "!ml-0", "!top-auto", "!bottom-0");
+      if (window.innerWidth < 640) return; // Mobile uses standard stacked layout
+
+      // Check bounding rect
+      const rect = submenuEl.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // If overflowing right viewport edge or less than 10px margin, flip to the left
+      if (rect.right > viewportWidth - 10) {
+        submenuEl.classList.add("!left-auto", "!right-full", "!mr-2", "!ml-0");
+      }
+
+      // If overflowing bottom viewport edge, shift upwards
+      if (rect.bottom > viewportHeight - 10) {
+        submenuEl.classList.add("!top-auto", "!bottom-0");
+      }
+    };
+
     const openDestinationPicker = async (mode) => {
       const activeButton = mode === "batch" ? batchTransferBtn : officeTransferBtn;
       const otherButton = mode === "batch" ? officeTransferBtn : batchTransferBtn;
@@ -1152,6 +1174,7 @@ export function initBeneficiaries() {
 
       destinationMode = mode;
       destinationsPanel.classList.remove("hidden");
+      positionSubmenu(destinationsPanel, activeButton);
       activeButton?.setAttribute("aria-expanded", "true");
       otherButton?.setAttribute("aria-expanded", "false");
       archiveMenu?.classList.add("hidden");
@@ -1185,6 +1208,7 @@ export function initBeneficiaries() {
       }
       renderDestinations();
       destinationSearch.focus();
+      positionSubmenu(destinationsPanel, activeButton);
     };
     trigger.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1224,6 +1248,9 @@ export function initBeneficiaries() {
       const expanded = archiveBtn.getAttribute("aria-expanded") === "true";
       archiveBtn.setAttribute("aria-expanded", String(!expanded));
       archiveMenu?.classList.toggle("hidden", expanded);
+      if (!expanded) {
+        positionSubmenu(archiveMenu, archiveBtn);
+      }
       destinationsPanel.classList.add("hidden");
       officeTransferBtn?.setAttribute("aria-expanded", "false");
       batchTransferBtn?.setAttribute("aria-expanded", "false");

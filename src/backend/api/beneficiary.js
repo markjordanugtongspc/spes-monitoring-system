@@ -225,7 +225,8 @@ async function _authorizeBeneficiaryMutation(beneficiaryId) {
   if (access.isChief) {
     return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
   }
-  if (access.isAdmin) return { allowed: true, session, access };
+  const isPrivileged = access.isAdmin || access.isHr;
+  if (isPrivileged) return { allowed: true, session, access };
   if (session.approved !== true || access.ownOfficeId == null) {
     return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
   }
@@ -252,7 +253,8 @@ async function _authorizeBeneficiaryStaffTarget(staffId) {
   if (access.isChief) {
     return { allowed: false, error: "Chief role has global read-only access. Modifying beneficiary records is not permitted." };
   }
-  if (access.isAdmin) return { allowed: true, session, access };
+  const isPrivileged = access.isAdmin || access.isHr;
+  if (isPrivileged) return { allowed: true, session, access };
   if (session.approved !== true || access.ownOfficeId == null) {
     return { allowed: false, error: "Your account is not approved to manage beneficiaries." };
   }
@@ -621,11 +623,11 @@ export async function bulkTransferBeneficiaries(ids, {
   if (access.isChief) {
     return { success: false, error: "Chief role has global read-only access. Transferring beneficiaries is not permitted." };
   }
-  const isAdmin = access.isAdmin;
-  if (!isAdmin && session.approved !== true) {
+  const isPrivileged = access.isAdmin || access.isHr;
+  if (!isPrivileged && session.approved !== true) {
     return { success: false, error: "Your account is not approved for beneficiary transfers." };
   }
-  if (!isAdmin && !session.office_id) {
+  if (!isPrivileged && !session.office_id) {
     return { success: false, error: "Your account has no assigned office." };
   }
 
@@ -633,9 +635,9 @@ export async function bulkTransferBeneficiaries(ids, {
   for (const idChunk of _chunkIds(safeIds)) {
     let sourceQuery = supabase
       .from("beneficiary")
-      .select(isAdmin ? "id, staff_id" : "id, staff_id, staffs!staff_id!inner(office_id)")
+      .select(isPrivileged ? "id, staff_id" : "id, staff_id, staffs!staff_id!inner(office_id)")
       .in("id", idChunk);
-    if (!isAdmin) sourceQuery = sourceQuery.eq("staffs.office_id", session.office_id);
+    if (!isPrivileged) sourceQuery = sourceQuery.eq("staffs.office_id", session.office_id);
 
     const { data: authorizedRows, error: sourceError } = await sourceQuery;
     if (sourceError) {
@@ -676,7 +678,7 @@ export async function bulkTransferBeneficiaries(ids, {
     if (destinationError || !destination?.office_id) {
       return { success: false, error: "The selected destination is unavailable." };
     }
-    if (!isAdmin && String(destination.office_id) !== String(session.office_id)) {
+    if (!isPrivileged && String(destination.office_id) !== String(session.office_id)) {
       return { success: false, error: "Other-office transfer destinations are read-only." };
     }
 
