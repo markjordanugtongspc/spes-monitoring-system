@@ -146,7 +146,7 @@
   <!-- Main Content -->
   <main class="min-h-screen transition-all duration-300 sm:ml-64 2xl:ml-80">
     <!-- Top Enterprise Banner -->
-    <header class="relative overflow-visible -mt-px bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
+    <header class="relative z-10 overflow-visible -mt-px bg-spes-blue dark:bg-spes-dark-primary p-6 pb-24 shadow-lg">
       <!-- Background Image Layer -->
       <div
         class="absolute -top-12 inset-x-0 bottom-0 z-0 overflow-hidden bg-[url('../../assets/img/other/spes-landscape.png')] bg-cover bg-center bg-no-repeat opacity-60 dark:opacity-40">
@@ -177,7 +177,7 @@
             </div>
             <!-- Dashboard Period Selector: options are populated from visible beneficiary records. -->
             <div id="dashboard-period-selector" role="group" aria-label="Dashboard period filters"
-              class="relative flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-lg bg-spes-blue/30 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:w-auto sm:min-w-72 sm:text-xs">
+              class="relative z-40 flex w-full max-w-md min-w-0 items-center justify-center gap-1 overflow-visible rounded-lg bg-spes-blue/30 p-1 text-[9px] font-bold ring-1 ring-white/25 shadow-sm backdrop-blur-sm sm:w-auto sm:min-w-72 sm:text-xs">
               <button id="dashboard-period-all" type="button"
                 class="cursor-pointer shrink-0 whitespace-nowrap rounded-sm bg-spes-white px-2 py-1.5 text-spes-blue shadow-sm transition-colors sm:px-3 sm:py-1.5">All
                 Time</button>
@@ -192,7 +192,7 @@
                   </svg>
                 </button>
                 <div id="dashboard-year-dropdown-menu"
-                  class="absolute left-0 top-full z-30 sm:z-50 mt-2 hidden min-w-32 max-w-48 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  class="absolute left-0 top-full z-[70] mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-[#0038A8] dark:bg-[#111827] p-1.5 shadow-2xl opacity-100 ring-1 ring-black/20">
                   <div id="dashboard-year-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>
@@ -207,7 +207,7 @@
                   </svg>
                 </button>
                 <div id="dashboard-month-dropdown-menu"
-                  class="absolute right-0 top-full z-30 sm:z-50 mt-2 hidden min-w-36 max-w-52 rounded-md border border-white/20 bg-spes-blue p-1.5 shadow-2xl backdrop-blur-xl dark:bg-spes-dark-primary">
+                  class="absolute right-0 top-full z-[70] mt-2 hidden min-w-40 max-w-56 rounded-md border border-white/20 bg-[#0038A8] dark:bg-[#111827] p-1.5 shadow-2xl opacity-100 ring-1 ring-black/20">
                   <div id="dashboard-month-options" class="max-h-56 overflow-y-auto"></div>
                 </div>
               </div>

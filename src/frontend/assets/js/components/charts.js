@@ -110,14 +110,15 @@ function _deriveReturnStatus(beneficiaries) {
 
 const CHART_PAGE_SIZE = 1000;
 
+// --- START: FETCH ALL BENEFICIARY CHART ROWS - excludes archived records ---
 async function _fetchAllBeneficiaryChartRows({ isGlobal, officeId, minimal = false }) {
   if (!isGlobal && !officeId) {
     return { data: [], error: "No office is assigned to this account." };
   }
 
   const fields = minimal
-    ? "staff_id, gender_id, month_period, year_period"
-    : "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status";
+    ? "id, staff_id, gender_id, month_period, year_period, archive_at, archived_at"
+    : "id, staff_id, full_name, relationship, month_period, year_period, created_at, educ_id, gender_id, return_status, archive_at, archived_at";
   const selectStr = fields + (isGlobal ? "" : ", staffs!staff_id!inner(office_id)");
   const rows = [];
 
@@ -127,19 +128,39 @@ async function _fetchAllBeneficiaryChartRows({ isGlobal, officeId, minimal = fal
       .select(selectStr);
 
     if (!isGlobal) query = query.eq("staffs.office_id", officeId);
+    
+    // Only active (non-archived) beneficiaries should be included in charts and statistics
     query = query
+      .is("archive_at", null)
+      .is("archived_at", null)
       .order("id", { ascending: true })
       .range(from, from + CHART_PAGE_SIZE - 1);
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    // Graceful fallback if archive columns differ across environments (e.g. 42703 column doesn't exist)
+    if (error && error.code === "42703") {
+      const fallbackQuery = supabase
+        .from("beneficiary")
+        .select(selectStr.replace(", archive_at, archived_at", ""))
+        .order("id", { ascending: true })
+        .range(from, from + CHART_PAGE_SIZE - 1);
+      if (!isGlobal) fallbackQuery.eq("staffs.office_id", officeId);
+      const fallbackResult = await fallbackQuery;
+      data = fallbackResult.data;
+      error = fallbackResult.error;
+    }
+
     if (error) return { data: [], error };
 
-    rows.push(...(data ?? []));
+    const cleanData = (data ?? []).filter((row) => !row.archive_at && !row.archived_at);
+    rows.push(...cleanData);
     if (!data || data.length < CHART_PAGE_SIZE) break;
   }
 
   return { data: rows, error: null };
 }
+// --- END: FETCH ALL BENEFICIARY CHART ROWS ---
 // --- START: INIT DASHBOARD CHARTS - initializes and renders all dashboard charts with role and scope resolution ---
 export async function initDashboardCharts() {
   const sessionStr = localStorage.getItem("spes_session");

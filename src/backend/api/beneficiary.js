@@ -22,30 +22,52 @@ function _writeBatchCache(data) {
   try { localStorage.setItem(BATCH_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch {}
 }
 
+// --- START: INVALIDATE BATCH CACHE ---
 export function invalidateBatchCache() {
-  try { localStorage.removeItem(BATCH_CACHE_KEY); } catch {}
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(BATCH_CACHE_KEY))
+      .forEach((key) => localStorage.removeItem(key));
+  } catch {}
 }
+// --- END: INVALIDATE BATCH CACHE ---
 
-export async function fetchBatches({ forceRefresh = false } = {}) {
+// --- START: FETCH BATCHES ---
+export async function fetchBatches({ forceRefresh = false, includeArchived = false } = {}) {
+  const cacheKey = `${BATCH_CACHE_KEY}_${includeArchived ? "all" : "active"}`;
   if (!forceRefresh) {
-    const cached = _readBatchCache();
+    const cached = _readBatchCache(cacheKey);
     if (cached) return { data: cached, fromCache: true };
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("batch")
     .select("*")
     .order("id", { ascending: true });
 
+  if (!includeArchived) {
+    query = query.is("archived_at", null);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
+    // If archived_at column is not present in DB schema yet (code 42703), fallback to select all
+    if (error.code === "42703") {
+      const fallback = await supabase.from("batch").select("*").order("id", { ascending: true });
+      const records = fallback.data ?? [];
+      _writeBatchCache(records, cacheKey);
+      return { data: records };
+    }
     if (import.meta.env.DEV) console.error("[SPES Batch] fetch error:", error.code, error.hint);
     return { data: [], error: "Unable to load batches." };
   }
 
   const records = data ?? [];
-  _writeBatchCache(records);
+  _writeBatchCache(records, cacheKey);
   return { data: records };
 }
+// --- END: FETCH BATCHES ---
 
 export async function addBatch(payload = {}) {
   const batchName = typeof payload === "object" && payload !== null
@@ -105,6 +127,7 @@ export async function updateBatch(id, payload = {}) {
  * @param {number|string} batchId
  * @returns {Promise<{ success: boolean, error?: string }>}
  */
+// --- START: DELETE BATCH PERMANENTLY ---
 export async function deleteBatchPermanently(batchId) {
   const bId = Number(batchId);
   if (!bId || isNaN(bId)) return { success: false, error: "Invalid batch ID." };
@@ -122,7 +145,7 @@ export async function deleteBatchPermanently(batchId) {
       method: "DELETE",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ batchId: bId }),
+      body: JSON.stringify({ batchId: bId, permanent: true }),
     });
     const json = await res.json().catch(() => ({}));
     if (res.ok && json.success) {
@@ -152,6 +175,66 @@ export async function deleteBatchPermanently(batchId) {
   invalidateBeneficiaryCache();
   return { success: true };
 }
+// --- END: DELETE BATCH PERMANENTLY ---
+
+// --- START: ARCHIVE BATCH (SOFT DELETE) ---
+/**
+ * Soft-archives a batch by updating its archived_at timestamp and archiving its beneficiaries.
+ * @param {number|string} batchId
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function archiveBatch(batchId) {
+  const bId = Number(batchId);
+  if (!bId || isNaN(bId)) return { success: false, error: "Invalid batch ID." };
+
+  const session = _getStoredSession();
+  const role = String(session?.role || "").toLowerCase();
+  const isAdminOrHr = role === "admin" || role === "hr" || Number(session?.role_id) === 1;
+  if (!isAdminOrHr) {
+    return { success: false, error: "Unauthorized. Only administrators and HR staff can archive batches." };
+  }
+
+  // 1. Primary: Use secure API endpoint
+  try {
+    const res = await fetch("/api/batch", {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ batchId: bId, action: "archive" }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.success) {
+      invalidateBatchCache();
+      invalidateBeneficiaryCache();
+      return { success: true, batchId: bId };
+    }
+    if (!res.ok && json.error) {
+      console.warn("[SPES Batch] API archive returned error:", json.error);
+    }
+  } catch (apiErr) {
+    console.warn("[SPES Batch] API archive fetch error, attempting direct client fallback:", apiErr?.message);
+  }
+
+  // 2. Fallback: Direct Supabase client
+  const nowIso = new Date().toISOString();
+  const { error } = await supabase
+    .from("batch")
+    .update({ archived_at: nowIso })
+    .eq("id", bId);
+
+  if (error) {
+    if (import.meta.env.DEV) console.error("[SPES Batch] archive error:", error.code, error.hint, error.message);
+    return { success: false, error: "Failed to archive batch. " + (error.message || "Please ensure the database column exists.") };
+  }
+
+  // Also soft-archive beneficiaries belonging to this batch
+  await archiveBeneficiariesByBatch(bId);
+
+  invalidateBatchCache();
+  invalidateBeneficiaryCache();
+  return { success: true, batchId: bId };
+}
+// --- END: ARCHIVE BATCH (SOFT DELETE) ---
 
 /**
  * Soft-archives all beneficiaries belonging to a batch by setting archive_at = now().

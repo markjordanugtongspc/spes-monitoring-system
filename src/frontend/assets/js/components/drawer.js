@@ -1334,6 +1334,9 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   const batchNameInput = document.getElementById("batch-form-name");
   const deleteSection = document.getElementById("batch-delete-section");
   const deleteBtn = document.getElementById("btn-delete-batch-permanent");
+  const optionsGrid = document.getElementById("batch-action-options-grid");
+  const destroyBtn = document.getElementById("btn-batch-confirm-destroy");
+  const archiveBtn = document.getElementById("btn-batch-confirm-archive");
 
   if (!drawerEl || !overlay || !form) {
     const missing = [
@@ -1365,13 +1368,15 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
   let _addBatch;
   let _updateBatch;
   let _deleteBatchPermanently;
+  let _archiveBatch;
   let _archiveBeneficiariesByBatch;
   const _loadApis = async () => {
-    if (_addBatch && _updateBatch && _deleteBatchPermanently && _archiveBeneficiariesByBatch) return;
+    if (_addBatch && _updateBatch && _deleteBatchPermanently && _archiveBatch && _archiveBeneficiariesByBatch) return;
     const mod = await import("../../../../backend/api/beneficiary.js");
     _addBatch = mod.addBatch;
     _updateBatch = mod.updateBatch;
     _deleteBatchPermanently = mod.deleteBatchPermanently;
+    _archiveBatch = mod.archiveBatch;
     _archiveBeneficiariesByBatch = mod.archiveBeneficiariesByBatch;
   };
 
@@ -1564,8 +1569,11 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
 
       if (currentEditId && isAdminOrHr) {
         deleteSection.classList.remove("hidden");
+        // Keep 2-button grid hidden initially until trigger is clicked
+        optionsGrid?.classList.add("hidden");
       } else {
         deleteSection.classList.add("hidden");
+        optionsGrid?.classList.add("hidden");
       }
     }
 
@@ -1708,9 +1716,23 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
     if (typeof onSuccess === "function") onSuccess(result.data, { mode: completedMode });
   });
 
-  // Wire DELETE BATCH permanent with 5-second Undo Toast
-  deleteBtn?.addEventListener("click", async (e) => {
+  // --- START: BATCH ACTIONS CONTROLLER (DELETE PERMANENT & SOFT ARCHIVE) ---
+  // 1. Toggle visibility of the 2 action buttons (Permanent vs Archive)
+  deleteBtn?.addEventListener("click", (e) => {
     e.preventDefault();
+    if (!optionsGrid) return;
+    const isCurrentlyHidden = optionsGrid.classList.contains("hidden");
+    if (isCurrentlyHidden) {
+      optionsGrid.classList.remove("hidden");
+      deleteBtn.classList.add("border-rose-600", "bg-rose-100/60", "dark:bg-rose-950/40");
+    } else {
+      optionsGrid.classList.add("hidden");
+      deleteBtn.classList.remove("border-rose-600", "bg-rose-100/60", "dark:bg-rose-950/40");
+    }
+  });
+
+  // Reusable batch removal handler supporting both 'permanent' and 'archive'
+  const _handleBatchRemoval = async ({ isPermanent = false } = {}) => {
     if (!currentEditId) return;
 
     const targetBatchId = currentEditId;
@@ -1721,58 +1743,91 @@ export function initBatchFormDrawer({ onSuccess } = {}) {
       batchName: batchNameInput?.value.trim() || ""
     };
 
-    // 1. Temporarily close off-canvas drawer so underlying cards and undo toast are completely visible
+    // Close off-canvas drawer immediately so toasts and cards are visible
     _hideError();
     closeDrawer();
 
-    // 2. Trigger Flowbite Success Toast first
     const { modals } = await import("./modals.js");
     let isUndone = false;
 
-    const successToast = modals.flowbiteToast(
-      "Batch Deleted",
-      `Batch "${batchName}" has been removed from view.`,
-      "success"
-    );
+    // Toast 1: Stacked feedback toast
+    const feedbackTitle = isPermanent ? "Batch Deleted" : "Batch Archived";
+    const feedbackMsg = isPermanent
+      ? `Batch "${batchName}" is scheduled for permanent deletion.`
+      : `Batch "${batchName}" has been archived and hidden.`;
+    const feedbackTone = isPermanent ? "danger" : "warning";
 
-    // 3. Sequentially show Undo Toast in the front card (~350ms later)
+    const feedbackToast = modals.flowbiteToast(feedbackTitle, feedbackMsg, feedbackTone);
+
+    // Toast 2: Undo toast with 10-second timer for Permanent and 5-second timer for Archive
+    const toastDuration = isPermanent ? 10000 : 5000;
     setTimeout(() => {
       if (isUndone) return;
       modals.undoToast({
-        message: `Batch "${batchName}" has been deleted.`,
-        durationMs: 5000,
+        message: isPermanent ? `Batch "${batchName}" permanently deleting...` : `Batch "${batchName}" archived.`,
+        durationMs: toastDuration,
+        tone: isPermanent ? "danger" : "warning",
         onUndo: () => {
           isUndone = true;
-          successToast?.close?.({ immediate: true });
+          feedbackToast?.close?.({ immediate: true });
           openDrawer(cachedBatch);
-          modals.flowbiteToast("Delete Undone", `Batch "${batchName}" was restored.`, "success");
+          modals.flowbiteToast(
+            "Action Undone",
+            `Batch "${batchName}" was restored.`,
+            "success"
+          );
         },
         onExpire: async () => {
           if (isUndone) return;
           try {
             await _loadApis();
-            await _archiveBeneficiariesByBatch(targetBatchId);
-            const delRes = await _deleteBatchPermanently(targetBatchId);
 
-            if (!delRes.success) {
+            let res;
+            if (isPermanent) {
+              await _archiveBeneficiariesByBatch(targetBatchId);
+              res = await _deleteBatchPermanently(targetBatchId);
+            } else {
+              res = await _archiveBatch(targetBatchId);
+            }
+
+            if (!res.success) {
               openDrawer(cachedBatch);
-              _showError(delRes.error || "Failed to delete batch.");
-              modals.error("Delete Failed", delRes.error || "Could not delete batch.");
+              _showError(res.error || `Failed to ${isPermanent ? "delete" : "archive"} batch.`);
+              modals.error(
+                isPermanent ? "Delete Failed" : "Archive Failed",
+                res.error || `Could not ${isPermanent ? "delete" : "archive"} batch.`
+              );
               return;
             }
 
             if (typeof onSuccess === "function") {
-              onSuccess({ id: targetBatchId }, { mode: "deleted" });
+              onSuccess({ id: targetBatchId }, { mode: isPermanent ? "deleted" : "archived" });
             }
           } catch (err) {
             openDrawer(cachedBatch);
-            console.error("[SPES Batch Delete] Expire error:", err);
-            modals.error("Delete Error", "An error occurred while deleting the batch.");
+            console.error(`[SPES Batch ${isPermanent ? "Delete" : "Archive"}] Expire error:`, err);
+            modals.error(
+              "Action Error",
+              `An error occurred while ${isPermanent ? "deleting" : "archiving"} the batch.`
+            );
           }
         }
       });
     }, 350);
+  };
+
+  // Wire LEFT Grid: Permanent Destroy
+  destroyBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await _handleBatchRemoval({ isPermanent: true });
   });
+
+  // Wire RIGHT Grid: Soft Archive
+  archiveBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await _handleBatchRemoval({ isPermanent: false });
+  });
+  // --- END: BATCH ACTIONS CONTROLLER ---
 
   return {
     open: openDrawer,

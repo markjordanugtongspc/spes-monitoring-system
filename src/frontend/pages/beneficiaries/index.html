@@ -1004,12 +1004,39 @@
             placeholder="e.g. SUMMER BATCH" />
         </div>
 
-        <!-- DELETE BATCH (Admin/HR only) — hidden by default, shown via JS in edit mode -->
-        <div id="batch-delete-section" class="hidden pt-2">
+        <!-- BATCH DANGER / ARCHIVE SECTION (Admin/HR only) — hidden by default, shown via JS in edit mode -->
+        <div id="batch-delete-section" class="hidden pt-2 space-y-2.5">
+          <!-- Main Trigger Button -->
           <button type="button" id="btn-delete-batch-permanent"
-            class="cursor-pointer w-full rounded-none bg-rose-600 px-4 py-3 text-xs sm:text-sm font-black uppercase tracking-widest text-white shadow-md transition-all hover:bg-rose-700 hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-rose-500/40">
-            DELETE BATCH
+            class="cursor-pointer w-full rounded-none border border-rose-600/40 bg-rose-50/50 dark:bg-rose-950/20 px-4 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 shadow-sm transition-all duration-200 hover:bg-rose-600 hover:text-white active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-rose-500/40">
+            <span class="inline-flex items-center justify-center gap-1.5">
+              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 7-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />
+              </svg>
+              <span>Batch Actions (Archive / Delete)</span>
+            </span>
           </button>
+
+          <!-- 2-Grid Sub-actions (Revealed upon clicking trigger) -->
+          <div id="batch-action-options-grid" class="hidden grid grid-cols-2 gap-2.5 pt-0.5 transition-all duration-300">
+            <!-- Left: Permanent Destroy (Stroke border static -> filled on hover/click) -->
+            <button type="button" id="btn-batch-confirm-destroy"
+              class="cursor-pointer inline-flex items-center justify-center gap-1.5 w-full rounded-none border-2 border-rose-600 bg-transparent px-3 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white active:bg-rose-700 active:scale-[0.98] transition-all duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40 text-center">
+              <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Permanent</span>
+            </button>
+
+            <!-- Right: Archive / Soft Delete (Filled orange/amber static -> hover-click effect) -->
+            <button type="button" id="btn-batch-confirm-archive"
+              class="cursor-pointer inline-flex items-center justify-center gap-1.5 w-full rounded-none bg-amber-500 hover:bg-amber-600 active:bg-amber-700 hover:shadow-md active:scale-[0.98] px-3 py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white transition-all duration-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 text-center">
+              <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              <span>Archive</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>

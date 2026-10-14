@@ -2070,17 +2070,34 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
     yearIcon?.classList.remove("rotate-180");
     monthIcon?.classList.remove("rotate-180");
   };
+  // --- START: PERIOD SELECTOR POSITIONING - portals dropdown menu to body for unconditional front stacking ---
   const positionPeriodMenu = (menu, button) => {
-    menu.classList.remove("left-0", "right-0", "left-1/2", "-translate-x-1/2", "top-full", "bottom-full", "mt-2", "mb-2");
+    if (menu.parentElement !== document.body) {
+      document.body.appendChild(menu);
+    }
     const rect = button.getBoundingClientRect();
     const estimatedHeight = Math.min(260, Math.max(120, menu.scrollHeight || 220));
     const estimatedWidth = Math.min(240, window.innerWidth - 16);
-    if (rect.left + estimatedWidth > window.innerWidth - 8) menu.classList.add("right-0");
-    else if (rect.left < 8) menu.classList.add("left-0");
-    else menu.classList.add("left-1/2", "-translate-x-1/2");
-    if (window.innerHeight - rect.bottom < estimatedHeight + 12 && rect.top > estimatedHeight + 12) menu.classList.add("bottom-full", "mb-2");
-    else menu.classList.add("top-full", "mt-2");
+    
+    // Calculate horizontal coordinate
+    let left = rect.left;
+    if (left + estimatedWidth > window.innerWidth - 8) {
+      left = Math.max(8, window.innerWidth - estimatedWidth - 8);
+    }
+
+    // Calculate vertical coordinate
+    let top = rect.bottom + 8;
+    if (window.innerHeight - rect.bottom < estimatedHeight + 12 && rect.top > estimatedHeight + 12) {
+      top = rect.top - estimatedHeight - 8;
+    }
+
+    menu.style.position = "fixed";
+    menu.style.top = `${Math.round(top)}px`;
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.zIndex = "99999";
+    menu.style.width = "max-content";
   };
+  // --- END: PERIOD SELECTOR POSITIONING ---
   const availableMonths = () => state.year === "all"
     ? periods.months
     : (periods.monthsByYear?.[state.year] || []);
@@ -2138,7 +2155,9 @@ function initDashboardPeriodSelector(periods = { years: [], months: [], monthsBy
     monthIcon?.classList.toggle("rotate-180", open);
   });
   document.addEventListener("click", (event) => {
-    if (!document.getElementById("dashboard-period-selector")?.contains(event.target)) closeMenus();
+    const isInsideSelector = document.getElementById("dashboard-period-selector")?.contains(event.target);
+    const isInsideMenus = yearMenu.contains(event.target) || monthMenu.contains(event.target);
+    if (!isInsideSelector && !isInsideMenus) closeMenus();
   });
   renderOptions();
 }
@@ -3009,10 +3028,16 @@ function initGlobalSearch(user) {
         // Remove the matched batch string from the query text for downstream facet parsing
         normalizedQuery = normalizedQuery.replace(batchRegex, " ");
       } else {
-        // Check DB batches table if named batches exist
-        const { data: dbBatches } = await supabase.from("batch").select("id, batch_name");
+        // Check DB batches table if named batches exist (excluding archived batches)
+        let batchQuery = supabase.from("batch").select("id, batch_name, archived_at").is("archived_at", null);
+        let { data: dbBatches, error: bErr } = await batchQuery;
+        if (bErr && bErr.code === "42703") {
+          const fallback = await supabase.from("batch").select("id, batch_name");
+          dbBatches = fallback.data;
+        }
         if (dbBatches?.length) {
           for (const b of dbBatches) {
+            if (b.archived_at) continue;
             const bName = String(b.batch_name || "").toUpperCase();
             if (bName && new RegExp(`\\b${bName}\\b`, "i").test(normalizedQuery)) {
               requestedBatchId = b.id;

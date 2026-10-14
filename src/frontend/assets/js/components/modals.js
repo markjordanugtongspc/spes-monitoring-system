@@ -247,35 +247,48 @@ function showFlowbiteToast(title, message, tone = "success") {
   return { close, pause, resume, element: toast };
 }
 
-function showFlowbiteUndoToast({ message, durationMs = 5000, onUndo, onExpire }) {
-  flowDebug("MODAL", "Opening Flowbite Undo toast", { message, durationMs });
+// --- START: SHOW FLOWBITE UNDO TOAST - Stacked Deck Undo Notification ---
+function showFlowbiteUndoToast({ message, durationMs = 10000, tone = "danger", onUndo, onExpire }) {
+  flowDebug("MODAL", "Opening Flowbite Undo toast", { message, durationMs, tone });
 
+  const isWarning = tone === "warning" || tone === "amber" || tone === "orange";
   const id = `spes-undo-toast-${Date.now()}-${toastSequence += 1}`;
   const toast = document.createElement("div");
   toast.id = id;
-  toast.className = "spes-toast-card spes-undo-card pointer-events-auto flex w-full items-center gap-3.5 rounded-2xl border border-rose-500/40 dark:border-rose-500/50 bg-white dark:bg-spes-dark-primary p-4 text-slate-800 dark:text-white shadow-[0_14px_36px_-4px_rgba(244,63,94,0.18),0_10px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_-4px_rgba(244,63,94,0.22),0_12px_28px_rgba(0,0,0,0.7)] backdrop-blur-md";
+  toast.className = `spes-toast-card spes-undo-card pointer-events-auto flex w-full items-center gap-3.5 sm:gap-4 rounded-2xl border ${
+    isWarning
+      ? "border-amber-500/50 dark:border-amber-500/60 shadow-[0_14px_36px_-4px_rgba(245,158,11,0.22),0_10px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_-4px_rgba(245,158,11,0.25),0_12px_28px_rgba(0,0,0,0.7)]"
+      : "border-rose-500/50 dark:border-rose-500/60 shadow-[0_14px_36px_-4px_rgba(244,63,94,0.22),0_10px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_-4px_rgba(244,63,94,0.25),0_12px_28px_rgba(0,0,0,0.7)]"
+  } bg-white dark:bg-spes-dark-primary p-4 sm:p-4.5 text-slate-800 dark:text-white backdrop-blur-md`;
   toast.setAttribute("role", "alert");
 
-  const radius = 13;
-  const circumference = 2 * Math.PI * radius; // ~81.68
+  const radius = 14;
+  const circumference = 2 * Math.PI * radius; // ~87.96
   const initialSecs = Math.max(1, Math.round(durationMs / 1000));
   let currentDisplayed = initialSecs;
 
+  const circleTrackColor = isWarning ? "text-amber-500/20 dark:text-amber-500/20" : "text-rose-500/20 dark:text-rose-500/20";
+  const circleProgressColor = isWarning ? "text-amber-500 dark:text-amber-400" : "text-rose-600 dark:text-rose-400";
+  const countdownTextColor = isWarning ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400";
+  const btnColor = isWarning
+    ? "bg-amber-500 hover:bg-amber-600 active:bg-amber-700 shadow-amber-500/30"
+    : "bg-rose-600 hover:bg-rose-700 active:bg-rose-800 shadow-rose-600/30";
+
   toast.innerHTML = `
-    <div class="relative flex h-8 w-8 shrink-0 items-center justify-center">
-      <svg class="h-8 w-8 -rotate-90 transform" viewBox="0 0 32 32">
-        <circle cx="16" cy="16" r="${radius}" fill="none" stroke="currentColor" stroke-width="2.5" class="text-rose-500/20 dark:text-rose-500/20" />
-        <circle data-progress cx="16" cy="16" r="${radius}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+    <div class="relative flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center">
+      <svg class="h-9 w-9 sm:h-10 sm:w-10 -rotate-90 transform" viewBox="0 0 34 34">
+        <circle cx="17" cy="17" r="${radius}" fill="none" stroke="currentColor" stroke-width="2.5" class="${circleTrackColor}" />
+        <circle data-progress cx="17" cy="17" r="${radius}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
           stroke-dasharray="${circumference.toFixed(2)}" stroke-dashoffset="0"
-          class="text-rose-600 dark:text-rose-400 transition-[stroke-dashoffset] ease-linear" style="transition-duration: ${durationMs}ms;" />
+          class="${circleProgressColor} transition-[stroke-dashoffset] ease-linear" style="transition-duration: ${durationMs}ms;" />
       </svg>
-      <span data-countdown class="absolute text-[11px] font-black tabular-nums text-rose-600 dark:text-rose-400 select-none transition-transform duration-150 transform inline-block">${initialSecs}</span>
+      <span data-countdown class="absolute text-xs sm:text-sm font-black tabular-nums ${countdownTextColor} select-none transition-transform duration-150 transform inline-block">${initialSecs}</span>
     </div>
     <div class="ms-1 min-w-0 flex-1">
-      <p data-undo-message class="text-xs font-black leading-tight text-spes-black dark:text-white"></p>
-      <p class="mt-0.5 text-[10px] font-bold text-spes-black/50 dark:text-white/50">Click Undo to restore before countdown ends.</p>
+      <p data-undo-message class="text-sm sm:text-base font-black leading-snug text-spes-black dark:text-white"></p>
+      <p class="mt-0.5 text-xs sm:text-xs font-semibold text-spes-black/60 dark:text-white/60">Click Undo to restore before countdown ends.</p>
     </div>
-    <button type="button" data-btn-undo class="ms-2 inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl bg-rose-600 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-white shadow-md hover:bg-rose-700 active:scale-95 transition-all">
+    <button type="button" data-btn-undo class="ms-2 inline-flex shrink-0 cursor-pointer items-center justify-center rounded-xl ${btnColor} px-4 py-2 sm:px-4.5 sm:py-2.5 text-xs sm:text-sm font-black uppercase tracking-wider text-white shadow-lg active:scale-95 transition-all">
       <span class="font-black">Undo</span>
     </button>`;
 
@@ -390,6 +403,7 @@ function showFlowbiteUndoToast({ message, durationMs = 5000, onUndo, onExpire })
 
   return { close, element: toast };
 }
+// --- END: SHOW FLOWBITE UNDO TOAST ---
 
 export const modals = {
   flowbiteToast: showFlowbiteToast,
